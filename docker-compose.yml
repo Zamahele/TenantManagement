@@ -1,11 +1,11 @@
 version: "3.9"
+
 services:
   db:
     image: mcr.microsoft.com/mssql/server:2022-latest
     environment:
       - ACCEPT_EULA=Y
       - SA_PASSWORD=Your_password123
-
     ports:
       - "1433:1433"
     healthcheck:
@@ -15,6 +15,8 @@ services:
       retries: 5
     volumes:
       - mssql_data:/var/opt/mssql
+    networks:
+      - appnet
 
   web:
     build:
@@ -28,8 +30,16 @@ services:
         condition: service_healthy
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
+      # Example connection string for SQL Server in Docker Compose
+      - ConnectionStrings__DefaultConnection=Server=db,1433;Database=YourDb;User Id=sa;Password=Your_password123;
     volumes:
       - ./aspnetapp.pfx:/https/aspnetapp.pfx:ro
+    networks:
+      - appnet
 
 volumes:
   mssql_data:
+
+networks:
+  appnet:
+    driver: bridge

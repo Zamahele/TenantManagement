@@ -1,0 +1,22 @@
+@model PropertyManagement.Web.Models.DeleteModalViewModel
+
+<div class="modal fade" id="@Model.ModalId" tabindex="-1" aria-labelledby="@Model.ModalLabelId" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form asp-action="@Model.Action" asp-controller="@Model.Controller" method="post">
+        <input type="hidden" name="id" value="@Model.EntityId" />
+        <div class="modal-header bg-danger text-white">
+          <h5 class="modal-title" id="@Model.ModalLabelId">@Model.Title</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          @Html.Raw(Model.Body)
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-danger">Delete</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

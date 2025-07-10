@@ -224,18 +224,27 @@ public class TenantsController : BaseController
   [Authorize(Roles = "Manager")]
   public async Task<IActionResult> Delete(int id)
   {
-    var tenant = await _context.Tenants.FindAsync(id);
-    if (tenant != null)
+    var tenant = await _context.Tenants
+        .Include(t => t.Payments)
+        .Include(t => t.LeaseAgreements)
+        .FirstOrDefaultAsync(t => t.TenantId == id);
+
+    if (tenant == null)
     {
-      _context.Tenants.Remove(tenant);
-      await _context.SaveChangesAsync();
-      SetSuccessMessage("Tenant deleted successfully.");
+        SetErrorMessage("Tenant not found.");
+        return RedirectToAction("Index");
     }
-    else
+
+    if ((tenant.Payments?.Any() ?? false) || (tenant.LeaseAgreements?.Any() ?? false))
     {
-      SetErrorMessage("Tenant not found.");
+        SetErrorMessage("Cannot delete tenant with associated payments or leases.");
+        return RedirectToAction("Index");
     }
-    return RedirectToAction(nameof(Index));
+
+    _context.Tenants.Remove(tenant);
+    await _context.SaveChangesAsync();
+    SetSuccessMessage("Tenant deleted successfully.");
+    return RedirectToAction("Index");
   }
 
   // GET: /Tenants/Login

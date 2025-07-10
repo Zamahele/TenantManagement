@@ -48,8 +48,8 @@ jobs:
     # Optional: Check if Dockerfile exists
     - name: Check for Dockerfile
       run: |
-        if (!(Test-Path -Path "./Dockerfile")) {
-          Write-Error "Dockerfile not found in repository root."
+        if (!(Test-Path -Path "./PropertyManagement.Web/Dockerfile")) {
+          Write-Error "Dockerfile not found in ./PropertyManagement.Web/"
           exit 1
         }
       shell: pwsh
@@ -63,7 +63,7 @@ jobs:
         }
         $owner = $repoParts[0]
         $repo = $repoParts[1]
-        docker build -t ghcr.io/$owner/$repo:latest .
+        docker build -f ./PropertyManagement.Web/Dockerfile -t ghcr.io/$owner/$repo:latest .
       shell: pwsh
 
     - name: Push Docker image

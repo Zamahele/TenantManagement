@@ -51,8 +51,6 @@ jobs:
         docker push ghcr.io/zamahele/tenantmanagement:test
 
     - name: Docker Compose up (integration test)
-      env:
-        SA_PASSWORD: Your_password123
       run: |
         docker compose up -d
         sleep 30 # Wait for services to start

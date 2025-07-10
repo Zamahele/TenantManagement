@@ -45,35 +45,17 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GHCR_PAT }}
 
-    - name: Check for Dockerfile
-      run: |
-        if (!(Test-Path -Path "./PropertyManagement.Web/Dockerfile")) {
-          Write-Error "Dockerfile not found in ./PropertyManagement.Web/"
-          exit 1
-        }
-      shell: pwsh
-
-    - name: Debug owner and repo for Docker tag
-      run: |
-        $repoParts = "${{ github.repository }}".ToLower().Trim().Split('/')
-        Write-Host "repoParts: $($repoParts)"
-        Write-Host "repoParts.Length: $($repoParts.Length)"
-        $owner = $repoParts[0]
-        $repo = $repoParts[1]
-        Write-Host "owner: $owner"
-        Write-Host "repo: $repo"
-        if ([string]::IsNullOrEmpty($repo)) {
-          Write-Error "Repository name is empty. github.repository='${{ github.repository }}'"
-          exit 1
-        }
-      shell: pwsh
-
-    - name: Build Docker image
-      shell: pwsh
+    - name: Build and push Docker image
       run: |
         docker build -f ./PropertyManagement.Web/Dockerfile -t ghcr.io/zamahele/tenantmanagement:test .
-
-    - name: Push Docker image
-      shell: pwsh
-      run: |
         docker push ghcr.io/zamahele/tenantmanagement:test
+
+    - name: Docker Compose up (integration test)
+      run: |
+        docker compose up -d
+        sleep 30 # Wait for services to start
+        docker compose ps
+
+    - name: Docker Compose down
+      if: always()
+      run: docker compose down -v

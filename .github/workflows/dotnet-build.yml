@@ -69,8 +69,8 @@ jobs:
       shell: pwsh
 
     - name: Build Docker image
+      shell: pwsh
       run: |
-        pwsh -Command @'
         $repoParts = "${{ github.repository }}".ToLower().Trim().Split('/')
         if ($repoParts.Length -ne 2) {
           Write-Error "Unexpected repository format: '${{ github.repository }}'"
@@ -80,12 +80,10 @@ jobs:
         $repo = $repoParts[1]
         Write-Host "Building Docker image: ghcr.io/$owner/$repo:latest"
         docker build -f ./PropertyManagement.Web/Dockerfile -t ghcr.io/$owner/$repo:latest .
-        '@
-      shell: cmd
 
     - name: Push Docker image
+      shell: pwsh
       run: |
-        pwsh -Command @'
         $repoParts = "${{ github.repository }}".ToLower().Trim().Split('/')
         if ($repoParts.Length -ne 2) {
           Write-Error "Unexpected repository format: '${{ github.repository }}'"
@@ -95,5 +93,3 @@ jobs:
         $repo = $repoParts[1]
         Write-Host "Pushing Docker image: ghcr.io/$owner/$repo:latest"
         docker push ghcr.io/$owner/$repo:latest
-        '@
-      shell: cmd

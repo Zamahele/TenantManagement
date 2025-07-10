@@ -33,4 +33,6 @@ WORKDIR /app
 COPY --from=publish /app/publish .
 # Copy certificate for HTTPS
 COPY PropertyManagement.Web/https/aspnetapp.pfx /https/aspnetapp.pfx
+RUN ls -l /app
+RUN ls -l /https
 ENTRYPOINT ["dotnet", "PropertyManagement.Web.dll"]

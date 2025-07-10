@@ -12,7 +12,8 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout source
+      uses: actions/checkout@v4
 
     - name: Setup .NET 8
       uses: actions/setup-dotnet@v4
@@ -44,38 +45,35 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Debug repo variables
+    # Optional: Check if Dockerfile exists
+    - name: Check for Dockerfile
       run: |
-        $repoParts = "${{ github.repository }}".ToLower().Split('/')
-        Write-Host "github.repository: ${{ github.repository }}"
-        Write-Host "repoParts[0]: $($repoParts[0])"
-        if ($repoParts.Length -gt 1) {
-          Write-Host "repoParts[1]: $($repoParts[1])"
-        } else {
-          Write-Host "repoParts[1] is missing!"
+        if (!(Test-Path -Path "./Dockerfile")) {
+          Write-Error "Dockerfile not found in repository root."
+          exit 1
         }
       shell: pwsh
 
     - name: Build Docker image
       run: |
-        $repoParts = "${{ github.repository }}".ToLower().Split('/')
-        $owner = $repoParts[0]
-        $repo = $repoParts[1]
-        if ([string]::IsNullOrEmpty($repo)) {
-          Write-Error "Repository name is empty. github.repository='${{ github.repository }}'"
+        $repoParts = "${{ github.repository }}".ToLower().Trim().Split('/')
+        if ($repoParts.Length -ne 2) {
+          Write-Error "Unexpected repository format: '${{ github.repository }}'"
           exit 1
         }
+        $owner = $repoParts[0]
+        $repo = $repoParts[1]
         docker build -t ghcr.io/$owner/$repo:latest .
       shell: pwsh
 
     - name: Push Docker image
       run: |
-        $repoParts = "${{ github.repository }}".ToLower().Split('/')
-        $owner = $repoParts[0]
-        $repo = $repoParts[1]
-        if ([string]::IsNullOrEmpty($repo)) {
-          Write-Error "Repository name is empty. github.repository='${{ github.repository }}'"
+        $repoParts = "${{ github.repository }}".ToLower().Trim().Split('/')
+        if ($repoParts.Length -ne 2) {
+          Write-Error "Unexpected repository format: '${{ github.repository }}'"
           exit 1
         }
+        $owner = $repoParts[0]
+        $repo = $repoParts[1]
         docker push ghcr.io/$owner/$repo:latest
       shell: pwsh

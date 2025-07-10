@@ -47,13 +47,13 @@ jobs:
     - name: Build Docker image
       run: |
         $owner = "${{ github.repository_owner }}".ToLower()
-        $repo = "${{ github.repository }}"..Split('/')[1].ToLower()
+        $repo = "${{ github.repository }}".Split('/')[1].ToLower()
         docker build -t ghcr.io/$owner/$repo:latest .
       shell: pwsh
 
     - name: Push Docker image
       run: |
         $owner = "${{ github.repository_owner }}".ToLower()
-        $repo = "${{ github.repository }}"..Split('/')[1].ToLower()
+        $repo = "${{ github.repository }}".Split('/')[1].ToLower()
         docker push ghcr.io/$owner/$repo:latest
       shell: pwsh

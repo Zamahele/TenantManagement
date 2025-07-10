@@ -26,8 +26,8 @@ jobs:
     - name: Build
       run: dotnet build --no-restore --configuration Release
 
-    - name: Test
-      run: dotnet test --no-build --configuration Release --verbosity normal
+    - name: Test with coverage
+      run: dotnet test --no-build --configuration Release --collect:"XPlat Code Coverage"
 
     - name: Publish
       run: dotnet publish --configuration Release --output ./publish
@@ -55,3 +55,9 @@ jobs:
       run: |
         docker build -f ./PropertyManagement.Web/Dockerfile -t ghcr.io/zamahele/tenantmanagement:test .
         docker push ghcr.io/zamahele/tenantmanagement:test
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        files: ./PropertyManagement.Test/TestResults/**/*.cobertura.xml
+        token: ${{ secrets.GHCR_PAT }}

@@ -11,8 +11,8 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "echo 'SELECT 1' | /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P $SA_PASSWORD"]
       interval: 10s
-      timeout: 5s
-      retries: 5
+      timeout: 10s
+      retries: 15
     volumes:
       - mssql_data:/var/opt/mssql
     networks:

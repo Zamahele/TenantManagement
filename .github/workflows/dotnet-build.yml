@@ -62,6 +62,10 @@ jobs:
       if: failure()
       run: docker compose logs db
 
+    - name: Show web logs on failure
+      if: failure()
+      run: docker compose logs web
+
     - name: Docker Compose down
       if: always()
       run: docker compose down -v

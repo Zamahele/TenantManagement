@@ -1,4 +1,4 @@
-name: .NET 8 Build and Test
+name: PropertyManagement Build .NET 8
 
 on:
   push:
@@ -45,11 +45,25 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
-    # Optional: Check if Dockerfile exists
     - name: Check for Dockerfile
       run: |
         if (!(Test-Path -Path "./PropertyManagement.Web/Dockerfile")) {
           Write-Error "Dockerfile not found in ./PropertyManagement.Web/"
+          exit 1
+        }
+      shell: pwsh
+
+    - name: Debug owner and repo for Docker tag
+      run: |
+        $repoParts = "${{ github.repository }}".ToLower().Trim().Split('/')
+        Write-Host "repoParts: $($repoParts)"
+        Write-Host "repoParts.Length: $($repoParts.Length)"
+        $owner = $repoParts[0]
+        $repo = $repoParts[1]
+        Write-Host "owner: $owner"
+        Write-Host "repo: $repo"
+        if ([string]::IsNullOrEmpty($repo)) {
+          Write-Error "Repository name is empty. github.repository='${{ github.repository }}'"
           exit 1
         }
       shell: pwsh

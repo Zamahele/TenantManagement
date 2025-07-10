@@ -20,8 +20,9 @@ services:
     restart: unless-stopped
 
   web:
-    image: ghcr.io/zamahele/tenantmanagement:test
-    pull_policy: always
+    build:
+      context: ./PropertyManagement.Web
+      dockerfile: Dockerfile
     ports:
       - "8443:443"
     depends_on:
@@ -34,7 +35,7 @@ services:
       - ./aspnetapp.pfx:/https/aspnetapp.pfx:ro
     networks:
       - appnet
-    restart: unless-stopped
+    restart: always
 
 volumes:
   mssql_data:

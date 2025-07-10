@@ -70,30 +70,20 @@ jobs:
 
     - name: Build Docker image
       run: |
-        & {
-          $repoParts = "${{ github.repository }}".ToLower().Trim().Split('/')
-          if ($repoParts.Length -ne 2) {
-            Write-Error "Unexpected repository format: '${{ github.repository }}'"
-            exit 1
-          }
-          $owner = $repoParts[0]
-          $repo = $repoParts[1]
-          Write-Host "Building Docker image: ghcr.io/$owner/$repo:latest"
-          docker build -f ./PropertyManagement.Web/Dockerfile -t ghcr.io/$owner/$repo:latest .
-        }
+        $repoParts = "${{ github.repository }}".ToLower().Trim().Split('/'); `
+        if ($repoParts.Length -ne 2) { Write-Error "Unexpected repository format: '${{ github.repository }}'"; exit 1 }; `
+        $owner = $repoParts[0]; `
+        $repo = $repoParts[1]; `
+        Write-Host "Building Docker image: ghcr.io/$owner/$repo:latest"; `
+        docker build -f ./PropertyManagement.Web/Dockerfile -t ghcr.io/$owner/$repo:latest .
       shell: pwsh
 
     - name: Push Docker image
       run: |
-        & {
-          $repoParts = "${{ github.repository }}".ToLower().Trim().Split('/')
-          if ($repoParts.Length -ne 2) {
-            Write-Error "Unexpected repository format: '${{ github.repository }}'"
-            exit 1
-          }
-          $owner = $repoParts[0]
-          $repo = $repoParts[1]
-          Write-Host "Pushing Docker image: ghcr.io/$owner/$repo:latest"
-          docker push ghcr.io/$owner/$repo:latest
-        }
+        $repoParts = "${{ github.repository }}".ToLower().Trim().Split('/'); `
+        if ($repoParts.Length -ne 2) { Write-Error "Unexpected repository format: '${{ github.repository }}'"; exit 1 }; `
+        $owner = $repoParts[0]; `
+        $repo = $repoParts[1]; `
+        Write-Host "Pushing Docker image: ghcr.io/$owner/$repo:latest"; `
+        docker push ghcr.io/$owner/$repo:latest
       shell: pwsh

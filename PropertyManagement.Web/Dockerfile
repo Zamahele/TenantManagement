@@ -32,5 +32,5 @@ FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
 # Copy certificate for HTTPS
-# COPY PropertyManagement.Web/https/aspnetapp.pfx /https/aspnetapp.pfx
+COPY PropertyManagement.Web/https/aspnetapp.pfx /https/aspnetapp.pfx
 ENTRYPOINT ["dotnet", "PropertyManagement.Web.dll"]

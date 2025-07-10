@@ -60,4 +60,4 @@ jobs:
       uses: codecov/codecov-action@v4
       with:
         files: ./PropertyManagement.Test/TestResults/**/*.cobertura.xml
-        token: ${{ secrets.GHCR_PAT }}
+        token: ${{ secrets.CODECOV_TOKEN }}

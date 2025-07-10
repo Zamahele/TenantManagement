@@ -48,7 +48,11 @@ jobs:
       run: |
         $repoParts = "${{ github.repository }}".ToLower().Split('/')
         $owner = $repoParts[0]
-        $repo = $repoParts[1]
+        $repo = if ($repoParts.Length -gt 1) { $repoParts[1] } else { "" }
+        if ([string]::IsNullOrEmpty($repo)) {
+          Write-Error "Repository name is empty. github.repository='${{ github.repository }}'"
+          exit 1
+        }
         docker build -t ghcr.io/$owner/$repo:latest .
       shell: pwsh
 
@@ -58,4 +62,11 @@ jobs:
         $owner = $repoParts[0]
         $repo = $repoParts[1]
         docker push ghcr.io/$owner/$repo:latest
+      shell: pwsh
+
+    - name: Debug repo variables
+      run: |
+        $repoParts = "${{ github.repository }}".ToLower().Split('/')
+        Write-Host "repoParts[0]: $($repoParts[0])"
+        Write-Host "repoParts[1]: $($repoParts[1])"
       shell: pwsh

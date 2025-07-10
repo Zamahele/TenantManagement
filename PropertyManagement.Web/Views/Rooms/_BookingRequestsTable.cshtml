@@ -1,0 +1,67 @@
+@model IEnumerable<PropertyManagement.Domain.Entities.BookingRequest>
+
+<table class="table table-bordered">
+  <thead>
+    <tr>
+      <th>Room</th>
+      <th>Full Name</th>
+      <th>Contact</th>
+      <th>Note</th>
+      <th>Proof of Payment</th>
+      <th>Request Date</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    @foreach (var booking in Model)
+    {
+      <tr>
+        <td>@booking.Room?.Number (@booking.Room?.Type)</td>
+        <td>@booking.FullName</td>
+        <td>@booking.Contact</td>
+        <td>@booking.Note</td>
+        <td>
+          @if (!string.IsNullOrEmpty(booking.ProofOfPaymentPath))
+          {
+            <a href="@booking.ProofOfPaymentPath" target="_blank">View</a>
+          }
+          else
+          {
+            <span class="text-warning">Not uploaded</span>
+          }
+        </td>
+        <td>@booking.RequestDate.ToString("yyyy-MM-dd HH:mm")</td>
+        <td>
+          <div class="btn-group">
+            <button type="button" class="btn btn-sm btn-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+              Actions
+            </button>
+            <ul class="dropdown-menu">
+              <li>
+                <button class="dropdown-item" onclick="editBookingRequest(@booking.BookingRequestId)">
+                  <i class="bi bi-pencil-square"></i> Edit
+                </button>
+              </li>
+              <li>
+                <form asp-action="ConfirmBooking" method="post" style="display:inline;">
+                  <input type="hidden" name="bookingRequestId" value="@booking.BookingRequestId" />
+                  <button type="submit" class="dropdown-item" @(string.IsNullOrEmpty(booking.ProofOfPaymentPath) ? "disabled" : "")>
+                    <i class="bi bi-check-circle"></i> Confirm
+                  </button>
+                </form>
+              </li>
+              <li>
+                <form asp-action="DeleteBookingRequest" method="post" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this booking request?');">
+                  <input type="hidden" name="bookingRequestId" value="@booking.BookingRequestId" />
+                  <button type="submit" class="dropdown-item text-danger">
+                    <i class="bi bi-trash"></i> Delete
+                  </button>
+                </form>
+              </li>
+            </ul>
+          </div>
+        </td>
+      </tr>
+    }
+  </tbody>
+</table>

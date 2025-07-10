@@ -1,0 +1,48 @@
+@model PropertyManagement.Domain.Entities.Payment
+
+@{
+  var tenant = Model.Tenant;
+  var room = tenant?.Room;
+  var paymentDate = Model.Date; // Use the correct property from your Payment entity
+}
+<link rel="stylesheet" href="~/css/receipt.css" />
+
+<div class="receipt-container">
+  <div class="receipt-card">
+    <div class="receipt-watermark">PAID</div>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <div>
+        <h3 class="mb-0">Payment Receipt</h3>
+        <small class="text-muted">Receipt #: @Model.PaymentId</small>
+      </div>
+      <img src="/images/logo.png" alt="Company Logo" style="height: 48px;" onerror="this.style.display='none';" />
+    </div>
+    <hr />
+    <div class="mb-3">
+      <strong>Date Issued:</strong> @paymentDate.ToString("MMMM dd, yyyy")
+    </div>
+    <div class="mb-3">
+      <strong>Received From:</strong> @tenant?.FullName <br />
+      <strong>Contact #:</strong> @tenant?.Contact <br />
+      <strong>Room:</strong> @room?.Number
+    </div>
+    <div class="mb-3">
+      <strong>Payment Details:</strong>
+      <ul class="list-unstyled mb-0">
+        <li><strong>Type:</strong> @Model.Type</li>
+        <li><strong>Amount:</strong> @Model.Amount.ToString("C")</li>
+        <li><strong>For Month:</strong> @System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(Model.PaymentMonth) @Model.PaymentYear</li>
+      </ul>
+    </div>
+    <hr />
+    <!-- Payment Method section removed because it does not exist in the model -->
+    <div class="text-end mt-4">
+      <span class="fw-bold">Thank you for your payment!</span>
+    </div>
+  </div>
+  <div class="text-center mt-3">
+    <button class="btn btn-primary btn-lg" onclick="window.print()">
+        <i class="bi bi-printer"></i> Print Receipt
+    </button>
+  </div>
+</div>

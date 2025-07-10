@@ -1,0 +1,55 @@
+@model PropertyManagement.Domain.Entities.Payment
+
+<div class="receipt-container">
+  <div class="receipt-card">
+    <div class="receipt-watermark">PROPERTY MANAGEMENT</div>
+    <div class="receipt-actions text-end mb-3" style="z-index:3; position:relative;">
+      <button class="btn btn-outline-secondary btn-sm me-2" type="button" onclick="printReceipt()">
+        <i class="bi bi-printer"></i> Print
+      </button>
+      <button class="btn btn-outline-primary btn-sm" type="button" onclick="shareReceipt()">
+        <i class="bi bi-share"></i> Share
+      </button>
+    </div>
+    <div class="receipt-content">
+      <h4 class="text-center text-primary mb-1">Payment Receipt</h4>
+      <div class="text-center text-muted mb-3" style="font-size:1.1rem;">Receipt #@Model.PaymentId</div>
+      <hr />
+      <div class="row mb-2">
+        <div class="col-5 fw-bold">Tenant</div>
+        <div class="col-7">@Model.Tenant?.FullName</div>
+      </div>
+      <div class="row mb-2">
+        <div class="col-5 fw-bold">Room</div>
+        <div class="col-7">@Model.Tenant?.Room?.Number</div>
+      </div>
+      <div class="row mb-2">
+        <div class="col-5 fw-bold">Amount</div>
+        <div class="col-7">@Model.Amount.ToString("C")</div>
+      </div>
+      <div class="row mb-2">
+        <div class="col-5 fw-bold">Type</div>
+        <div class="col-7">@Model.Type</div>
+      </div>
+      <div class="row mb-2">
+        <div class="col-5 fw-bold">Date</div>
+        <div class="col-7">@Model.Date.ToShortDateString()</div>
+      </div>
+      <div class="row mb-2">
+        <div class="col-5 fw-bold">Month</div>
+        <div class="col-7">
+          @(Model.PaymentMonth >= 1 && Model.PaymentMonth <= 12
+              ? System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(Model.PaymentMonth)
+              : "Invalid")
+        </div>
+      </div>
+      <div class="row mb-2">
+        <div class="col-5 fw-bold">Year</div>
+        <div class="col-7">@Model.PaymentYear</div>
+      </div>
+    </div>
+    <div class="receipt-stamp">
+      PAID
+    </div>
+  </div>
+</div>

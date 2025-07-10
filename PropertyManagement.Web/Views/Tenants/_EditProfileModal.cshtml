@@ -1,0 +1,55 @@
+@model PropertyManagement.Domain.Entities.Tenant
+@{
+  var rooms = ViewBag.Rooms as List<PropertyManagement.Domain.Entities.Room>;
+}
+<div class="modal fade" id="editProfileModal" tabindex="-1" aria-labelledby="editProfileModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width: 500px;">
+    <div class="modal-content shadow-lg border-0">
+      <div class="modal-header bg-primary text-white py-2">
+        <h5 class="modal-title d-flex align-items-center" id="editProfileModalLabel">
+          <i class="bi bi-pencil me-2"></i> Edit Profile
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-3 bg-light">
+        <form asp-action="EditProfile" method="post" autocomplete="off">
+          @Html.AntiForgeryToken()
+          @Html.HiddenFor(m => m.TenantId)
+          @Html.HiddenFor(m => m.User.Username)
+          @Html.HiddenFor(m => m.User.PasswordHash)
+          <div class="mb-4">
+            <label asp-for="FullName" class="form-label"></label>
+            <input asp-for="FullName" class="form-control" />
+            <span asp-validation-for="FullName" class="text-danger"></span>
+          </div>
+          <div class="mb-4">
+            <label asp-for="Contact" class="form-label"></label>
+            <input asp-for="Contact" class="form-control" />
+            <span asp-validation-for="Contact" class="text-danger"></span>
+          </div>
+          <div class="mb-4">
+            <label asp-for="RoomId" class="form-label"></label>
+            <input type="text" class="form-control" value="@Model.Room?.Number" readonly />
+            <input type="hidden" asp-for="RoomId" />
+            <div class="form-text">Room cannot be changed.</div>
+          </div>
+          <div class="mb-4">
+            <label asp-for="EmergencyContactName" class="form-label"></label>
+            <input asp-for="EmergencyContactName" class="form-control" />
+            <span asp-validation-for="EmergencyContactName" class="text-danger"></span>
+          </div>
+          <div class="mb-4">
+            <label asp-for="EmergencyContactNumber" class="form-label"></label>
+            <input asp-for="EmergencyContactNumber" class="form-control" />
+            <span asp-validation-for="EmergencyContactNumber" class="text-danger"></span>
+          </div>
+          <div class="d-flex justify-content-end">
+            <button type="submit" class="btn btn-success px-4">
+              <i class="bi bi-save me-1"></i> Save Changes
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>

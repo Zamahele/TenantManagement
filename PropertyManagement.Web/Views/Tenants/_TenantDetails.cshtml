@@ -1,0 +1,22 @@
+@model PropertyManagement.Domain.Entities.Tenant
+
+<h5>Rental History</h5>
+<table class="table">
+    <thead>
+        <tr>
+            <th>Room</th>
+            <th>Start Date</th>
+            <th>End Date</th>
+        </tr>
+    </thead>
+    <tbody>
+    @foreach (var lease in Model.LeaseAgreements)
+    {
+        <tr>
+            <td>@lease.Tenant?.Room?.Number</td>
+            <td>@lease.StartDate.ToShortDateString()</td>
+            <td>@lease.EndDate.ToShortDateString()</td>
+        </tr>
+    }
+    </tbody>
+</table>

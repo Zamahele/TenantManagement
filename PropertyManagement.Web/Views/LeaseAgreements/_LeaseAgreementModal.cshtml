@@ -1,0 +1,119 @@
+@model PropertyManagement.Domain.Entities.LeaseAgreement
+@{
+  var tenants = ViewBag.Tenants as List<PropertyManagement.Domain.Entities.Tenant>;
+  var isEdit = ViewBag.IsEdit as bool? ?? (Model.LeaseAgreementId != 0);
+  var currentYear = DateTime.Today.Year;
+  var defaultStart = new DateTime(currentYear, 1, 1);
+  var defaultEnd = new DateTime(currentYear, 12, 31);
+  string startDateValue = Model.StartDate != default ? Model.StartDate.ToString("yyyy-MM-dd") : defaultStart.ToString("yyyy-MM-dd");
+  string endDateValue = Model.EndDate != default ? Model.EndDate.ToString("yyyy-MM-dd") : defaultEnd.ToString("yyyy-MM-dd");
+  var rentAmountValue = Model.RentAmount != 0 ? Model.RentAmount.ToString("0.##") : "";
+  var expectedRentDayValue = Model.ExpectedRentDay != 0 ? Model.ExpectedRentDay : 1;
+  var selectedTenant = tenants?.FirstOrDefault(t => t.TenantId == Model.TenantId);
+  var selectedRoomId = isEdit ? Model.RoomId : selectedTenant?.RoomId;
+  var selectedRoomNumber = isEdit ? Model.Room?.Number : selectedTenant?.Room?.Number;
+}
+<div class="modal fade" id="agreementModal" tabindex="-1" aria-labelledby="agreementModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width: 600px;">
+    <div class="modal-content shadow-lg border-0">
+      <div class="modal-header bg-primary text-white py-2">
+        <h5 class="modal-title d-flex align-items-center" id="agreementModalLabel">
+          <i class="bi bi-file-earmark-text me-2"></i>
+          @(isEdit ? "Edit Lease Agreement" : "Add Lease Agreement")
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-3 bg-light">
+        <form id="agreementForm" asp-action="CreateOrEdit" method="post" enctype="multipart/form-data" autocomplete="off">
+          <div asp-validation-summary="All" class="alert alert-danger"></div>
+          @Html.HiddenFor(m => m.LeaseAgreementId)
+          <div class="mb-4">
+            <label asp-for="TenantId" class="form-label"></label>
+            @if (isEdit)
+            {
+              @Html.HiddenFor(m => m.TenantId)
+              <input type="text" class="form-control" value="@selectedTenant?.FullName" readonly />
+            }
+            else
+            {
+              <select asp-for="TenantId" class="form-control" id="TenantId" required onchange="updateRoomFields()">
+                <option value="">Select Tenant</option>
+                @if (tenants != null)
+                {
+                  foreach (var tenant in tenants)
+                  {
+                    <option value="@tenant.TenantId"
+                            data-room-id="@tenant.RoomId"
+                            data-room-number="@tenant.Room?.Number">
+                      @tenant.FullName (@tenant.Room?.Number)
+                    </option>
+                  }
+                }
+              </select>
+            }
+            <span asp-validation-for="TenantId" class="text-danger"></span>
+          </div>
+          <input type="hidden" asp-for="RoomId" id="RoomId" value="@selectedRoomId" />
+          <div class="mb-4">
+            <label class="form-label">Room</label>
+            <input type="text" class="form-control" id="RoomDisplay" value="@selectedRoomNumber" readonly />
+            <span asp-validation-for="RoomId" class="text-danger"></span>
+          </div>
+          <div class="mb-4">
+            <label asp-for="StartDate" class="form-label"></label>
+            <input asp-for="StartDate" type="date" class="form-control" id="StartDate" required value="@startDateValue" />
+            <span asp-validation-for="StartDate" class="text-danger"></span>
+          </div>
+          <div class="mb-4">
+            <label asp-for="EndDate" class="form-label"></label>
+            <input asp-for="EndDate" type="date" class="form-control" id="EndDate" required value="@endDateValue" />
+            <span asp-validation-for="EndDate" class="text-danger"></span>
+          </div>
+          <div class="mb-4">
+            <label asp-for="RentAmount" class="form-label"></label>
+            <input asp-for="RentAmount" class="form-control" id="RentAmount" required value="@rentAmountValue" />
+            <span asp-validation-for="RentAmount" class="text-danger"></span>
+          </div>
+          <div class="mb-4">
+            <label asp-for="ExpectedRentDay" class="form-label">Rent Expected Day</label>
+            <div class="d-flex align-items-center gap-2">
+              <input asp-for="ExpectedRentDay"
+                     type="range"
+                     class="form-range"
+                     min="1"
+                     max="31"
+                     id="ExpectedRentDay"
+                     required
+                     value="@expectedRentDayValue"
+                     oninput="document.getElementById('expectedRentDayValue').textContent = this.value;" />
+              <span id="expectedRentDayValue">@expectedRentDayValue</span>
+            </div>
+            <span asp-validation-for="ExpectedRentDay" class="text-danger"></span>
+          </div>
+          <div class="mb-4">
+            <label for="File" class="form-label">Lease File (PDF)</label>
+            <input asp-for="File" type="file" class="form-control" accept=".pdf" />
+            <span asp-validation-for="File" class="text-danger"></span>
+            <div id="currentFile" class="mt-2">
+              @if (isEdit && !string.IsNullOrEmpty(Model.FilePath))
+              {
+                <a href="@Model.FilePath" target="_blank">Current File</a>
+              }
+            </div>
+          </div>
+          <div class="d-flex justify-content-end">
+            <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary px-4" id="saveAgreementBtn">
+              <i class="bi bi-save me-1"></i> Save
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+@section Scripts {
+  <script>
+    // You can add custom scripts here if needed
+  </script>
+}

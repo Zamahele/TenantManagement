@@ -1,0 +1,48 @@
+.rooms-dashboard-card {
+    border-radius: 1.25rem;
+    background: linear-gradient(135deg, #f8fafc 60%, #e9ecef 100%);
+    border: none;
+    box-shadow: 0 2px 16px rgba(80, 80, 120, 0.10);
+    margin-top: 2rem;
+}
+
+.bg-gradient-primary {
+    background: linear-gradient(90deg, #4f8cff 0%, #1e3c72 100%) !important;
+    color: #fff !important;
+    border-top-left-radius: 1.25rem;
+    border-top-right-radius: 1.25rem;
+}
+
+.card, .card-body {
+    border-radius: 1rem;
+}
+
+.card {
+    background: #fff;
+    border: none;
+    box-shadow: 0 1px 6px rgba(80, 80, 120, 0.07);
+}
+
+.card .btn-primary {
+    background: #4f8cff;
+    border: none;
+}
+
+.card .btn-primary:hover {
+    background: #1e3c72;
+}
+
+.badge.bg-danger {
+    font-size: 0.8rem;
+}
+
+.bi-door-closed, .bi-building, .bi-tools, .bi-person, .bi-file-earmark-text, .bi-cash, .bi-bell {
+    color: #4f8cff;
+}
+
+.card.mb-4 {
+  border-radius: 1rem;
+  background: linear-gradient(135deg, #f8fafc 60%, #e9ecef 100%);
+  border: none;
+  box-shadow: 0 2px 16px rgba(80, 80, 120, 0.10);
+}

@@ -1,0 +1,143 @@
+﻿
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>@ViewData["Title"] - Property Management</title>
+  <!-- Bootstrap CSS (only once, use CDN or local, not both) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+  <!-- Bootstrap Icons (only once) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+  <!-- Your custom and site CSS -->
+  <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+  <link rel="stylesheet" href="~/PropertyManagement.Web.styles.css" asp-append-version="true" />
+  <link href="~/css/receipt.css" rel="stylesheet" />
+  <link rel="stylesheet" href="~/css/rooms-dashboard.css" asp-append-version="true" />
+  <link rel="stylesheet" href="~/css/layout-custom.css" asp-append-version="true" />
+  <!-- Toastr CSS -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet" />
+</head>
+<body>
+  @using System.Security.Claims
+  <div class="d-flex min-vh-100 flex-column">
+    <header>
+      <nav class="navbar navbar-light bg-white border-bottom box-shadow">
+        <div class="container-fluid">
+          <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">Property Management</a>
+          <div class="ms-auto d-flex align-items-center">
+            @if (User.Identity.IsAuthenticated)
+            {
+              <form asp-controller="Tenants" asp-action="Logout" method="post" class="mb-0">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-outline-danger">
+                  <i class="bi bi-box-arrow-right"></i> Sign Out
+                </button>
+              </form>
+            }
+            else
+            {
+              <a class="btn btn-outline-primary" asp-controller="Tenants" asp-action="Login">
+                <i class="bi bi-box-arrow-in-right"></i> Login
+              </a>
+            }
+          </div>
+        </div>
+      </nav>
+    </header>
+    <div class="flex-grow-1 d-flex">
+      <!-- Sidebar -->
+      <nav class="bg-light border-end p-3" style="min-width:220px;">
+        <ul class="nav flex-column">
+          @if (User.Identity.IsAuthenticated)
+          {
+            <li class="nav-item">
+              <a class="nav-link text-dark" asp-area="" asp-controller="Maintenance" asp-action="Index">
+                <i class="bi bi-tools"></i> Requests
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link text-dark" asp-area="" asp-controller="Rooms" asp-action="Index">
+                <i class="bi bi-door-closed"></i> Rooms
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link text-dark" asp-area="" asp-controller="Tenants" asp-action="Index">
+                <i class="bi bi-person"></i> Tenants
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link text-dark" asp-area="" asp-controller="LeaseAgreements" asp-action="Index">
+                <i class="bi bi-file-earmark-text"></i> Leases
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link text-dark" asp-area="" asp-controller="Payments" asp-action="Index">
+                <i class="bi bi-cash"></i> Payments
+              </a>
+            </li>
+
+            // Manager navigation
+            if (User.IsInRole("Manager"))
+            {
+              <li class="nav-item">
+                <a class="nav-link" asp-controller="Tenants" asp-action="Index">
+                  <i class="bi bi-people"></i> Manage Tenants
+                </a>
+              </li>
+              <!-- Add more manager links as needed -->
+            }
+            // Tenant navigation
+            if (User.IsInRole("Tenant"))
+            {
+              <li class="nav-item">
+                <a class="nav-link" asp-controller="Tenants" asp-action="Profile">
+                  <i class="bi bi-person-circle"></i> My Profile
+                </a>
+              </li>
+              <!-- Add more tenant links as needed -->
+            }
+          }
+        </ul>
+      </nav>
+      <!-- Main content -->
+      <div class="container-fluid p-4">
+        <main role="main" class="pb-3">
+          @RenderBody()
+        </main>
+      </div>
+    </div>
+    <footer class="border-top footer text-muted mt-auto">
+      <div class="container text-center">
+        &copy; 2025 - PropertyManagement.Web - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+      </div>
+    </footer>
+  </div>
+  <script src="~/lib/jquery/dist/jquery.min.js"></script>
+  <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="~/js/site.js" asp-append-version="true"></script>
+  <!-- Toastr JS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+  <!-- Before the closing </body> tag -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+  <script>
+    @if (TempData["Success"] != null)
+    {
+            <text>toastr.success('@TempData["Success"]');</text>
+    }
+    @if (TempData["Error"] != null)
+    {
+            <text>toastr.error('@TempData["Error"]');</text>
+    }
+    @if (TempData["Info"] != null)
+    {
+            <text>toastr.info('@TempData["Info"]');</text>
+    }
+    @if (TempData["Warning"] != null)
+    {
+            <text>toastr.warning('@TempData["Warning"]');</text>
+    }
+  </script>
+  @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

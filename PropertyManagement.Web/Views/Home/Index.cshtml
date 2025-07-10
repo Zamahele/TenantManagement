@@ -1,0 +1,191 @@
+﻿@model PropertyManagement.Web.Models.DashboardViewModel
+@{
+  ViewData["Title"] = "Dashboard";
+}
+<link rel="stylesheet" href="~/css/dashboard.css" asp-append-version="true" />
+
+<div class="container-fluid px-3 py-4">
+  <div class="dashboard-header mb-4 d-flex align-items-center">
+    <i class="bi bi-speedometer2 fs-2 text-primary me-3"></i>
+    <h2 class="fw-semibold mb-0">Dashboard</h2>
+  </div>
+  <div class="row g-4 mb-4">
+    <div class="col-6 col-md-3">
+      <div class="dashboard-summary-card shadow-sm border-0 h-100">
+        <div class="d-flex align-items-center">
+          <div class="dashboard-icon-box bg-primary text-white me-3">
+            <i class="bi bi-door-closed"></i>
+          </div>
+          <div>
+            <div class="dashboard-label text-muted">Total Rooms</div>
+            <div class="dashboard-metric fw-bold fs-4">@Model.TotalRooms</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="dashboard-summary-card shadow-sm border-0 h-100">
+        <div class="d-flex align-items-center">
+          <div class="dashboard-icon-box bg-success text-white me-3">
+            <i class="bi bi-check-circle"></i>
+          </div>
+          <div>
+            <div class="dashboard-label text-muted">Available</div>
+            <div class="dashboard-metric fw-bold fs-4">@Model.AvailableRooms</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="dashboard-summary-card shadow-sm border-0 h-100">
+        <div class="d-flex align-items-center">
+          <div class="dashboard-icon-box bg-warning text-white me-3">
+            <i class="bi bi-person"></i>
+          </div>
+          <div>
+            <div class="dashboard-label text-muted">Tenants</div>
+            <div class="dashboard-metric fw-bold fs-4">@Model.TotalTenants</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="dashboard-summary-card shadow-sm border-0 h-100">
+        <div class="d-flex align-items-center">
+          <div class="dashboard-icon-box bg-danger text-white me-3">
+            <i class="bi bi-tools"></i>
+          </div>
+          <div>
+            <div class="dashboard-label text-muted">Pending Requests</div>
+            <div class="dashboard-metric fw-bold fs-4">@Model.PendingRequests</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4 mb-4">
+    <div class="col-6 col-md-3">
+      <div class="dashboard-summary-card shadow-sm border-0 h-100">
+        <div class="d-flex align-items-center">
+          <div class="dashboard-icon-box bg-secondary text-white me-3">
+            <i class="bi bi-house-lock"></i>
+          </div>
+          <div>
+            <div class="dashboard-label text-muted">Occupied Rooms</div>
+            <div class="dashboard-metric fw-bold fs-4">@Model.OccupiedRooms</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="dashboard-summary-card shadow-sm border-0 h-100">
+        <div class="d-flex align-items-center">
+          <div class="dashboard-icon-box bg-info text-white me-3">
+            <i class="bi bi-wrench-adjustable"></i>
+          </div>
+          <div>
+            <div class="dashboard-label text-muted">Under Maintenance</div>
+            <div class="dashboard-metric fw-bold fs-4">@Model.UnderMaintenanceRooms</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="dashboard-summary-card shadow-sm border-0 h-100">
+        <div class="d-flex align-items-center">
+          <div class="dashboard-icon-box bg-dark text-white me-3">
+            <i class="bi bi-file-earmark-text"></i>
+          </div>
+          <div>
+            <div class="dashboard-label text-muted">Active Leases</div>
+            <div class="dashboard-metric fw-bold fs-4">@Model.ActiveLeases</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="dashboard-summary-card shadow-sm border-0 h-100">
+        <div class="d-flex align-items-center">
+          <div class="dashboard-icon-box bg-warning text-white me-3">
+            <i class="bi bi-exclamation-triangle"></i>
+          </div>
+          <div>
+            <div class="dashboard-label text-muted">Expiring Leases</div>
+            <div class="dashboard-metric fw-bold fs-4">@Model.ExpiringLeases</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4 dashboard-charts-row">
+    <div class="col-12 col-md-6">
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-header bg-white border-bottom-0 py-3">
+          <span class="fw-semibold">Room Status Overview</span>
+        </div>
+        <div class="card-body p-0 d-flex align-items-center justify-content-center" style="height:220px;">
+          <canvas id="roomStatusChart" style="width:100%;height:180px;"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-6">
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-header bg-white border-bottom-0 py-3">
+          <span class="fw-semibold">Lease Status Overview</span>
+        </div>
+        <div class="card-body p-0 d-flex align-items-center justify-content-center" style="height:220px;">
+          <canvas id="leaseStatusChart" style="width:100%;height:180px;"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    // Room Status Pie Chart
+    new Chart(document.getElementById('roomStatusChart'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Available', 'Occupied', 'Under Maintenance'],
+            datasets: [{
+                data: [@Model.AvailableRooms, @Model.OccupiedRooms, @Model.UnderMaintenanceRooms],
+                backgroundColor: ['#198754', '#6c757d', '#0dcaf0'],
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom' }
+            }
+        }
+    });
+
+    // Lease Status Bar Chart
+    new Chart(document.getElementById('leaseStatusChart'), {
+        type: 'bar',
+        data: {
+            labels: ['Active Leases', 'Expiring Leases'],
+            datasets: [{
+                label: 'Leases',
+                data: [@Model.ActiveLeases, @Model.ExpiringLeases],
+                backgroundColor: ['#212529', '#ffc107']
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: { beginAtZero: true, precision: 0 }
+            }
+        }
+    });
+  </script>
+}

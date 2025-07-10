@@ -1,0 +1,29 @@
+.dashboard-summary-card {
+  transition: box-shadow 0.2s;
+  border-radius: 0.75rem;
+  background: #fff;
+  padding: 1.25rem 1rem;
+}
+
+  .dashboard-summary-card:hover {
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+  }
+
+.dashboard-icon-box {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  font-size: 1.5rem;
+}
+
+.dashboard-label {
+  font-size: 0.95rem;
+  letter-spacing: 0.01em;
+}
+
+.dashboard-metric {
+  font-size: 1.5rem;
+}

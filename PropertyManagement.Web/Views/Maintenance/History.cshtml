@@ -1,0 +1,28 @@
+@model IEnumerable<PropertyManagement.Domain.Entities.MaintenanceRequest>
+@{
+    ViewData["Title"] = "Maintenance History";
+}
+<h2>@ViewData["Title"]</h2>
+<table class="table">
+    <thead>
+        <tr>
+            <th>Description</th>
+            <th>Status</th>
+            <th>Assigned To</th>
+            <th>Request Date</th>
+            <th>Completed Date</th>
+        </tr>
+    </thead>
+    <tbody>
+    @foreach (var item in Model)
+    {
+        <tr>
+            <td>@item.Description</td>
+            <td>@item.Status</td>
+            <td>@item.AssignedTo</td>
+            <td>@item.RequestDate.ToShortDateString()</td>
+            <td>@item.CompletedDate?.ToShortDateString()</td>
+        </tr>
+    }
+    </tbody>
+</table>

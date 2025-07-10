@@ -1,0 +1,102 @@
+.receipt-container {
+  max-width: 480px;
+  margin: 2.5rem auto;
+  position: relative;
+  background: #fff;
+  border-radius: 1rem;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+  padding: 2.5rem 2rem 2rem 2rem;
+  overflow: visible; /* CHANGED: allow overflow for absolute stamp */
+  border: 1px solid #e3e3e3;
+}
+
+.receipt-card {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  position: relative;
+  z-index: 1;
+  min-height: 520px;
+  padding-bottom: 5.5rem; /* INCREASED: more space for stamp */
+}
+
+.receipt-watermark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 350px;
+  height: 120px;
+  transform: translate(-50%, -50%) rotate(-18deg);
+  opacity: 0.13;
+  z-index: 0;
+  pointer-events: none;
+  user-select: none;
+  text-align: center;
+  font-size: 2.7rem;
+  font-weight: 700;
+  color: #0d6efd;
+  letter-spacing: 0.18em;
+  white-space: nowrap;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  text-shadow: 0 2px 8px rgba(13,110,253,0.08);
+}
+
+.receipt-content {
+  position: relative;
+  z-index: 2;
+}
+
+.receipt-actions {
+  margin-bottom: 1.2rem;
+  text-align: right;
+  z-index: 3;
+}
+
+/* --- Business Stamp --- */
+.receipt-stamp {
+  position: absolute;
+  bottom: 24px; /* CHANGED: closer to bottom */
+  right: 24px; /* CHANGED: closer to right */
+  color: #198754;
+  font-size: 2.2rem;
+  font-weight: bold;
+  border: 3px solid #198754;
+  border-radius: 0.5rem;
+  padding: 0.3em 0.8em;
+  opacity: 0.85; /* INCREASED: more visible */
+  transform: rotate(-12deg);
+  background: #fff;
+  z-index: 30; /* INCREASED: ensure above all */
+  box-shadow: 0 2px 8px rgba(25,135,84,0.08);
+  letter-spacing: 0.15em;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  pointer-events: none;
+  user-select: none;
+  display: block; /* ENSURE: always block */
+}
+
+@media print {
+  .btn, .btn * {
+    display: none !important;
+  }
+
+  body {
+    background: #fff !important;
+  }
+
+  .receipt-container {
+    box-shadow: none !important;
+    margin: 0 !important;
+    border: none !important;
+  }
+
+  .receipt-watermark {
+    opacity: 0.18 !important;
+  }
+
+  .receipt-stamp {
+    opacity: 0.9 !important;
+    display: block !important;
+  }
+}

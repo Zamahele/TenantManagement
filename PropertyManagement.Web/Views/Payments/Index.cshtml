@@ -1,0 +1,104 @@
+@model IEnumerable<PropertyManagement.Domain.Entities.Payment>
+@{
+  ViewData["Title"] = "Payments";
+  var tenants = ViewBag.Tenants as List<PropertyManagement.Domain.Entities.Tenant>;
+}
+
+<div class="card shadow-lg" style="font-size: 1.15rem;">
+  <div class="card-header bg-primary text-white d-flex align-items-center justify-content-between">
+    <h2 class="mb-0 display-6"><i class="bi bi-cash-coin"></i> Payments</h2>
+  </div>
+  <div class="card-body p-4" style="background-color: #f4f6fb;">
+    <ul class="nav nav-tabs mb-3" id="paymentsTab" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="payments-tab" data-bs-toggle="tab" data-bs-target="#payments" type="button" role="tab" aria-controls="payments" aria-selected="true">
+          Payments
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="balances-tab" data-bs-toggle="tab" data-bs-target="#balances" type="button" role="tab" aria-controls="balances" aria-selected="false">
+          Outstanding Balances
+        </button>
+      </li>
+    </ul>
+    <div class="tab-content" id="paymentsTabContent">
+      <div class="tab-pane fade show active" id="payments" role="tabpanel" aria-labelledby="payments-tab">
+        @await Html.PartialAsync("_PaymentsTable", Model)
+      </div>
+      <div class="tab-pane fade" id="balances" role="tabpanel" aria-labelledby="balances-tab">
+        @await Html.PartialAsync("_OutstandingBalances", tenants)
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Container -->
+<div class="modal fade" id="paymentModal" tabindex="-1" aria-labelledby="paymentModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width: 500px;">
+    <div class="modal-content shadow-lg border-0">
+      <div class="modal-header bg-primary text-white py-2">
+        <h5 class="modal-title" id="paymentModalLabel">Add Payment</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-3 custom-modal-body" id="paymentModalBody" style="background-color: #f8f9fa;">
+        <!-- Form will be loaded here via AJAX -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="receiptModal" tabindex="-1" aria-labelledby="receiptModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="receiptModalLabel"><i class="bi bi-receipt"></i> Payment Receipt</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="receiptModalBody">
+        <!-- Receipt partial loads here -->
+      </div>
+    </div>
+  </div>
+</div>
+
+
+@section Scripts {
+  <script>
+    function openAddPaymentModal() {
+      fetch('/Payments/PaymentForm')
+        .then(response => response.text())
+        .then(html => {
+          document.getElementById('paymentModalLabel').innerText = 'Add Payment';
+          document.getElementById('paymentModalBody').innerHTML = html;
+          var modal = new bootstrap.Modal(document.getElementById('paymentModal'));
+          modal.show();
+        });
+    }
+    function openEditPaymentModal(id) {
+      fetch('/Payments/PaymentForm?id=' + id)
+        .then(response => response.text())
+        .then(html => {
+          document.getElementById('paymentModalLabel').innerText = 'Edit Payment';
+          document.getElementById('paymentModalBody').innerHTML = html;
+          var modal = new bootstrap.Modal(document.getElementById('paymentModal'));
+          modal.show();
+        });
+    }
+    function deletePayment(id) {
+      if (confirm('Delete this payment?')) {
+        document.getElementById('deleteForm-' + id).submit();
+      }
+    }
+
+    function showReceiptModal(paymentId) {
+      fetch('/Payments/ReceiptPartial/' + paymentId)
+        .then(response => response.text())
+        .then(html => {
+          document.getElementById('receiptModalBody').innerHTML = html;
+          var modal = new bootstrap.Modal(document.getElementById('receiptModal'));
+          modal.show();
+        });
+    }
+  </script>
+  <script src="~/js/receipt-utils.js"></script>
+}

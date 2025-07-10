@@ -1,0 +1,44 @@
+@model IEnumerable<PropertyManagement.Domain.Entities.Room>
+
+<table class="table table-bordered">
+  <thead>
+    <tr>
+      <th>Number</th>
+      <th>Type</th>
+      <th>Status</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    @foreach (var room in Model)
+    {
+      <tr>
+        <td>@room.Number</td>
+        <td>@room.Type</td>
+        <td>@room.Status</td>
+        <td>
+          <!-- Action Dropdown -->
+          <div class="btn-group">
+            <button type="button" class="btn btn-sm btn-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+              Actions
+            </button>
+            <ul class="dropdown-menu">
+              <li>
+                <a class="dropdown-item" href="javascript:void(0);" onclick="openEditModal(@room.RoomId)">Edit</a>
+              </li>
+              <li>
+                <a class="dropdown-item" asp-action="GetRoom" asp-route-id="@room.RoomId">Details</a>
+              </li>
+              @if (room.Status == "Available")
+              {
+                <li>
+                  <a class="dropdown-item text-success" href="javascript:void(0);" onclick="BookRoom(@room.RoomId)">Book</a>
+                </li>
+              }
+            </ul>
+          </div>
+        </td>
+      </tr>
+    }
+  </tbody>
+</table>

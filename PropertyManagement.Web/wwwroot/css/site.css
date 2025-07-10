@@ -1,0 +1,74 @@
+html {
+  font-size: 14px;
+}
+
+@media (min-width: 768px) {
+  html {
+    font-size: 16px;
+  }
+}
+
+.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
+  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+}
+
+html {
+  position: relative;
+  min-height: 100%;
+}
+
+body {
+  margin-bottom: 60px;
+}
+
+.hero-bg {
+  background: linear-gradient(135deg, #4e54c8 0%, #8f94fb 100%);
+  color: #fff;
+}
+.validation-summary-valid {
+  display: none;
+}
+
+/* Card and Table Styles */
+.card.shadow-lg {
+  font-size: 1.15rem;
+}
+
+.card-header.bg-primary {
+  background-color: #0d6efd !important;
+  color: #fff !important;
+}
+
+.card-body {
+  background-color: #f8f9fa;
+}
+
+.table-striped > tbody > tr:nth-of-type(odd) {
+  background-color: #f2f6fc;
+}
+
+.table-bordered th, .table-bordered td {
+  vertical-align: middle;
+  text-align: center;
+}
+
+.table thead th {
+  font-weight: 600;
+}
+
+.btn-light.text-primary.fw-bold {
+  font-weight: bold;
+}
+
+.modal-content.shadow-lg {
+  border: none;
+}
+
+.modal-header.bg-primary {
+  background-color: #0d6efd !important;
+  color: #fff !important;
+}
+
+.btn-outline-secondary {
+  border-color: #6c757d;
+}

@@ -1,0 +1,89 @@
+@model PropertyManagement.Domain.Entities.Tenant
+@{
+  var rooms = ViewBag.Rooms as List<PropertyManagement.Domain.Entities.Room>;
+  bool isEdit = Model?.TenantId > 0;
+}
+<form id="tenantForm" asp-action="CreateOrEdit" method="post" autocomplete="off">
+  <input asp-for="TenantId" type="hidden" />
+
+  <div class="mb-3">
+    <label asp-for="RoomId" class="form-label"></label>
+    <select asp-for="RoomId" class="form-select" asp-items="@(new SelectList(rooms, "RoomId", "Number", Model?.RoomId))" required>
+      <option value="">-- Select Room --</option>
+    </select>
+  </div>
+
+  <div class="mb-3">
+    <label class="form-label">Contact</label>
+    <input type="text"
+           class="form-control"
+           name="Contact"
+           id="Contact"
+           value="@Model?.Contact"
+           required
+           oninput="document.getElementById('username').value = this.value;" />
+  </div>
+
+  <div class="mb-3">
+    <label class="form-label">Username</label>
+    <input type="text"
+           class="form-control"
+           name="username"
+           id="username"
+           value="@Model?.Contact"
+           readonly
+           required />
+  </div>
+
+  <div class="mb-3">
+    <label class="form-label">Password</label>
+    <input type="password"
+           class="form-control"
+           name="plainTextPassword"
+           id="plainTextPassword"
+           value="01Pa$$w0rd"
+           readonly
+           required />
+    <small class="text-muted">Password is always set to <b>01Pa$$w0rd</b></small>
+  </div>
+
+  <div class="mb-3">
+    <label asp-for="FullName" class="form-label"></label>
+    <input asp-for="FullName" class="form-control" required />
+  </div>
+
+  <div class="mb-3">
+    <label asp-for="EmergencyContactName" class="form-label"></label>
+    <input asp-for="EmergencyContactName" class="form-control" required />
+  </div>
+
+  <div class="mb-3">
+    <label asp-for="EmergencyContactNumber" class="form-label"></label>
+    <input asp-for="EmergencyContactNumber" class="form-control" required />
+  </div>
+
+  <div class="d-grid mt-3">
+    <button type="submit" class="btn btn-primary">
+      <i class="bi bi-person-plus"></i> Save
+    </button>
+  </div>
+</form>
+
+@section Scripts {
+  <script>
+    // Ensure username is always in sync with contact on page load (for edit)
+    document.addEventListener('DOMContentLoaded', function () {
+      var contact = document.getElementById('Contact');
+      var username = document.getElementById('username');
+      if (contact && username) {
+        username.value = contact.value;
+        contact.addEventListener('input', function () {
+          username.value = contact.value;
+        });
+      }
+      // Always set password to default
+      var pwd = document.getElementById('plainTextPassword');
+      if (pwd) pwd.value = "01Pa$$w0rd";
+    });
+  </script>
+}

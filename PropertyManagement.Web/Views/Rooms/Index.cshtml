@@ -1,0 +1,146 @@
+@model RoomsTabViewModel
+@using PropertyManagement.Domain.Entities
+@using PropertyManagement.Web.Models
+@using Microsoft.AspNetCore.Mvc.Rendering
+
+<div class="mb-4">
+  <div class="card shadow-lg" style="font-size: 1.15rem;">
+    <div class="card-header bg-primary text-white d-flex align-items-center justify-content-between">
+      <h2 class="mb-0 display-6"><i class="bi bi-door-closed me-2"></i> Rooms Dashboard</h2>
+      <button class="btn btn-light text-primary fw-bold" onclick="openAddModal()">
+        <i class="bi bi-plus-circle"></i> Add Room
+      </button>
+    </div>
+  </div>
+  <div class="mt-0 mb-4 p-4" style="background-color: #f8f9fa; border-radius: 0 0 .5rem .5rem;">
+    <ul class="nav nav-tabs mb-3" id="roomTabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-bs-target="#all" type="button" role="tab">All</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="occupied-tab" data-bs-toggle="tab" data-bs-target="#occupied" type="button" role="tab">Occupied</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="vacant-tab" data-bs-toggle="tab" data-bs-target="#vacant" type="button" role="tab">Vacant</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="maintenance-tab" data-bs-toggle="tab" data-bs-target="#maintenance" type="button" role="tab">Under Maintenance</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="requests-tab" data-bs-toggle="tab" data-bs-target="#requests" type="button" role="tab">
+          Requests
+          <span class="position-relative">
+            <i class="bi bi-bell"></i>
+            @if (Model.PendingRequestCount > 0)
+            {
+              <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                @Model.PendingRequestCount
+                <span class="visually-hidden">unread requests</span>
+              </span>
+            }
+          </span>
+        </button>
+      </li>
+    </ul>
+    <div class="tab-content" id="roomTabsContent">
+      <div class="tab-pane fade show active" id="all" role="tabpanel">
+        @Html.Partial("_RoomTable", Model.AllRooms)
+      </div>
+      <div class="tab-pane fade" id="occupied" role="tabpanel">
+        @Html.Partial("_RoomTable", Model.OccupiedRooms)
+      </div>
+      <div class="tab-pane fade" id="vacant" role="tabpanel">
+        @Html.Partial("_RoomTable", Model.VacantRooms)
+      </div>
+      <div class="tab-pane fade" id="maintenance" role="tabpanel">
+        @Html.Partial("_RoomTable", Model.MaintenanceRooms)
+      </div>
+      <div class="tab-pane fade" id="requests" role="tabpanel">
+        @Html.Partial("_BookingRequestsTable", Model.PendingBookingRequests)
+      </div>
+    </div>
+  </div>
+</div>
+
+@{
+  var statusOptions = new List<SelectListItem>
+    {
+        new SelectListItem { Value = "Occupied", Text = "Occupied" },
+        new SelectListItem { Value = "Available", Text = "Available" },
+        new SelectListItem { Value = "Under Maintenance", Text = "Under Maintenance" }
+    };
+}
+@Html.Partial("_RoomModal", new RoomFormViewModel { StatusOptions = statusOptions })
+<div id="bookingModalContainer"></div>
+
+@section Scripts {
+  <script>
+    function openAddModal() {
+        document.getElementById('roomForm').reset();
+        document.getElementById('RoomId').value = 0;
+        document.getElementById('roomModalLabel').innerText = 'Add Room';
+        var modal = new bootstrap.Modal(document.getElementById('roomModal'));
+        modal.show();
+    }
+
+    function openEditModal(id) {
+        fetch('/Rooms/GetRoom/' + id)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('roomForm').reset();
+                if (document.getElementById('RoomId')) document.getElementById('RoomId').value = data.roomId;
+                if (document.getElementById('Number')) document.getElementById('Number').value = data.number;
+                if (document.getElementById('Type')) document.getElementById('Type').value = data.type;
+                if (document.getElementById('Status')) document.getElementById('Status').value = data.status;
+                if (document.getElementById('CottageId')) document.getElementById('CottageId').value = data.cottageId || '';
+                document.getElementById('roomModalLabel').innerText = 'Edit Room';
+                var modal = new bootstrap.Modal(document.getElementById('roomModal'));
+                modal.show();
+            });
+    }
+    function deleteRoom(id) {
+        if (confirm('Delete this room?')) {
+            document.getElementById('deleteForm-' + id).submit();
+        }
+    }
+    function BookRoom(roomId) {
+        fetch('/Rooms/BookRoom?roomId=' + roomId)
+            .then(response => response.text())
+            .then(html => {
+                document.getElementById('bookingModalContainer').innerHTML = html;
+                var modal = new bootstrap.Modal(document.getElementById('bookingModal'));
+                modal.show();
+            });
+    }
+
+    function editBookingRequest(bookingRequestId) {
+        fetch('/Rooms/EditBookingRequest?bookingRequestId=' + bookingRequestId)
+            .then(response => response.text())
+            .then(html => {
+                document.getElementById('bookingModalContainer').innerHTML = html;
+                var modal = new bootstrap.Modal(document.getElementById('bookingModal'));
+                modal.show();
+            });
+    }
+    // Save the active tab to localStorage when changed
+    document.addEventListener('DOMContentLoaded', function () {
+        var tabEls = document.querySelectorAll('button[data-bs-toggle="tab"]');
+        tabEls.forEach(function (tabEl) {
+            tabEl.addEventListener('shown.bs.tab', function (event) {
+                localStorage.setItem('activeRoomTab', event.target.id);
+            });
+        });
+
+        // On page load, restore the active tab
+        var activeTab = localStorage.getItem('activeRoomTab');
+        if (activeTab) {
+            var triggerEl = document.getElementById(activeTab);
+            if (triggerEl) {
+                var tab = new bootstrap.Tab(triggerEl);
+                tab.show();
+            }
+        }
+    });
+
+  </script>
+}

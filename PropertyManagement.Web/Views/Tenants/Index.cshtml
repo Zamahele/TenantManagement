@@ -1,0 +1,112 @@
+@model IEnumerable<PropertyManagement.Domain.Entities.Tenant>
+@{
+  ViewData["Title"] = "Tenants";
+  var rooms = ViewBag.Rooms as List<PropertyManagement.Domain.Entities.Room>;
+}
+
+<div class="card shadow-lg" style="font-size: 1.15rem;">
+  <div class="card-header bg-primary text-white d-flex align-items-center justify-content-between">
+    <h2 class="mb-0 display-6"><i class="bi bi-people"></i> Tenants</h2>
+    <button class="btn btn-light text-primary fw-bold" onclick="openAddModal()">
+      <i class="bi bi-plus-circle"></i> Add Tenant
+    </button>
+  </div>
+  <div class="card-body p-4" style="background-color: #f8f9fa;">
+    <table class="table table-striped table-bordered align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Name</th>
+          <th>Contact</th>
+          <th>Emergency Name</th>
+          <th>Emergency #</th>
+          <th>Room</th>
+          <th style="width: 120px;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        @foreach (var tenant in Model)
+        {
+          <tr>
+            <td>@tenant.FullName</td>
+            <td>@tenant.Contact</td>
+            <td>@tenant.EmergencyContactName</td>
+            <td>@tenant.EmergencyContactNumber</td>
+            <td>@tenant.Room?.Number</td>
+            <td>
+              <div class="dropdown">
+                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                  Actions
+                </button>
+                <ul class="dropdown-menu">
+                  <li>
+                    <a class="dropdown-item"
+                       href="#"
+                       onclick="openEditModal(@tenant.TenantId); return false;">
+                      <i class="bi bi-pencil"></i> Edit
+                    </a>
+                  </li>
+                  <li>
+                    <button type="button"
+                            class="dropdown-item text-danger"
+                            onclick="deleteTenant(@tenant.TenantId)">
+                      <i class="bi bi-trash"></i> Delete
+                    </button>
+                  </li>
+                </ul>
+              </div>
+              <form id="deleteForm-@tenant.TenantId" asp-action="Delete" method="post" style="display:none;">
+                <input type="hidden" name="id" value="@tenant.TenantId" />
+              </form>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal Container -->
+<div class="modal fade" id="tenantModal" tabindex="-1" aria-labelledby="tenantModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width: 500px;">
+    <div class="modal-content shadow-lg border-0">
+      <div class="modal-header bg-primary text-white py-2">
+        <h5 class="modal-title" id="tenantModalLabel">Add Tenant</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-3 custom-modal-body" id="tenantModalBody" style="background-color: #f8f9fa;">
+        <!-- Form will be loaded here via AJAX -->
+      </div>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+  <script>
+    function openAddModal() {
+        fetch('/Tenants/TenantForm')
+            .then(response => response.text())
+            .then(html => {
+                document.getElementById('tenantModalLabel').innerText = 'Add Tenant';
+                document.getElementById('tenantModalBody').innerHTML = html;
+                var modal = new bootstrap.Modal(document.getElementById('tenantModal'));
+                modal.show();
+            });
+    }
+    function openEditModal(id) {
+        fetch('/Tenants/TenantForm?id=' + id)
+            .then(response => response.text())
+            .then(html => {
+                document.getElementById('tenantModalLabel').innerText = 'Edit Tenant';
+                document.getElementById('tenantModalBody').innerHTML = html;
+                var modal = new bootstrap.Modal(document.getElementById('tenantModal'));
+                modal.show();
+            });
+    }
+
+    function deleteTenant(id) {
+        if (confirm('Delete this tenant?')) {
+            document.getElementById('deleteForm-' + id).submit();
+        }
+    }
+  </script>
+}

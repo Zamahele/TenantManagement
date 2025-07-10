@@ -1,0 +1,35 @@
+@model IEnumerable<PropertyManagement.Domain.Entities.MaintenanceRequest>
+@{
+    var room = ViewBag.Room as PropertyManagement.Domain.Entities.Room;
+    ViewData["Title"] = "Maintenance History";
+}
+
+<div class="card mb-4">
+    <div class="card-body">
+        <h2 class="mb-0">Maintenance History for Room @room?.Number</h2>
+    </div>
+</div>
+
+<table class="table table-striped table-bordered align-middle">
+    <thead class="table-light">
+        <tr>
+            <th>Description</th>
+            <th>Status</th>
+            <th>Assigned To</th>
+            <th>Request Date</th>
+            <th>Completed Date</th>
+        </tr>
+    </thead>
+    <tbody>
+    @foreach (var req in Model)
+    {
+        <tr>
+            <td>@req.Description</td>
+            <td>@req.Status</td>
+            <td>@req.AssignedTo</td>
+            <td>@req.RequestDate.ToShortDateString()</td>
+            <td>@req.CompletedDate?.ToShortDateString()</td>
+        </tr>
+    }
+    </tbody>
+</table>

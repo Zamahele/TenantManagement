@@ -44,6 +44,18 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
+    - name: Debug repo variables
+      run: |
+        $repoParts = "${{ github.repository }}".ToLower().Split('/')
+        Write-Host "github.repository: ${{ github.repository }}"
+        Write-Host "repoParts[0]: $($repoParts[0])"
+        if ($repoParts.Length -gt 1) {
+          Write-Host "repoParts[1]: $($repoParts[1])"
+        } else {
+          Write-Host "repoParts[1] is missing!"
+        }
+      shell: pwsh
+
     - name: Build Docker image
       run: |
         $repoParts = "${{ github.repository }}".ToLower().Split('/')
@@ -60,13 +72,10 @@ jobs:
       run: |
         $repoParts = "${{ github.repository }}".ToLower().Split('/')
         $owner = $repoParts[0]
-        $repo = $repoParts[1]
+        $repo = if ($repoParts.Length -gt 1) { $repoParts[1] } else { "" }
+        if ([string]::IsNullOrEmpty($repo)) {
+          Write-Error "Repository name is empty. github.repository='${{ github.repository }}'"
+          exit 1
+        }
         docker push ghcr.io/$owner/$repo:latest
-      shell: pwsh
-
-    - name: Debug repo variables
-      run: |
-        $repoParts = "${{ github.repository }}".ToLower().Split('/')
-        Write-Host "repoParts[0]: $($repoParts[0])"
-        Write-Host "repoParts[1]: $($repoParts[1])"
       shell: pwsh

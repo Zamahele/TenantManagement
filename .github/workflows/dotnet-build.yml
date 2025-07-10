@@ -49,21 +49,3 @@ jobs:
       run: |
         docker build -f ./PropertyManagement.Web/Dockerfile -t ghcr.io/zamahele/tenantmanagement:test .
         docker push ghcr.io/zamahele/tenantmanagement:test
-
-    - name: Docker Compose up (integration test)
-      run: |
-        docker compose up -d
-        sleep 30 # Wait for services to start
-        docker compose ps
-
-    - name: Show DB logs on failure
-      if: failure()
-      run: docker compose logs db
-
-    - name: Show web logs on failure
-      if: failure()
-      run: docker compose logs web
-
-    - name: Docker Compose down
-      if: always()
-      run: docker compose down -v

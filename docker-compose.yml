@@ -17,25 +17,23 @@ services:
       - mssql_data:/var/opt/mssql
     networks:
       - appnet
+    restart: unless-stopped
 
   web:
-    build:
-      context: .
-      dockerfile: PropertyManagement.Web/Dockerfile
+    image: ghcr.io/zamahele/tenantmanagement:test
     ports:
-      - "8080:80"
       - "8443:443"
     depends_on:
       db:
         condition: service_healthy
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
-      # Example connection string for SQL Server in Docker Compose
-      - ConnectionStrings__DefaultConnection=Server=db,1433;Database=YourDb;User Id=sa;Password=Your_password123;
+      - ConnectionStrings__DefaultConnection=Server=db,1433;Database=PropertyManagementDb;User=sa;Password=Your_password123;MultipleActiveResultSets=true;TrustServerCertificate=True
     volumes:
       - ./aspnetapp.pfx:/https/aspnetapp.pfx:ro
     networks:
       - appnet
+    restart: unless-stopped
 
 volumes:
   mssql_data:

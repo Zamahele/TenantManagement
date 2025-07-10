@@ -21,6 +21,7 @@ services:
 
   web:
     image: ghcr.io/zamahele/tenantmanagement:test
+    pull_policy: always
     ports:
       - "8443:443"
     depends_on:

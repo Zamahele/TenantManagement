@@ -14,7 +14,8 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
 
-      - name: Setup .NET 8
+      - &setup-dotnet
+        name: Setup .NET 8
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
@@ -30,7 +31,7 @@ jobs:
         with:
           name: build-output
           path: .
-  
+
   test:
     runs-on: ubuntu-latest
     needs: build
@@ -40,10 +41,7 @@ jobs:
         with:
           name: build-output
 
-      - name: Setup .NET 8
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.0.x'
+      - <<: *setup-dotnet
 
       - name: Test with coverage
         run: dotnet test --no-build --configuration Release --collect:"XPlat Code Coverage"
@@ -63,10 +61,7 @@ jobs:
         with:
           name: build-output
 
-      - name: Setup .NET 8
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.0.x'
+      - <<: *setup-dotnet
 
       - name: Publish
         run: dotnet publish --configuration Release --output ./publish
@@ -80,11 +75,13 @@ jobs:
           name: published-app
           path: ./publish
 
-      - name: Upload docker-compose file
+      - name: Upload docker-compose and cert
         uses: actions/upload-artifact@v4
         with:
           name: docker-compose
-          path: docker-compose.yml
+          path: |
+            docker-compose.yml
+            PropertyManagement.Web/https/aspnetapp.pfx
 
   docker-build:
     runs-on: ubuntu-latest
@@ -105,7 +102,7 @@ jobs:
           docker build -f PropertyManagement.Web/Dockerfile -t ghcr.io/zamahele/tenantmanagement:test .
 
       - name: Upload Docker image artifact
-        run: echo "Image built" # Optionally save image as tar if needed
+        run: echo "Image built"
 
   docker-push:
     runs-on: ubuntu-latest
@@ -127,7 +124,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: publish
     steps:
-      - name: Download docker-compose file
+      - name: Download docker-compose and cert
         uses: actions/download-artifact@v4
         with:
           name: docker-compose
@@ -139,5 +136,4 @@ jobs:
           name: compose-files
           path: |
             docker-compose.yml
-            .env
-            aspnetapp.pfx
+            PropertyManagement.Web/https/aspnetapp.pfx

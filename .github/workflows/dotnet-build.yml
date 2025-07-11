@@ -89,7 +89,7 @@ jobs:
           name: docker-compose
           path: |
             docker-compose.yml
-            ./publish/aspnetapp.pfx
+            ./aspnetapp.pfx
 
   docker-build:
     runs-on: ubuntu-latest

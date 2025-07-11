@@ -71,6 +71,9 @@ jobs:
       - name: Publish
         run: dotnet publish --configuration Release --output ./publish
 
+      - name: Copy Dockerfile to publish output
+        run: cp PropertyManagement.Web/Dockerfile ./publish/
+
       - name: Upload published artifact
         uses: actions/upload-artifact@v4
         with:
@@ -108,7 +111,7 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build -f ./publish/PropertyManagement.Web/Dockerfile -t ghcr.io/zamahele/tenantmanagement:test ./publish/PropertyManagement.Web
+          docker build -f ./publish/Dockerfile -t ghcr.io/zamahele/tenantmanagement:test ./publish
 
       - name: Upload Docker image artifact
         run: echo "Image built" # Optionally save image as tar if needed

@@ -140,3 +140,4 @@ jobs:
           path: |
             docker-compose.yml
             .env
+            aspnetapp.pfx

@@ -74,6 +74,9 @@ jobs:
       - name: Copy Dockerfile to publish output
         run: cp PropertyManagement.Web/Dockerfile ./publish/
 
+      - name: Copy certificate to publish output
+        run: cp PropertyManagement.Web/https/* ./publish/
+
       - name: Upload published artifact
         uses: actions/upload-artifact@v4
         with:
@@ -86,7 +89,7 @@ jobs:
           name: docker-compose
           path: |
             docker-compose.yml
-            PropertyManagement.Web/https/aspnetapp.pfx
+            ./publish/aspnetapp.pfx
 
   docker-build:
     runs-on: ubuntu-latest
@@ -135,10 +138,10 @@ jobs:
           name: docker-compose
           path: .
 
-      - name: Upload compose files
-        uses: actions/upload-artifact@v4
-        with:
-          name: compose-files
-          path: |
-            docker-compose.yml
-            PropertyManagement.Web/https/aspnetapp.pfx
+      # - name: Upload compose files
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: compose-files
+      #     path: |
+      #       docker-compose.yml
+      #       PropertyManagement.Web/https/aspnetapp.pfx

@@ -72,3 +72,8 @@ body {
 .btn-outline-secondary {
   border-color: #6c757d;
 }
+
+/* Ensure sidebar icons inherit the link color */
+.nav-link .bi {
+  color: inherit !important;
+}

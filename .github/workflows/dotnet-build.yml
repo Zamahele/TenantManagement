@@ -132,3 +132,9 @@ jobs:
         with:
           name: docker-compose
           path: .
+
+      - name: Upload .env file
+        uses: actions/upload-artifact@v4
+        with:
+          name: env-file
+          path: .env

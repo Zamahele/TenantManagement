@@ -3,7 +3,7 @@ services:
     image: mcr.microsoft.com/mssql/server:2022-latest
     environment:
       - ACCEPT_EULA=Y
-      - SA_PASSWORD=${SA_PASSWORD}
+      - SA_PASSWORD=Your_password123
     ports:
       - "1433:1433"
     healthcheck:
@@ -27,7 +27,7 @@ services:
         condition: service_healthy
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
-      - ConnectionStrings__DefaultConnection=Server=db,1433;Database=PropertyManagementDb;User=sa;Password=${SA_PASSWORD};MultipleActiveResultSets=true;TrustServerCertificate=True
+      - ConnectionStrings__DefaultConnection=Server=db,1433;Database=PropertyManagementDb;User=sa;Password=Your_password123;MultipleActiveResultSets=true;TrustServerCertificate=True
     volumes:
       - ./aspnetapp.pfx:/https/aspnetapp.pfx:ro
     networks:

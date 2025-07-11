@@ -92,7 +92,7 @@ public class MaintenanceControllerTests
 
         var controller = GetController(context, GetUser("Tenant", 2));
 
-        var result = await controller.TenantCreate();
+        var result = await controller.SubmitTenantRequest();
 
         var viewResult = Assert.IsType<ViewResult>(result);
         Assert.IsType<MaintenanceRequest>(viewResult.Model);

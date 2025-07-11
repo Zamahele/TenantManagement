@@ -109,7 +109,7 @@ public class MaintenanceControllerTests
         var controller = GetController(context, GetUser("Tenant", 2));
         var model = new MaintenanceRequest { Description = "Leaking tap" };
 
-        var result = await controller.TenantCreate(model);
+        var result = await controller.SubmitTenantRequest(model);
 
         var redirect = Assert.IsType<RedirectToActionResult>(result);
         Assert.Equal("Index", redirect.ActionName);

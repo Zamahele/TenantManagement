@@ -17,6 +17,8 @@ public class ApplicationDbContext : DbContext
     public DbSet<LeaseAgreement> LeaseAgreements { get; set; }
     public DbSet<Payment> Payments { get; set; }
     public DbSet<BookingRequest> BookingRequests { get; set; }
+    public DbSet<Inspection> Inspections { get; set; }
+    public DbSet<UtilityBill> UtilityBills { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -63,5 +65,12 @@ public class ApplicationDbContext : DbContext
             .WithMany()
             .HasForeignKey(p => p.LeaseAgreementId)
             .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<UtilityBill>(entity =>
+        {
+            entity.Property(e => e.WaterUsage).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.ElectricityUsage).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.TotalAmount).HasColumnType("decimal(18,2)");
+        });
     }
 }

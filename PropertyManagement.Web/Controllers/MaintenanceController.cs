@@ -243,18 +243,46 @@ public class MaintenanceController : BaseController
   [Authorize(Roles = "Manager")]
   public async Task<IActionResult> Delete(int id)
   {
-    var request = await _context.MaintenanceRequests.FindAsync(id);
-    if (request != null)
+    var request = await _context.MaintenanceRequests
+        .Include(r => r.Room)
+        .FirstOrDefaultAsync(r => r.MaintenanceRequestId == id);
+
+    if (request == null)
     {
-      _context.MaintenanceRequests.Remove(request);
-      await _context.SaveChangesAsync();
-      SetSuccessMessage("Maintenance request deleted successfully.");
+        SetErrorMessage("Maintenance request not found.");
+        return NotFound();
     }
-    else
+
+    var room = request.Room;
+
+    _context.MaintenanceRequests.Remove(request);
+    await _context.SaveChangesAsync();
+
+    if (room != null)
     {
-      SetErrorMessage("Maintenance request not found.");
+        // Check if there are any remaining maintenance requests for this room
+        var hasOtherRequests = await _context.MaintenanceRequests
+            .AnyAsync(r => r.RoomId == room.RoomId);
+
+        if (!hasOtherRequests)
+        {
+            // Load tenants for the room
+            await _context.Entry(room).Collection(r => r.Tenants).LoadAsync();
+
+            if (room.Tenants != null && room.Tenants.Any())
+            {
+                room.Status = "Occupied";
+            }
+            else
+            {
+                room.Status = "Available";
+            }
+            await _context.SaveChangesAsync();
+        }
     }
-    return RedirectToAction(nameof(Index));
+
+    SetSuccessMessage("Maintenance request deleted and room status updated if applicable.");
+    return RedirectToAction("Index");
   }
 
   // GET: /Maintenance/History/roomId
@@ -266,5 +294,15 @@ public class MaintenanceController : BaseController
         .Include(r => r.Room)
         .ToListAsync();
     return View(history);
+  }
+
+  // GET: /Maintenance/DeleteModal
+  public IActionResult DeleteModal(int id)
+  {
+    var request = _context.MaintenanceRequests.Find(id);
+    if (request == null)
+        return NotFound();
+
+    return PartialView("_DeleteModal", request);
   }
 }

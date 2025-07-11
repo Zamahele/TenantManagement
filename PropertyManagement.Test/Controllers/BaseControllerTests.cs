@@ -6,7 +6,7 @@ using PropertyManagement.Web.Controllers;
 using Moq;
 using Assert = Xunit.Assert;
 
-namespace PropertyManagement.Test;
+namespace PropertyManagement.Test.Controllers;
 
 public class BaseControllerTests
 {

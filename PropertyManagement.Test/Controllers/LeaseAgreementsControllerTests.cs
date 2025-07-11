@@ -16,7 +16,7 @@ using System.IO;
 using Assert = Xunit.Assert;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 
-namespace PropertyManagement.Test;
+namespace PropertyManagement.Test.Controllers;
 
 public class LeaseAgreementsControllerTests
 {

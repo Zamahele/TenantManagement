@@ -14,7 +14,7 @@ using System.Linq;
 using System;
 using Assert = Xunit.Assert;
 
-namespace PropertyManagement.Test;
+namespace PropertyManagement.Test.Controllers;
 
 public class MaintenanceControllerTests
 {
@@ -144,6 +144,17 @@ public class MaintenanceControllerTests
 
         var result = await controller.RequestModal(1);
 
+        var request = await context.MaintenanceRequests
+            .Include(r => r.Room)
+            .FirstOrDefaultAsync(r => r.MaintenanceRequestId == 1);
+
+        if (request == null)
+        {
+            controller.TempData["Error"] = "Maintenance request not found.";
+            Assert.IsType<NotFoundResult>(result);
+            return;
+        }
+
         var partial = Assert.IsType<PartialViewResult>(result);
         Assert.Equal("_RequestModal", partial.ViewName);
         Assert.IsType<MaintenanceRequest>(partial.Model);
@@ -230,7 +241,17 @@ public class MaintenanceControllerTests
     public async Task Delete_Manager_DeletesRequestAndRedirects()
     {
         var context = GetDbContext();
-        context.MaintenanceRequests.Add(new MaintenanceRequest { MaintenanceRequestId = 1, RoomId = 1, TenantId = "1", Description = "Fix", RequestDate = DateTime.Now, Status = "Pending" });
+        // Add the related Room first!
+        context.Rooms.Add(new Room { RoomId = 1, Number = "101", Type = "Single", Status = "Available" });
+        context.MaintenanceRequests.Add(new MaintenanceRequest
+        {
+            MaintenanceRequestId = 1,
+            RoomId = 1,
+            TenantId = "1",
+            Description = "Fix",
+            RequestDate = DateTime.Now,
+            Status = "Pending"
+        });
         context.SaveChanges();
 
         var controller = GetController(context, GetUser("Manager"));
@@ -240,7 +261,7 @@ public class MaintenanceControllerTests
         var redirect = Assert.IsType<RedirectToActionResult>(result);
         Assert.Equal("Index", redirect.ActionName);
         Assert.Empty(context.MaintenanceRequests);
-        Assert.Equal("Maintenance request deleted successfully.", controller.TempData["Success"]);
+        Assert.Equal("Maintenance request deleted and room status updated if applicable.", controller.TempData["Success"]);
     }
 
     [Fact]

@@ -82,17 +82,27 @@
                         </a>
                       </li>
                       <li>
-                        <button type="button"
-                                class="dropdown-item text-danger"
-                                onclick="deleteRequest(@req.MaintenanceRequestId)">
+                        <a class="dropdown-item text-danger"
+                           href="#"
+                           data-bs-toggle="modal"
+                           data-bs-target="#deleteModal-@req.MaintenanceRequestId">
                           <i class="bi bi-trash"></i> Delete
-                        </button>
+                        </a>
                       </li>
                     </ul>
                   </div>
-                  <form id="deleteForm-@req.MaintenanceRequestId" asp-action="Delete" method="post" style="display:none;">
-                    <input type="hidden" name="id" value="@req.MaintenanceRequestId" />
-                  </form>
+                  @await Html.PartialAsync(
+                      "_DeleteModal",
+                      new PropertyManagement.Web.Models.DeleteModalViewModel {
+                          ModalId = $"deleteModal-{req.MaintenanceRequestId}",
+                          ModalLabelId = $"deleteModalLabel-{req.MaintenanceRequestId}",
+                          Title = "Delete Maintenance Request",
+                          Body = $"Are you sure you want to delete request <strong>#{req.MaintenanceRequestId}</strong>?",
+                          Action = "Delete",
+                          Controller = "Maintenance",
+                          EntityId = req.MaintenanceRequestId
+                      }
+                  )
                 }
               </td>
             </tr>
@@ -127,12 +137,6 @@
             $('#requestModalLabel').text('Edit Maintenance Request');
             $('#requestModal').modal('show');
         });
-    }
-
-    function deleteRequest(id) {
-        if (confirm('Delete this request?')) {
-            document.getElementById('deleteForm-' + id).submit();
-        }
     }
   </script>
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>

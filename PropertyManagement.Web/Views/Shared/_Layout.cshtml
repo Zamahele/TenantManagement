@@ -62,11 +62,6 @@
               </a>
             </li>
             <li class="nav-item">
-              <a class="nav-link text-dark" asp-area="" asp-controller="Tenants" asp-action="Index">
-                <i class="bi bi-person"></i> Tenants
-              </a>
-            </li>
-            <li class="nav-item">
               <a class="nav-link text-dark" asp-area="" asp-controller="LeaseAgreements" asp-action="Index">
                 <i class="bi bi-file-earmark-text"></i> Leases
               </a>
@@ -82,7 +77,17 @@
             {
               <li class="nav-item">
                 <a class="nav-link" asp-controller="Tenants" asp-action="Index">
-                  <i class="bi bi-people"></i> Manage Tenants
+                  <i class="bi bi-people"></i> Tenants
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link text-dark" asp-area="" asp-controller="Inspections" asp-action="Index">
+                  <i class="bi bi-clipboard-check"></i> Inspections
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link text-dark" asp-area="" asp-controller="UtilityBills" asp-action="Index">
+                  <i class="bi bi-droplet-half"></i> Utility Bills
                 </a>
               </li>
               <!-- Add more manager links as needed -->
@@ -123,19 +128,19 @@
   <script>
     @if (TempData["Success"] != null)
     {
-            <text>toastr.success('@TempData["Success"]');</text>
+              <text>toastr.success('@TempData["Success"]');</text>
     }
     @if (TempData["Error"] != null)
     {
-            <text>toastr.error('@TempData["Error"]');</text>
+              <text>toastr.error('@TempData["Error"]');</text>
     }
     @if (TempData["Info"] != null)
     {
-            <text>toastr.info('@TempData["Info"]');</text>
+              <text>toastr.info('@TempData["Info"]');</text>
     }
     @if (TempData["Warning"] != null)
     {
-            <text>toastr.warning('@TempData["Warning"]');</text>
+              <text>toastr.warning('@TempData["Warning"]');</text>
     }
   </script>
   @await RenderSectionAsync("Scripts", required: false)

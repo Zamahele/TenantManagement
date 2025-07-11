@@ -1,0 +1,36 @@
+﻿
+@model PropertyManagement.Domain.Entities.Inspection
+@{
+    ViewData["Title"] = "Schedule Inspection";
+    var rooms = ViewBag.Rooms as List<PropertyManagement.Domain.Entities.Room>;
+}
+<h2>Schedule Inspection</h2>
+<form asp-action="Create" method="post">
+    <div class="mb-3">
+        <label asp-for="RoomId" class="form-label">Room</label>
+        <select asp-for="RoomId" class="form-select" asp-items="@(new SelectList(rooms, "RoomId", "Number"))">
+            <option value="">-- Select Room --</option>
+        </select>
+        <span asp-validation-for="RoomId" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="Date" class="form-label">Date</label>
+        <input asp-for="Date" class="form-control" type="date" />
+        <span asp-validation-for="Date" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="Result" class="form-label">Result</label>
+        <input asp-for="Result" class="form-control" />
+        <span asp-validation-for="Result" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="Notes" class="form-label">Notes</label>
+        <textarea asp-for="Notes" class="form-control"></textarea>
+        <span asp-validation-for="Notes" class="text-danger"></span>
+    </div>
+    <button type="submit" class="btn btn-success">Save</button>
+    <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+</form>
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

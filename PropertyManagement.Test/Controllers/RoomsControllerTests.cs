@@ -12,13 +12,13 @@ using PropertyManagement.Domain.Entities;
 using System.Linq;
 using Assert = Xunit.Assert;
 
-namespace PropertyManagement.Test;
+namespace PropertyManagement.Test.Controllers;
 public class RoomsControllerTests
 {
   private ApplicationDbContext GetDbContext()
   {
     var options = new DbContextOptionsBuilder<ApplicationDbContext>()
-        .UseInMemoryDatabase(databaseName: System.Guid.NewGuid().ToString()) // Unique DB per test
+        .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString()) // Unique DB per test
         .Options;
     return new ApplicationDbContext(options);
   }

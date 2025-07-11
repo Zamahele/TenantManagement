@@ -12,7 +12,7 @@ using System.Linq;
 using System;
 using Assert = Xunit.Assert;
 
-namespace PropertyManagement.Test;
+namespace PropertyManagement.Test.Controllers;
 public class PaymentsControllerTests
 {
     private ApplicationDbContext GetDbContext()

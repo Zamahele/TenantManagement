@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PropertyManagement.Infrastructure.Data;
 
@@ -11,9 +12,11 @@ using PropertyManagement.Infrastructure.Data;
 namespace PropertyManagement.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250711122312_AddingINspection")]
+    partial class AddingINspection
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -305,39 +308,6 @@ namespace PropertyManagement.Infrastructure.Migrations
                     b.ToTable("Users");
                 });
 
-            modelBuilder.Entity("PropertyManagement.Domain.Entities.UtilityBill", b =>
-                {
-                    b.Property<int>("UtilityBillId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("UtilityBillId"));
-
-                    b.Property<DateTime>("BillingDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<decimal>("ElectricityUsage")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("Notes")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("RoomId")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("TotalAmount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("WaterUsage")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.HasKey("UtilityBillId");
-
-                    b.HasIndex("RoomId");
-
-                    b.ToTable("UtilityBills");
-                });
-
             modelBuilder.Entity("PropertyManagement.Domain.Entities.BookingRequest", b =>
                 {
                     b.HasOne("PropertyManagement.Domain.Entities.Room", "Room")
@@ -425,17 +395,6 @@ namespace PropertyManagement.Infrastructure.Migrations
                     b.Navigation("Room");
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("PropertyManagement.Domain.Entities.UtilityBill", b =>
-                {
-                    b.HasOne("PropertyManagement.Domain.Entities.Room", "Room")
-                        .WithMany()
-                        .HasForeignKey("RoomId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Room");
                 });
 
             modelBuilder.Entity("PropertyManagement.Domain.Entities.Room", b =>

@@ -67,11 +67,9 @@
                     </a>
                   </li>
                   <li>
-                    <button type="button"
-                            class="dropdown-item text-danger"
-                            onclick="deleteAgreement(@agreement.LeaseAgreementId)">
+                    <a class="dropdown-item text-danger" href="#" data-bs-toggle="modal" data-bs-target="#deleteModal-@agreement.LeaseAgreementId">
                       <i class="bi bi-trash"></i> Delete
-                    </button>
+                    </a>
                   </li>
                 </ul>
               </div>
@@ -80,6 +78,18 @@
               </form>
             </td>
           </tr>
+             @await Html.PartialAsync(
+              "_DeleteModal",
+              new PropertyManagement.Web.Models.DeleteModalViewModel {
+                  ModalId = $"deleteModal-{agreement.LeaseAgreementId}",
+                  ModalLabelId = $"deleteModalLabel-{agreement.LeaseAgreementId}",
+                  Title = "Delete Lease",
+                  Body = $"Are you sure you want to delete Lease for  <strong>{agreement.Tenant?.FullName}</strong>?",
+                  Action = "Delete",
+                  Controller = "LeaseAgreements",
+                  EntityId = agreement.LeaseAgreementId
+              }
+          )
         }
       </tbody>
     </table>

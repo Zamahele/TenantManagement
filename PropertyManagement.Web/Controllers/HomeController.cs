@@ -11,11 +11,18 @@ namespace PropertyManagement.Web.Controllers;
 public class HomeController : Controller
 {
   private readonly ApplicationDbContext _context;
+  private readonly ILogger<HomeController> _logger;
 
-  public HomeController(ApplicationDbContext context) => _context = context;
+  public HomeController(ApplicationDbContext context, ILogger<HomeController> logger)
+  {
+    _context = context ?? throw new ArgumentNullException(nameof(context));
+    _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+  }
+
 
   public async Task<IActionResult> Index()
   {
+    _logger.LogInformation("Accessing the dashboard at {Time}", DateTime.UtcNow);
     var now = DateTime.UtcNow;
     var model = new DashboardViewModel
     {

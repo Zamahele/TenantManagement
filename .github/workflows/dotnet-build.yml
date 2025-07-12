@@ -74,6 +74,9 @@ jobs:
       - name: Copy Dockerfile to publish output
         run: cp PropertyManagement.Web/Dockerfile ./publish/
 
+      - name: Copy .env to docker-compose artifact
+        run: cp .env ./
+
       - name: Copy certificate to root (with docker-compose.yml)
         run: cp PropertyManagement.Web/https/aspnetapp.pfx ./aspnetapp.pfx
 
@@ -90,6 +93,7 @@ jobs:
           path: |
             docker-compose.yml
             aspnetapp.pfx
+            .env
 
   docker-build:
     runs-on: ubuntu-latest

@@ -14,7 +14,7 @@ services:
     volumes:
       - mssql_data:/var/opt/mssql
     networks:
-      - appnet
+      - mynet
     restart: unless-stopped
 
   web:
@@ -37,7 +37,7 @@ services:
     volumes:
       - ./aspnetapp.pfx:/https/aspnetapp.pfx:ro
     networks:
-      - appnet
+      - mynet
     restart: always
 
   elasticsearch:
@@ -51,7 +51,7 @@ services:
     volumes:
       - esdata:/usr/share/elasticsearch/data
     networks:
-      - appnet
+      - mynet
     restart: unless-stopped
 
   kibana:
@@ -63,7 +63,7 @@ services:
     depends_on:
       - elasticsearch
     networks:
-      - appnet
+      - mynet
     restart: unless-stopped
 
 volumes:
@@ -71,5 +71,5 @@ volumes:
   esdata:
 
 networks:
-  appnet:
+  mynet:
     driver: bridge

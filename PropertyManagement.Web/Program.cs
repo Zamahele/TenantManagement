@@ -138,4 +138,6 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
+Log.Information("Test log from PropertyManagement.Web startup");
+
 app.Run();

@@ -107,7 +107,7 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build -f PropertyManagement.Web/Dockerfile -t ghcr.io/zamahele/tenantmanagement:test .
+          docker build -f PropertyManagement.Web/Dockerfile -t ghcr.io/zamahele/tenantmanagement:${{ github.sha }} .
 
       - name: Upload Docker image artifact
         run: echo "Image built"
@@ -127,13 +127,6 @@ jobs:
         run: |
           docker pull ghcr.io/zamahele/tenantmanagement:test
           docker push ghcr.io/zamahele/tenantmanagement:test
-
-  compose-upload:
-    runs-on: ubuntu-latest
-    needs: publish
-    steps:
-      - name: Download docker-compose and cert
-        uses: actions/download-artifact@v4
-        with:
-          name: docker-compose
-          path: .
+      - name: Push Docker image
+        run: |
+          docker push ghcr.io/zamahele/tenantmanagement:${{ github.sha }}

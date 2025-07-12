@@ -1,3 +1,4 @@
+using Serilog;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.EntityFrameworkCore;
 using PropertyManagement.Infrastructure.Data;
@@ -6,8 +7,24 @@ using System.Globalization;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using PropertyManagement.Domain.Entities;
+using Microsoft.AspNetCore.Diagnostics;
+
+
+// Configure Serilog
+Log.Logger = new LoggerConfiguration()
+    .WriteTo.Console()
+    .WriteTo.Elasticsearch(new Serilog.Sinks.Elasticsearch.ElasticsearchSinkOptions(new Uri("http://localhost:9200"))
+    {
+        AutoRegisterTemplate = true,
+        IndexFormat = "propertymanagement-logs-{0:yyyy.MM.dd}"
+    })
+    .Enrich.FromLogContext()
+    .CreateLogger();
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Use Serilog for logging
+builder.Host.UseSerilog();
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
@@ -96,8 +113,17 @@ app.UseRequestLocalization(localizationOptions);
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
-  app.UseExceptionHandler("/Home/Error");
-  app.UseHsts();
+    app.UseExceptionHandler(errorApp =>
+    {
+        errorApp.Run(async context =>
+        {
+            var exceptionHandlerPathFeature = context.Features.Get<IExceptionHandlerPathFeature>();
+            var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
+            logger.LogError(exceptionHandlerPathFeature?.Error, "Unhandled exception occurred");
+            context.Response.Redirect("/Home/Error");
+        });
+    });
+    app.UseHsts();
 }
 
 app.UseHttpsRedirection();

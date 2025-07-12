@@ -9,64 +9,16 @@ using Microsoft.AspNetCore.Authorization;
 using PropertyManagement.Domain.Entities;
 using Microsoft.AspNetCore.Diagnostics;
 
-// Configure Serilog
-Log.Logger = new LoggerConfiguration()
-    .MinimumLevel.Information()
-    .WriteTo.File("/app/logs/propertymanagement.log", rollingInterval: RollingInterval.Day)
-    .WriteTo.Elasticsearch(new Serilog.Sinks.Elasticsearch.ElasticsearchSinkOptions(new Uri("http://elasticsearch:9200"))
-    {
-        AutoRegisterTemplate = true,
-        IndexFormat = "propertymanagement-logs-{0:yyyy.MM.dd}"
-    })
-    .Enrich.FromLogContext()
-    .CreateLogger();
-
+// Build configuration first
 var builder = WebApplication.CreateBuilder(args);
 
-// Use Serilog for logging
-builder.Host.UseSerilog();
-
-// Add services to the container.
-builder.Services.AddControllersWithViews();
-
-// Require authentication globally (force login for all pages except [AllowAnonymous])
-builder.Services.AddAuthorization(options =>
+// Configure Serilog from configuration (appsettings.json, environment variables, etc.)
+builder.Host.UseSerilog((context, services, configuration) =>
 {
-  options.FallbackPolicy = new AuthorizationPolicyBuilder()
-      .RequireAuthenticatedUser()
-      .Build();
-});
-
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(
-        builder.Configuration.GetConnectionString("DefaultConnection"),
-        sqlOptions => sqlOptions.EnableRetryOnFailure(0)
-    ));
-builder.Services.AddHttpClient();
-builder.Services.AddScoped<ISmsService, BulkSmsService>();
-builder.Services.AddHostedService<RentReminderService>();
-builder.Services.AddScoped<IEmailService, SmtpEmailService>();
-
-builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
-    .AddCookie(options =>
-    {
-      options.LoginPath = "/Tenants/Login";
-      options.LogoutPath = "/Tenants/Logout";
-      options.AccessDeniedPath = "/Tenants/AccessDenied";
-      // Change the cookie name on every app start to force logout for all users
-      options.Cookie.Name = "PropertyManagementAuth";
-    });
-
-builder.WebHost.ConfigureKestrel(options =>
-{
-    if (!builder.Environment.IsDevelopment())
-    {       
-        options.ListenAnyIP(80); // HTTP for production
-        options.ListenAnyIP(443, listenOptions =>
-        {
-            listenOptions.UseHttps("https/aspnetapp.pfx", "YourPassword123");
-        });
-    }
+    configuration
+        .ReadFrom.Configuration(context.Configuration)
+        .ReadFrom.Services(services)
+        .Enrich.FromLogContext();
 });
 
 var app = builder.Build();

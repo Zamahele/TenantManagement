@@ -1,3 +1,4 @@
+# docker-compose.yml
 services:
   db:
     image: mcr.microsoft.com/mssql/server:2022-latest
@@ -31,9 +32,6 @@ services:
         condition: service_started
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
-      - ConnectionStrings__DefaultConnection=Server=db,1433;Database=PropertyManagementDb;User=sa;Password=Your_password123;MultipleActiveResultSets=true;TrustServerCertificate=True
-      - Serilog__WriteTo__1__Name=Elasticsearch
-      - Serilog__WriteTo__1__Args__NodeUris=http://elasticsearch:9200
     volumes:
       - ./aspnetapp.pfx:/https/aspnetapp.pfx:ro
       - ./logs:/app/logs

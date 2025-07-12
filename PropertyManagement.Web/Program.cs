@@ -9,11 +9,11 @@ using Microsoft.AspNetCore.Authorization;
 using PropertyManagement.Domain.Entities;
 using Microsoft.AspNetCore.Diagnostics;
 
-
 // Configure Serilog
 Log.Logger = new LoggerConfiguration()
-    .WriteTo.Console()
-    .WriteTo.Elasticsearch(new Serilog.Sinks.Elasticsearch.ElasticsearchSinkOptions(new Uri("http://localhost:9200"))
+    .MinimumLevel.Information()
+    .WriteTo.File("/app/logs/propertymanagement.log", rollingInterval: RollingInterval.Day)
+    .WriteTo.Elasticsearch(new Serilog.Sinks.Elasticsearch.ElasticsearchSinkOptions(new Uri("http://elasticsearch:9200"))
     {
         AutoRegisterTemplate = true,
         IndexFormat = "propertymanagement-logs-{0:yyyy.MM.dd}"

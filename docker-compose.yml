@@ -19,8 +19,8 @@ services:
     restart: unless-stopped
 
   web:
-    image: ghcr.io/zamahele/tenantmanagement:test
-    pull_policy: always
+    # The below uses the TAG env variable, or 'latest' if not set
+    image: ghcr.io/zamahele/tenantmanagement:${TAG:-latest}
     ports:
       - "8443:443"
     depends_on:

@@ -112,3 +112,9 @@ jobs:
       - name: Push Docker image
         run: |
           docker push ghcr.io/zamahele/tenantmanagement:${{ github.sha }}
+
+      - name: Tag image as latest
+        run: docker tag ghcr.io/zamahele/tenantmanagement:${{ github.sha }} ghcr.io/zamahele/tenantmanagement:latest
+
+      - name: Push latest tag
+        run: docker push ghcr.io/zamahele/tenantmanagement:latest

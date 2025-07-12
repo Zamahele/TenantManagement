@@ -8,6 +8,10 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using PropertyManagement.Domain.Entities;
 using Microsoft.AspNetCore.Diagnostics;
+using System.IO;
+
+// Ensure log directory exists before Serilog is configured
+Directory.CreateDirectory("/app/logs");
 
 // Build configuration first
 var builder = WebApplication.CreateBuilder(args);

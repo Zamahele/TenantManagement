@@ -9,6 +9,8 @@ using System;
 using Assert = Xunit.Assert;
 using PropertyManagement.Domain.Entities;
 using Microsoft.AspNetCore.Http;
+using Moq;
+using Microsoft.Extensions.Logging;
 
 namespace PropertyManagement.Test.Controllers;
 
@@ -35,11 +37,17 @@ public class HomeControllerTests
     return context;
   }
 
+  private ILogger<HomeController> GetLogger()
+  {
+    return new Mock<ILogger<HomeController>>().Object;
+  }
+
   [Fact]
   public async Task Index_ReturnsViewWithDashboardViewModel()
   {
     var context = GetDbContext();
-    var controller = new HomeController(context);
+    var logger = GetLogger();
+    var controller = new HomeController(context, logger);
 
     var result = await controller.Index();
 
@@ -60,7 +68,8 @@ public class HomeControllerTests
   public void Privacy_ReturnsView()
   {
     var context = GetDbContext();
-    var controller = new HomeController(context);
+    var logger = GetLogger();
+    var controller = new HomeController(context, logger);
 
     var result = controller.Privacy();
 
@@ -71,12 +80,13 @@ public class HomeControllerTests
   public void Error_ReturnsViewWithErrorViewModel()
   {
     var context = GetDbContext();
-    var controller = new HomeController(context);
+    var logger = GetLogger();
+    var controller = new HomeController(context, logger);
 
     // Setup fake HttpContext with TraceIdentifier
     controller.ControllerContext = new ControllerContext
     {
-        HttpContext = new DefaultHttpContext()
+      HttpContext = new DefaultHttpContext()
     };
     controller.ControllerContext.HttpContext.TraceIdentifier = Guid.NewGuid().ToString();
 

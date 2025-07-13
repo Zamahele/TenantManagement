@@ -10,6 +10,8 @@ using PropertyManagement.Web.Services;
 using Serilog;
 using System.Globalization;
 using System.IO;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 
 // Ensure log directory exists before Serilog is configured
 Directory.CreateDirectory("/app/logs");
@@ -55,6 +57,26 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
       options.AccessDeniedPath = "/Tenants/AccessDenied";
       // Change the cookie name on every app start to force logout for all users
       options.Cookie.Name = "PropertyManagementAuth";
+    });
+
+// Add OpenTelemetry Tracing
+builder.Services.AddOpenTelemetry()
+    .WithTracing(tracerProviderBuilder =>
+    {
+        tracerProviderBuilder
+            .SetResourceBuilder(ResourceBuilder.CreateDefault()
+                .AddService(builder.Environment.ApplicationName))
+            .AddAspNetCoreInstrumentation()
+            .AddOtlpExporter(options =>
+            {
+                // Read OTLP endpoint from environment variable, fallback to sensible default
+                var otlpEndpoint = Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT")
+                    ?? (builder.Environment.IsDevelopment()
+                        ? "http://localhost:4317"
+                        : "http://otel-collector:4317");
+
+                options.Endpoint = new Uri(otlpEndpoint);
+            });
     });
 
 builder.WebHost.ConfigureKestrel(options =>

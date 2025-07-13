@@ -1,0 +1,21 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+      http:
+
+exporters:
+  logging:
+    loglevel: info
+  elasticsearch:
+    endpoints: ["http://elasticsearch:9200"]
+    index: "otel-traces"
+    # If you use authentication, add:
+    # username: "elastic"
+    # password: "yourpassword"
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      exporters: [logging, elasticsearch]

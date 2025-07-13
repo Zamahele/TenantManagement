@@ -26,6 +26,52 @@ A comprehensive solution for managing rental properties, tenants, and operations
 
 ---
 
+## Core Functionality
+
+### 1. Maintenance Request Management
+- Tenants can submit maintenance requests for their rooms.
+- Property managers can assign, track, and update the status of maintenance tasks.
+- Maintenance history is logged per room.
+
+### 2. Lease Agreement Management
+- Store and manage digital copies of lease agreements.
+- Track lease start and end dates, and notify tenants and managers of upcoming expirations.
+
+### 3. Payment Tracking and Receipts
+- Record all rent and deposit payments.
+- Generate and send payment receipts to tenants.
+- Track outstanding balances and payment history.
+
+### 4. Automated Notifications
+- Send reminders to tenants for upcoming rent due dates.
+- Notify property managers of overdue rents or expiring leases.
+- Alert maintenance staff of new or urgent requests.
+
+### 5. Room Availability and Booking
+- Track which rooms are occupied, vacant, or under maintenance.
+- Allow prospective tenants to view available rooms and submit booking requests.
+
+### 6. Tenant Profile Management
+- Maintain detailed profiles for each tenant (contact info, emergency contacts, rental history).
+- Allow tenants to update their own information.
+
+### 7. Inspection Scheduling and Records
+- Schedule regular room inspections.
+- Record inspection results and follow-up actions.
+
+### 8. Utility Billing and Tracking
+- Track utility usage (water, electricity) per room or tenant.
+- Generate and send utility bills.
+
+### 9. Document Management
+- Store important documents (insurance, compliance certificates) related to the property.
+
+### 10. Reporting and Analytics
+- Generate reports on occupancy rates, rent collection, maintenance costs, etc.
+- Visual dashboards for property performance.
+
+---
+
 ## Running the Stack Locally
 
 1. **Clone the repository** (if you haven't already):

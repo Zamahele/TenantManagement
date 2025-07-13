@@ -1,13 +1,14 @@
-using Serilog;
-using Microsoft.AspNetCore.Localization;
-using Microsoft.EntityFrameworkCore;
-using PropertyManagement.Infrastructure.Data;
-using PropertyManagement.Web.Services;
-using System.Globalization;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
-using PropertyManagement.Domain.Entities;
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Localization;
+using Microsoft.EntityFrameworkCore;
+using Prometheus;
+using PropertyManagement.Domain.Entities;
+using PropertyManagement.Infrastructure.Data;
+using PropertyManagement.Web.Services;
+using Serilog;
+using System.Globalization;
 using System.IO;
 
 // Ensure log directory exists before Serilog is configured
@@ -68,6 +69,10 @@ builder.WebHost.ConfigureKestrel(options =>
   }
 });
 var app = builder.Build();
+
+// Use Prometheus metrics endpoint
+app.UseMetricServer(); // Exposes /metrics
+app.UseHttpMetrics();  // Collects default HTTP metrics
 
 // Seed initial data
 using (var scope = app.Services.CreateScope())

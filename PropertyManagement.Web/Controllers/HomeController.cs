@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using PropertyManagement.Infrastructure.Data;
 using PropertyManagement.Web.Models;
 using System.Diagnostics;
+using Prometheus; // Add this at the top
 
 namespace PropertyManagement.Web.Controllers;
 
@@ -19,9 +20,15 @@ public class HomeController : Controller
     _logger = logger ?? throw new ArgumentNullException(nameof(logger));
   }
 
+  // Add a static counter for home page visits
+  private static readonly Counter HomePageVisitCounter =
+      Metrics.CreateCounter("home_page_visits_total", "Total number of visits to the home page.");
 
   public async Task<IActionResult> Index()
   {
+    // Increment the Prometheus counter
+    HomePageVisitCounter.Inc();
+
     _logger.LogInformation("Accessing the dashboard at {Time}", DateTime.UtcNow);
     var now = DateTime.UtcNow;
     var model = new DashboardViewModel

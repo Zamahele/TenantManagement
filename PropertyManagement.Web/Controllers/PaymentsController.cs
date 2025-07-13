@@ -4,12 +4,17 @@ using Microsoft.EntityFrameworkCore;
 using PropertyManagement.Domain.Entities;
 using PropertyManagement.Infrastructure.Data;
 using PropertyManagement.Web.Controllers;
+using Prometheus; // Add this at the top
 
 [Authorize]
 [Authorize(Roles = "Manager")]
 public class PaymentsController : BaseController
 {
   private readonly ApplicationDbContext _context;
+  // Add a static counter for payment creations
+  private static readonly Counter PaymentCreatedCounter =
+      Metrics.CreateCounter("payments_created_total", "Total number of payments created.");
+
   public PaymentsController(ApplicationDbContext context) => _context = context;
 
   public async Task<IActionResult> Index()
@@ -57,6 +62,10 @@ public class PaymentsController : BaseController
       payment.Date = DateTime.Now;
       _context.Add(payment);
       await _context.SaveChangesAsync();
+
+      // Increment the Prometheus counter
+      PaymentCreatedCounter.Inc();
+
       SetSuccessMessage("Payment recorded successfully.");
       return RedirectToAction(nameof(Index));
     }

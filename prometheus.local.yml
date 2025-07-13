@@ -1,0 +1,8 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'property-management-app'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['localhost:5001'] # Use the port your app runs on

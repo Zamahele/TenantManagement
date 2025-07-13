@@ -5,5 +5,5 @@ scrape_configs:
   - job_name: 'property-management-app'
     metrics_path: /metrics
     static_configs:
-      - targets: ['web:443'] # Use 'web' as the container name and 443 as the port exposed by your app
-    scheme: https
+      - targets: ['web:80']
+    scheme: http

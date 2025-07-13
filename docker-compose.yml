@@ -23,6 +23,7 @@ services:
     image: ghcr.io/zamahele/tenantmanagement:${TAG:-latest}
     ports:
       - "8443:443"
+      - "8080:80"
     depends_on:
       db:
         condition: service_healthy

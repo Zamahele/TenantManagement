@@ -17,6 +17,7 @@ A comprehensive Razor Pages solution for managing rental properties, tenants, an
 - Record all rent and deposit payments.
 - Generate and send payment receipts to tenants.
 - Track outstanding balances and payment history.
+- **Prometheus metrics** are used to monitor payment creation events.
 
 ### 4. Automated Notifications
 - Reminders for tenants about upcoming rent due dates.
@@ -45,6 +46,16 @@ A comprehensive Razor Pages solution for managing rental properties, tenants, an
 ### 10. Reporting and Analytics
 - Generate reports on occupancy rates, rent collection, maintenance costs, and more.
 - Visual dashboards for property performance.
+
+## Observability
+
+- **Prometheus** is used for application metrics (e.g., payment creation counters).
+- **OpenTelemetry** has been removed from the project. If you need distributed tracing, you can re-integrate it as needed.
+
+## Testing
+
+- The solution uses **xUnit** and **Moq** for unit testing.
+- Example: `PaymentsControllerTests` covers payment creation, editing, deletion, and receipt generation.
 
 ## Getting Started
 

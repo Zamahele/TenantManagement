@@ -4,32 +4,28 @@ using Microsoft.EntityFrameworkCore;
 using PropertyManagement.Domain.Entities;
 using PropertyManagement.Infrastructure.Data;
 using PropertyManagement.Web.Controllers;
-using Prometheus; // Add this at the top
-using OpenTelemetry.Trace; // Add this at the top
+using Prometheus;
 
 [Authorize]
 [Authorize(Roles = "Manager")]
 public class PaymentsController : BaseController
 {
   private readonly ApplicationDbContext _context;
-  private readonly Tracer _tracer; // Add this
-
-  // Add TracerProvider to the constructor
-  public PaymentsController(ApplicationDbContext context, TracerProvider tracerProvider)
-  {
-    _context = context;
-    _tracer = tracerProvider.GetTracer("PaymentsController");
-  }
 
   // Add a static counter for payment creations
   private static readonly Counter PaymentCreatedCounter =
       Metrics.CreateCounter("payments_created_total", "Total number of payments created.");
 
+  public PaymentsController(ApplicationDbContext context)
+  {
+    _context = context;
+  }
+
   public async Task<IActionResult> Index()
   {
     var payments = await _context.Payments
         .Include(p => p.Tenant)
-        .Include (p => p.LeaseAgreement)
+        .Include(p => p.LeaseAgreement)
         .ThenInclude(t => t.Room)
         .ToListAsync();
 
@@ -45,19 +41,11 @@ public class PaymentsController : BaseController
   [ValidateAntiForgeryToken]
   public async Task<IActionResult> Create([Bind("TenantId,Amount,Type,PaymentMonth,PaymentYear,PaymentId")] Payment payment)
   {
-    using var span = _tracer.StartActiveSpan("PaymentsController.Create", SpanKind.Internal);
-
-    span.SetAttribute("payment.tenant_id", payment.TenantId);
-    span.SetAttribute("payment.amount", (double)payment.Amount);
-    span.SetAttribute("payment.type", payment.Type ?? "unknown");
-
     // Simulate a long-running operation for testing
     await Task.Delay(200);
 
-    // ... rest of your logic ...
     if (!ModelState.IsValid)
     {
-      span.SetAttribute("payment.status", "invalid");
       SetErrorMessage("Please correct the errors in the form.");
       return View(payment);
     }
@@ -82,16 +70,12 @@ public class PaymentsController : BaseController
       _context.Add(payment);
       await _context.SaveChangesAsync();
 
-      span.SetAttribute("payment.status", "success");
-
       // Increment the Prometheus counter
       PaymentCreatedCounter.Inc();
 
       SetSuccessMessage("Payment recorded successfully.");
       return RedirectToAction(nameof(Index));
     }
-
-    span.SetAttribute("payment.status", "failed");
 
     SetErrorMessage("Failed to record payment. Please check the form.");
     var payments = await _context.Payments
@@ -187,7 +171,7 @@ public class PaymentsController : BaseController
         .FirstOrDefaultAsync(p => p.PaymentId == id);
 
     if (payment == null)
-        return NotFound();
+      return NotFound();
 
     return PartialView("_ReceiptPartial", payment);
   }

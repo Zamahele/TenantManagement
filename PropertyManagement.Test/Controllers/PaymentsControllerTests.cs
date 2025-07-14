@@ -10,8 +10,6 @@ using Moq;
 using System.Threading.Tasks;
 using System.Linq;
 using System;
-using OpenTelemetry.Trace; // Add for TracerProvider
-using OpenTelemetry;       // Add for Sdk
 using Assert = Xunit.Assert;
 
 namespace PropertyManagement.Test.Controllers;
@@ -25,18 +23,9 @@ public class PaymentsControllerTests
     return new ApplicationDbContext(options);
   }
 
-  // Add: Create a basic TracerProvider for testing
-  private TracerProvider GetTestTracerProvider()
-  {
-    return Sdk.CreateTracerProviderBuilder()
-        .AddSource("PaymentsController")
-        .Build();
-  }
-
   private PaymentsController GetController(ApplicationDbContext context)
   {
-    var tracerProvider = GetTestTracerProvider();
-    var controller = new PaymentsController(context, tracerProvider);
+    var controller = new PaymentsController(context);
     var tempData = new TempDataDictionary(
         new DefaultHttpContext(),
         Mock.Of<ITempDataProvider>()

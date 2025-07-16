@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc.Rendering;
 using PropertyManagement.Domain.Entities;
 
-namespace PropertyManagement.Web.Models
+namespace PropertyManagement.Web.ViewModels
 {
   public class RoomFormViewModel
   {

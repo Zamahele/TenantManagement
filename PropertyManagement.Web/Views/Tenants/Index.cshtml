@@ -1,7 +1,7 @@
-@model IEnumerable<PropertyManagement.Domain.Entities.Tenant>
+@model IEnumerable<PropertyManagement.Web.ViewModels.TenantViewModel>
 @{
   ViewData["Title"] = "Tenants";
-  var rooms = ViewBag.Rooms as List<PropertyManagement.Domain.Entities.Room>;
+  var rooms = ViewBag.Rooms as List<PropertyManagement.Web.ViewModels.RoomViewModel>;
 }
 
 <div class="card shadow-lg" style="font-size: 1.15rem;">
@@ -59,7 +59,7 @@
           </tr>
           @await Html.PartialAsync(
               "_DeleteModal",
-              new PropertyManagement.Web.Models.DeleteModalViewModel {
+              new DeleteModalViewModel {
                   ModalId = $"deleteModal-{tenant.TenantId}",
                   ModalLabelId = $"deleteModalLabel-{tenant.TenantId}",
                   Title = "Delete Tenant",

@@ -1,4 +1,4 @@
-@model PropertyManagement.Domain.Entities.Tenant
+@model PropertyManagement.Web.ViewModels.TenantViewModel
 
 @{
   ViewData["Title"] = "My Profile";
@@ -13,7 +13,7 @@
       .Where(p => p.Date.Year == now.Year)
       .GroupBy(p => p.Date.Month)
       .ToDictionary(g => g.Key, g => g.OrderByDescending(p => p.Date).FirstOrDefault())
-      ?? new Dictionary<int, PropertyManagement.Domain.Entities.Payment>();
+      ?? new Dictionary<int, PropertyManagement.Web.ViewModels.PaymentViewModel>();
 }
 
 <!-- Card wrapping only the heading -->

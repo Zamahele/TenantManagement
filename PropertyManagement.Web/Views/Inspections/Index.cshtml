@@ -1,4 +1,4 @@
-﻿@model IEnumerable<PropertyManagement.Domain.Entities.Inspection>
+﻿@model IEnumerable<PropertyManagement.Web.ViewModels.InspectionViewModel>
 @{
     ViewData["Title"] = "Inspections";
 }
@@ -56,7 +56,7 @@
                     </tr>
                     @await Html.PartialAsync(
                         "_DeleteModal",
-                        new PropertyManagement.Web.Models.DeleteModalViewModel {
+                        new PropertyManagement.Web.ViewModels.DeleteModalViewModel {
                             ModalId = $"deleteModal-{inspection.InspectionId}",
                             ModalLabelId = $"deleteModalLabel-{inspection.InspectionId}",
                             Title = "Delete Inspection",

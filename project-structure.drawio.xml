@@ -1,0 +1,85 @@
+﻿<mxfile host="app.diagrams.net">
+  <diagram name="Project Structure" id="project-structure">
+    <mxGraphModel dx="1000" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <!-- Solution -->
+        <mxCell id="2" value="PropertyManagement (Solution)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;" vertex="1" parent="1">
+          <mxGeometry x="320" y="40" width="260" height="40" as="geometry"/>
+        </mxCell>
+        <!-- Domain -->
+        <mxCell id="3" value="PropertyManagement.Domain" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;" vertex="1" parent="1">
+          <mxGeometry x="40" y="120" width="220" height="40" as="geometry"/>
+        </mxCell>
+        <!-- Infrastructure -->
+        <mxCell id="4" value="PropertyManagement.Infrastructure" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;" vertex="1" parent="1">
+          <mxGeometry x="320" y="120" width="260" height="40" as="geometry"/>
+        </mxCell>
+        <!-- Web -->
+        <mxCell id="5" value="PropertyManagement.Web" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;" vertex="1" parent="1">
+          <mxGeometry x="640" y="120" width="260" height="40" as="geometry"/>
+        </mxCell>
+        <!-- Entities -->
+        <mxCell id="6" value="Entities&#10;- Tenant.cs&#10;- Room.cs&#10;- LeaseAgreement.cs&#10;- Payment.cs&#10;- User.cs" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;" vertex="1" parent="1">
+          <mxGeometry x="40" y="180" width="220" height="120" as="geometry"/>
+        </mxCell>
+        <!-- Data -->
+        <mxCell id="7" value="Data&#10;- ApplicationDbContext.cs" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;" vertex="1" parent="1">
+          <mxGeometry x="320" y="180" width="120" height="60" as="geometry"/>
+        </mxCell>
+        <!-- Repositories -->
+        <mxCell id="8" value="Repositories&#10;- IGenericRepository.cs&#10;- GenericRepository.cs" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;" vertex="1" parent="1">
+          <mxGeometry x="460" y="180" width="120" height="80" as="geometry"/>
+        </mxCell>
+        <!-- Controllers -->
+        <mxCell id="9" value="Controllers&#10;- TenantsController.cs" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;" vertex="1" parent="1">
+          <mxGeometry x="640" y="180" width="120" height="60" as="geometry"/>
+        </mxCell>
+        <!-- ViewModels -->
+        <mxCell id="10" value="ViewModels&#10;- TenantViewModel.cs&#10;- RoomViewModel.cs" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;" vertex="1" parent="1">
+          <mxGeometry x="780" y="180" width="120" height="60" as="geometry"/>
+        </mxCell>
+        <!-- Pages -->
+        <mxCell id="11" value="Pages&#10;- (Razor Pages and partials)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;" vertex="1" parent="1">
+          <mxGeometry x="640" y="260" width="120" height="40" as="geometry"/>
+        </mxCell>
+        <!-- Views -->
+        <mxCell id="12" value="Views&#10;- (MVC views or shared partials)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;" vertex="1" parent="1">
+          <mxGeometry x="780" y="260" width="120" height="40" as="geometry"/>
+        </mxCell>
+        <!-- Connectors -->
+        <mxCell id="13" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" edge="1" parent="1" source="2" target="3">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="14" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" edge="1" parent="1" source="2" target="4">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="15" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" edge="1" parent="1" source="2" target="5">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="16" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" edge="1" parent="1" source="3" target="6">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="17" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" edge="1" parent="1" source="4" target="7">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="18" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" edge="1" parent="1" source="4" target="8">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="19" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" edge="1" parent="1" source="5" target="9">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="20" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" edge="1" parent="1" source="5" target="10">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="21" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" edge="1" parent="1" source="5" target="11">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="22" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" edge="1" parent="1" source="5" target="12">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

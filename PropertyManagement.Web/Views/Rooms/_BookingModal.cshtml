@@ -1,10 +1,10 @@
-@model BookingRequestViewModel
+@model PropertyManagement.Web.ViewModels.BookingRequestViewModel
 
 <div class="modal fade" id="bookingModal" tabindex="-1" aria-labelledby="bookingModalLabel" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content">
       <form id="bookingForm"
-            asp-action="@(Model.BookingRequestId.HasValue ? "EditBookingRequest" : "BookRoom")"
+            asp-action="@(Model.BookingRequestId > 0 ? "EditBookingRequest" : "BookRoom")"
             method="post"
             enctype="multipart/form-data"
             autocomplete="off">

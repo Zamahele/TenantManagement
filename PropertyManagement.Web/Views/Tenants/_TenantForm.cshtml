@@ -1,6 +1,6 @@
-@model PropertyManagement.Domain.Entities.Tenant
+@model PropertyManagement.Web.ViewModels.TenantViewModel
 @{
-  var rooms = ViewBag.Rooms as List<PropertyManagement.Domain.Entities.Room>;
+  var rooms = ViewBag.Rooms as List<PropertyManagement.Web.ViewModels.RoomViewModel>;
   bool isEdit = Model?.TenantId > 0;
 }
 <form id="tenantForm" asp-action="CreateOrEdit" method="post" autocomplete="off">

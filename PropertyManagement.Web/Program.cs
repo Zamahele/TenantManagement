@@ -1,15 +1,21 @@
+using FluentValidation;
+using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Prometheus;
 using PropertyManagement.Domain.Entities;
 using PropertyManagement.Infrastructure.Data;
 using PropertyManagement.Web.Services;
+using PropertyManagement.Web.ViewModels;
 using Serilog;
 using System.Globalization;
 using System.IO;
+using AutoMapper;
+using PropertyManagement.Infrastructure.Repositories;
 
 // Ensure log directory exists before Serilog is configured
 Directory.CreateDirectory("/app/logs");
@@ -28,6 +34,8 @@ builder.Host.UseSerilog((context, services, configuration) =>
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+builder.Services.AddRazorPages();
+
 
 // Require authentication globally (force login for all pages except [AllowAnonymous])
 builder.Services.AddAuthorization(options =>
@@ -42,10 +50,27 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
         builder.Configuration.GetConnectionString("DefaultConnection"),
         sqlOptions => sqlOptions.EnableRetryOnFailure(0)
     ));
+
+builder.Services.AddFluentValidationAutoValidation(options =>
+{
+  options.DisableDataAnnotationsValidation = true;
+}).AddFluentValidationClientsideAdapters();
+
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<ISmsService, BulkSmsService>();
 builder.Services.AddHostedService<RentReminderService>();
 builder.Services.AddScoped<IEmailService, SmtpEmailService>();
+// Register all validators for DI (required for validators with constructor injection)
+builder.Services.AddScoped<IValidator<Payment>, PaymentValidator>();
+builder.Services.AddScoped<IValidator<Tenant>, TenantValidator>();
+builder.Services.AddScoped<IValidator<MaintenanceRequest>, MaintenanceRequestValidator>();
+builder.Services.AddScoped<IValidator<LeaseAgreement>, LeaseAgreementValidator>();
+builder.Services.AddScoped<IValidator<Inspection>, InspectionValidator>();
+builder.Services.AddScoped<IValidator<UtilityBill>, UtilityBillValidator>();
+builder.Services.AddScoped<IValidator<BookingRequestViewModel>, BookingRequestViewModelValidator>();
+builder.Services.AddScoped<IValidator<TenantLoginViewModel>, TenantLoginViewModelValidator>();
+builder.Services.AddScoped<IValidator<RoomFormViewModel>, RoomFormViewModelValidator>();
+builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
@@ -56,6 +81,28 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
       // Change the cookie name on every app start to force logout for all users
       options.Cookie.Name = "PropertyManagementAuth";
     });
+
+
+builder.Services.AddAutoMapper(cfg =>
+{
+  cfg.CreateMap<Room, RoomViewModel>().ReverseMap();
+
+  cfg.CreateMap<LeaseAgreement, LeaseAgreementViewModel>()
+      .ForMember(dest => dest.Room, opt => opt.MapFrom(src => src.Room))
+      .ReverseMap();
+
+  cfg.CreateMap<Payment, PaymentViewModel>()
+      .ForMember(dest => dest.Tenant, opt => opt.MapFrom(src => src.Tenant))
+      .ForMember(dest => dest.Room, opt => opt.MapFrom(src => src.Tenant != null ? src.Tenant.Room : null))
+      .ForMember(dest => dest.LeaseAgreement, opt => opt.MapFrom(src => src.LeaseAgreement))
+      .ReverseMap();
+
+  cfg.CreateMap<Tenant, TenantViewModel>()
+      .ForMember(dest => dest.Room, opt => opt.MapFrom(src => src.Room))
+      .ForMember(dest => dest.LeaseAgreements, opt => opt.MapFrom(src => src.LeaseAgreements))
+      .ForMember(dest => dest.Payments, opt => opt.MapFrom(src => src.Payments))
+      .ReverseMap();
+});
 
 builder.WebHost.ConfigureKestrel(options =>
 {

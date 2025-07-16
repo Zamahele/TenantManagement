@@ -1,8 +1,8 @@
-@model PropertyManagement.Domain.Entities.Tenant
+@model PropertyManagement.Web.ViewModels.TenantViewModel
 
 @{
   ViewData["Title"] = "Register";
-  var rooms = ViewBag.Rooms as List<PropertyManagement.Domain.Entities.Room>;
+  var rooms = ViewBag.Rooms as List<PropertyManagement.Web.ViewModels.RoomViewModel>;
 }
 
 <div class="container mt-5">

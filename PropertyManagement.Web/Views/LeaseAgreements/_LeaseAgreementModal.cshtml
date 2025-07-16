@@ -1,6 +1,6 @@
-@model PropertyManagement.Domain.Entities.LeaseAgreement
+@model PropertyManagement.Web.ViewModels.LeaseAgreementViewModel
 @{
-  var tenants = ViewBag.Tenants as List<PropertyManagement.Domain.Entities.Tenant>;
+  var tenants = ViewBag.Tenants as List<PropertyManagement.Web.ViewModels.TenantViewModel>;
   var isEdit = ViewBag.IsEdit as bool? ?? (Model.LeaseAgreementId != 0);
   var currentYear = DateTime.Today.Year;
   var defaultStart = new DateTime(currentYear, 1, 1);

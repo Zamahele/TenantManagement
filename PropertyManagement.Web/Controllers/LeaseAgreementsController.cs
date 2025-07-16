@@ -1,99 +1,117 @@
+using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PropertyManagement.Domain.Entities;
-using PropertyManagement.Infrastructure.Data;
+using PropertyManagement.Infrastructure.Repositories;
 using PropertyManagement.Web.Controllers;
+using PropertyManagement.Web.ViewModels;
 using System.Threading.Tasks;
 
 [Authorize]
 [Authorize(Roles = "Manager")]
 public class LeaseAgreementsController : BaseController
 {
-    private readonly ApplicationDbContext _context;
-    private readonly IWebHostEnvironment _env;
+  private readonly IGenericRepository<LeaseAgreement> _leaseAgreementRepository;
+  private readonly IGenericRepository<Tenant> _tenantRepository;
+  private readonly IGenericRepository<Room> _roomRepository;
+  private readonly IWebHostEnvironment _env;
+  private readonly IMapper _mapper;
 
-    public LeaseAgreementsController(ApplicationDbContext context, IWebHostEnvironment env)
-    {
-        _context = context;
-        _env = env;
-    }
+  public LeaseAgreementsController(
+      IGenericRepository<LeaseAgreement> leaseAgreementRepository,
+      IGenericRepository<Tenant> tenantRepository,
+      IGenericRepository<Room> roomRepository,
+      IWebHostEnvironment env,
+      IMapper mapper)
+  {
+    _leaseAgreementRepository = leaseAgreementRepository;
+    _tenantRepository = tenantRepository;
+    _roomRepository = roomRepository;
+    _env = env;
+    _mapper = mapper;
+  }
 
-    // GET: /LeaseAgreements
-    public async Task<IActionResult> Index()
-    {
-        var agreements = await _context.LeaseAgreements
-            .Include(l => l.Tenant)
+  // GET: /LeaseAgreements
+  public async Task<IActionResult> Index()
+  {
+    var agreements = await _leaseAgreementRepository.Query()
+        .Include(l => l.Tenant)
             .ThenInclude(t => t.Room)
-            .ToListAsync();
+        .Include(l => l.Room)
+        .ToListAsync();
 
-        var now = DateTime.UtcNow;
-        var expiringIds = agreements
-            .Where(a => a.EndDate > now && a.EndDate <= now.AddDays(30))
-            .Select(a => a.LeaseAgreementId)
-            .ToList();
+    var now = DateTime.UtcNow;
+    var expiringIds = agreements
+        .Where(a => a.EndDate > now && a.EndDate <= now.AddDays(30))
+        .Select(a => a.LeaseAgreementId)
+        .ToList();
 
-        var overdueIds = agreements
-            .Where(a => a.EndDate < now)
-            .Select(a => a.LeaseAgreementId)
-            .ToList();
+    var overdueIds = agreements
+        .Where(a => a.EndDate < now)
+        .Select(a => a.LeaseAgreementId)
+        .ToList();
 
-        ViewBag.Tenants = await _context.Tenants.Include(t => t.Room).ToListAsync();
-        ViewBag.ExpiringIds = expiringIds;
-        ViewBag.OverdueIds = overdueIds;
-        return View(agreements);
-    }
+    var tenants = await _tenantRepository.Query().Include(t => t.Room).ToListAsync();
+    ViewBag.Tenants = _mapper.Map<List<TenantViewModel>>(tenants);
+    ViewBag.ExpiringIds = expiringIds;
+    ViewBag.OverdueIds = overdueIds;
 
-    // GET: /LeaseAgreements/GetAgreement/5
-    public async Task<IActionResult> GetAgreement(int id)
+    var agreementVms = _mapper.Map<List<LeaseAgreementViewModel>>(agreements);
+    return View(agreementVms);
+  }
+
+  // GET: /LeaseAgreements/GetAgreement/5
+  public async Task<IActionResult> GetAgreement(int id)
+  {
+    var agreement = await _leaseAgreementRepository.GetByIdAsync(id);
+    if (agreement == null)
     {
-        var agreement = await _context.LeaseAgreements.FindAsync(id);
-        if (agreement == null)
-        {
-            SetErrorMessage("Lease agreement not found.");
-            return NotFound();
-        }
-        return Json(new
-        {
-            id = agreement.LeaseAgreementId,
-            tenantId = agreement.TenantId,
-            startDate = agreement.StartDate.ToString("yyyy-MM-dd"),
-            endDate = agreement.EndDate.ToString("yyyy-MM-dd"),
-            rentAmount = agreement.RentAmount,
-            filePath = agreement.FilePath
-        });
+      SetErrorMessage("Lease agreement not found.");
+      return NotFound();
     }
-
-    // GET: /LeaseAgreements/Edit/5
-    public async Task<IActionResult> Edit(int id)
+    var agreementVm = _mapper.Map<LeaseAgreementViewModel>(agreement);
+    return Json(new
     {
-        var agreement = await _context.LeaseAgreements.FindAsync(id);
-        if (agreement == null)
-        {
-            SetErrorMessage("Lease agreement not found.");
-            return NotFound();
-        }
-        ViewBag.Tenants = await _context.Tenants.Include(t => t.Room).ToListAsync();
-        return View("CreateOrEdit", agreement);
-    }
+      id = agreementVm.LeaseAgreementId,
+      tenantId = agreementVm.TenantId,
+      startDate = agreementVm.StartDate.ToString("yyyy-MM-dd"),
+      endDate = agreementVm.EndDate.ToString("yyyy-MM-dd"),
+      rentAmount = agreementVm.RentAmount,
+      filePath = agreementVm.FilePath
+    });
+  }
 
-    // POST: /LeaseAgreements/CreateOrEdit
-    [HttpPost]
+  // GET: /LeaseAgreements/Edit/5
+  public async Task<IActionResult> Edit(int id)
+  {
+    var agreement = await _leaseAgreementRepository.GetByIdAsync(id);
+    if (agreement == null)
+    {
+      SetErrorMessage("Lease agreement not found.");
+      return NotFound();
+    }
+    var tenants = await _tenantRepository.Query().Include(t => t.Room).ToListAsync();
+    ViewBag.Tenants = _mapper.Map<List<TenantViewModel>>(tenants);
+    var agreementVm = _mapper.Map<LeaseAgreementViewModel>(agreement);
+    return View("CreateOrEdit", agreementVm);
+  }
+
   // POST: /LeaseAgreements/CreateOrEdit
   [HttpPost]
   public async Task<IActionResult> CreateOrEdit(
-    [Bind("LeaseAgreementId,TenantId,RoomId,StartDate,EndDate,FilePath,RentAmount,ExpectedRentDay")] LeaseAgreement agreement,
-    IFormFile? File)
+      LeaseAgreementViewModel agreementVm,
+      IFormFile? File)
   {
     // Custom validation: EndDate must be after Start Date
-    if (agreement.EndDate <= agreement.StartDate)
+    if (agreementVm.EndDate <= agreementVm.StartDate)
     {
       ModelState.AddModelError("EndDate", "End Date must be after Start Date.");
       SetErrorMessage("End Date must be after Start Date.");
     }
 
     // Ensure TenantId exists
-    var tenantExists = await _context.Tenants.AnyAsync(t => t.TenantId == agreement.TenantId);
+    var tenantExists = await _tenantRepository.Query().AnyAsync(t => t.TenantId == agreementVm.TenantId);
     if (!tenantExists)
     {
       ModelState.AddModelError("TenantId", "Selected tenant does not exist.");
@@ -101,7 +119,7 @@ public class LeaseAgreementsController : BaseController
     }
 
     // Ensure RoomId exists
-    var roomExists = await _context.Rooms.AnyAsync(r => r.RoomId == agreement.RoomId);
+    var roomExists = await _roomRepository.Query().AnyAsync(r => r.RoomId == agreementVm.RoomId);
     if (!roomExists)
     {
       ModelState.AddModelError("RoomId", "Selected room does not exist.");
@@ -109,25 +127,26 @@ public class LeaseAgreementsController : BaseController
     }
 
     // If editing and no new file uploaded, preserve existing FilePath
-    if (agreement.LeaseAgreementId != 0 && (File == null || File.Length == 0))
+    if (agreementVm.LeaseAgreementId != 0 && (File == null || File.Length == 0))
     {
-      var existingAgreement = await _context.LeaseAgreements
+      var existingAgreement = await _leaseAgreementRepository.Query()
           .AsNoTracking()
-          .FirstOrDefaultAsync(x => x.LeaseAgreementId == agreement.LeaseAgreementId);
+          .FirstOrDefaultAsync(x => x.LeaseAgreementId == agreementVm.LeaseAgreementId);
 
       if (existingAgreement != null)
       {
-        agreement.FilePath = existingAgreement.FilePath;
+        agreementVm.FilePath = existingAgreement.FilePath;
         ModelState.Clear();
-        TryValidateModel(agreement);
+        TryValidateModel(agreementVm);
       }
     }
 
     if (!ModelState.IsValid)
     {
-      ViewBag.Tenants = await _context.Tenants.Include(t => t.Room).ToListAsync();
-      ViewBag.IsEdit = agreement.LeaseAgreementId != 0;
-      return PartialView("_LeaseAgreementModal", agreement);
+      var tenants = await _tenantRepository.Query().Include(t => t.Room).ToListAsync();
+      ViewBag.Tenants = _mapper.Map<List<TenantViewModel>>(tenants);
+      ViewBag.IsEdit = agreementVm.LeaseAgreementId != 0;
+      return PartialView("_LeaseAgreementModal", agreementVm);
     }
 
     // Handle file upload if present
@@ -141,85 +160,81 @@ public class LeaseAgreementsController : BaseController
       {
         await File.CopyToAsync(stream);
       }
-      agreement.FilePath = "/uploads/" + fileName;
+      agreementVm.FilePath = "/uploads/" + fileName;
     }
 
-    if (agreement.LeaseAgreementId == 0)
+    if (agreementVm.LeaseAgreementId == 0)
     {
-      _context.LeaseAgreements.Add(agreement);
+      var entity = _mapper.Map<LeaseAgreement>(agreementVm);
+      await _leaseAgreementRepository.AddAsync(entity);
       SetSuccessMessage("Lease agreement created successfully.");
     }
     else
     {
-      var existing = await _context.LeaseAgreements.FindAsync(agreement.LeaseAgreementId);
+      var existing = await _leaseAgreementRepository.GetByIdAsync(agreementVm.LeaseAgreementId);
       if (existing == null)
       {
         SetErrorMessage("Lease agreement not found.");
         return NotFound();
       }
 
-      existing.TenantId = agreement.TenantId;
-      existing.RoomId = agreement.RoomId;
-      existing.StartDate = agreement.StartDate;
-      existing.EndDate = agreement.EndDate;
-      existing.RentAmount = agreement.RentAmount;
-      existing.ExpectedRentDay = agreement.ExpectedRentDay;
-      if (!string.IsNullOrEmpty(agreement.FilePath))
-        existing.FilePath = agreement.FilePath;
-      _context.LeaseAgreements.Update(existing);
+      _mapper.Map(agreementVm, existing);
+      if (!string.IsNullOrEmpty(agreementVm.FilePath))
+        existing.FilePath = agreementVm.FilePath;
+      await _leaseAgreementRepository.UpdateAsync(existing);
       SetSuccessMessage("Lease agreement updated successfully.");
     }
-    await _context.SaveChangesAsync();
     return RedirectToAction(nameof(Index));
   }
 
   // POST: /LeaseAgreements/Delete/5
   [HttpPost]
-    public async Task<IActionResult> Delete(int id)
+  public async Task<IActionResult> Delete(int id)
+  {
+    var agreement = await _leaseAgreementRepository.GetByIdAsync(id);
+    if (agreement != null)
     {
-        var agreement = await _context.LeaseAgreements.FindAsync(id);
-        if (agreement != null)
-        {
-            _context.LeaseAgreements.Remove(agreement);
-            await _context.SaveChangesAsync();
-            SetSuccessMessage("Lease agreement deleted successfully.");
-        }
-        else
-        {
-            SetErrorMessage("Lease agreement not found.");
-        }
-        return RedirectToAction(nameof(Index));
+      await _leaseAgreementRepository.DeleteAsync(agreement);
+      SetSuccessMessage("Lease agreement deleted successfully.");
+    }
+    else
+    {
+      SetErrorMessage("Lease agreement not found.");
+    }
+    return RedirectToAction(nameof(Index));
+  }
+
+  [HttpGet]
+  public async Task<IActionResult> LeaseAgreementModal(int? id)
+  {
+    LeaseAgreementViewModel model;
+    bool isEdit = false;
+    if (id.HasValue && id.Value != 0)
+    {
+      var entity = await _leaseAgreementRepository.GetByIdAsync(id.Value);
+      if (entity == null)
+      {
+        SetErrorMessage("Lease agreement not found.");
+        return NotFound();
+      }
+      model = _mapper.Map<LeaseAgreementViewModel>(entity);
+      isEdit = true;
+    }
+    else
+    {
+      model = new LeaseAgreementViewModel();
     }
 
-    [HttpGet]
-    public async Task<IActionResult> LeaseAgreementModal(int? id)
-    {
-        LeaseAgreement model;
-        bool isEdit = false;
-        if (id.HasValue && id.Value != 0)
-        {
-            model = await _context.LeaseAgreements.FindAsync(id.Value);
-            if (model == null)
-            {
-                SetErrorMessage("Lease agreement not found.");
-                return NotFound();
-            }
-            isEdit = true;
-        }
-        else
-        {
-            model = new LeaseAgreement();
-        }
-
-        ViewBag.Tenants = await _context.Tenants.Include(t => t.Room).ToListAsync();
-        ViewBag.IsEdit = isEdit;
-        return PartialView("_LeaseAgreementModal", model);
-    }
+    var tenants = await _tenantRepository.Query().Include(t => t.Room).ToListAsync();
+    ViewBag.Tenants = _mapper.Map<List<TenantViewModel>>(tenants);
+    ViewBag.IsEdit = isEdit;
+    return PartialView("_LeaseAgreementModal", model);
+  }
 
   [HttpGet]
   public async Task<IActionResult> GetRoomIdByTenant(int tenantId)
   {
-    var roomId = await _context.Tenants
+    var roomId = await _tenantRepository.Query()
         .Where(t => t.TenantId == tenantId)
         .Select(t => t.RoomId)
         .FirstOrDefaultAsync();

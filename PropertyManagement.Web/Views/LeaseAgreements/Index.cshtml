@@ -1,7 +1,7 @@
-@model IEnumerable<PropertyManagement.Domain.Entities.LeaseAgreement>
+@model IEnumerable<PropertyManagement.Web.ViewModels.LeaseAgreementViewModel>
 @{
   ViewData["Title"] = "Lease Agreements";
-  var tenants = ViewBag.Tenants as List<PropertyManagement.Domain.Entities.Tenant>;
+  var tenants = ViewBag.Tenants as List<PropertyManagement.Web.ViewModels.TenantViewModel>;
   var expiringIds = ViewBag.ExpiringIds as List<int> ?? new List<int>();
   var overdueIds = ViewBag.OverdueIds as List<int> ?? new List<int>();
 }
@@ -80,7 +80,7 @@
           </tr>
              @await Html.PartialAsync(
               "_DeleteModal",
-              new PropertyManagement.Web.Models.DeleteModalViewModel {
+              new PropertyManagement.Web.ViewModels.DeleteModalViewModel {
                   ModalId = $"deleteModal-{agreement.LeaseAgreementId}",
                   ModalLabelId = $"deleteModalLabel-{agreement.LeaseAgreementId}",
                   Title = "Delete Lease",

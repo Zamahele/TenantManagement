@@ -1,6 +1,8 @@
-@model IEnumerable<PropertyManagement.Domain.Entities.Payment>
+@model IEnumerable<PropertyManagement.Web.ViewModels.PaymentViewModel>
 @{
-  var tenants = ViewBag.Tenants as List<PropertyManagement.Domain.Entities.Tenant>;
+  var tenants = ViewBag.Tenants as List<PropertyManagement.Web.ViewModels.TenantViewModel>;
+  var currentYear = DateTime.Now.Year;
+  var currentMonth = DateTime.Now.Month;
 }
 <div class="mt-0 mb-4 p-4" style="background-color: #f8f9fa; border-radius: 0 0 .5rem .5rem;">
   <form asp-action="Create" method="post" class="row g-2 align-items-center mb-4">    
@@ -9,7 +11,16 @@
         <option value="">Year</option>
         @for (int y = DateTime.Now.Year - 1; y <= DateTime.Now.Year + 1; y++)
         {
-          <option value="@y">@y</option>
+          <option value="@y"> @y</option>
+        }
+      </select>
+    </div>
+    <div class="col-12 col-md-auto">
+      <select name="PaymentMonth" class="form-select" required>
+        <option value="">Month</option>
+        @for (int m = 1; m <= 12; m++)
+        {
+          <option value="@m">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(m)</option>
         }
       </select>
     </div>
@@ -36,15 +47,7 @@
         <option value="Other">Other</option>
       </select>
     </div>
-    <div class="col-12 col-md-auto">
-      <select name="PaymentMonth" class="form-select" required>
-        <option value="">Month</option>
-        @for (int m = 1; m <= 12; m++)
-        {
-          <option value="@m">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(m)</option>
-        }
-      </select>
-    </div>
+
     <div class="col-12 col-md-auto">
       <button type="submit" class="btn btn-primary w-100">
         <i class="bi bi-plus-circle"></i> Add Payment

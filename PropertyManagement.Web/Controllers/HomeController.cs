@@ -1,23 +1,38 @@
+using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using PropertyManagement.Infrastructure.Data;
-using PropertyManagement.Web.Models;
+using Prometheus;
+using PropertyManagement.Domain.Entities;
+using PropertyManagement.Infrastructure.Repositories;
 using System.Diagnostics;
-using Prometheus; // Add this at the top
 
 namespace PropertyManagement.Web.Controllers;
 
 [Authorize(Roles = "Manager")]
 public class HomeController : Controller
 {
-  private readonly ApplicationDbContext _context;
+  private readonly IGenericRepository<Room> _roomRepository;
+  private readonly IGenericRepository<Tenant> _tenantRepository;
+  private readonly IGenericRepository<LeaseAgreement> _leaseAgreementRepository;
+  private readonly IGenericRepository<MaintenanceRequest> _maintenanceRequestRepository;
   private readonly ILogger<HomeController> _logger;
+  private readonly IMapper _mapper;
 
-  public HomeController(ApplicationDbContext context, ILogger<HomeController> logger)
+  public HomeController(
+      IGenericRepository<Room> roomRepository,
+      IGenericRepository<Tenant> tenantRepository,
+      IGenericRepository<LeaseAgreement> leaseAgreementRepository,
+      IGenericRepository<MaintenanceRequest> maintenanceRequestRepository,
+      ILogger<HomeController> logger,
+      IMapper mapper)
   {
-    _context = context ?? throw new ArgumentNullException(nameof(context));
+    _roomRepository = roomRepository;
+    _tenantRepository = tenantRepository;
+    _leaseAgreementRepository = leaseAgreementRepository;
+    _maintenanceRequestRepository = maintenanceRequestRepository;
     _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
   }
 
   // Add a static counter for home page visits
@@ -31,16 +46,22 @@ public class HomeController : Controller
 
     _logger.LogInformation("Accessing the dashboard at {Time}", DateTime.UtcNow);
     var now = DateTime.UtcNow;
-    var model = new DashboardViewModel
+
+    var rooms = await _roomRepository.GetAllAsync();
+    var tenants = await _tenantRepository.GetAllAsync();
+    var leases = await _leaseAgreementRepository.GetAllAsync();
+    var pendingRequests = await _maintenanceRequestRepository.GetAllAsync(r => r.Status == "Pending");
+
+    var model = new PropertyManagement.Web.ViewModels.DashboardViewModel
     {
-      TotalRooms = await _context.Rooms.CountAsync(),
-      AvailableRooms = await _context.Rooms.CountAsync(r => r.Status == "Available"),
-      OccupiedRooms = await _context.Rooms.CountAsync(r => r.Status == "Occupied"),
-      UnderMaintenanceRooms = await _context.Rooms.CountAsync(r => r.Status == "Under Maintenance"),
-      TotalTenants = await _context.Tenants.CountAsync(),
-      ActiveLeases = await _context.LeaseAgreements.CountAsync(l => l.EndDate >= now),
-      ExpiringLeases = await _context.LeaseAgreements.CountAsync(l => l.EndDate > now && l.EndDate <= now.AddDays(30)),
-      PendingRequests = await _context.MaintenanceRequests.CountAsync(r => r.Status == "Pending")
+      TotalRooms = rooms.Count(),
+      AvailableRooms = rooms.Count(r => r.Status == "Available"),
+      OccupiedRooms = rooms.Count(r => r.Status == "Occupied"),
+      UnderMaintenanceRooms = rooms.Count(r => r.Status == "Under Maintenance"),
+      TotalTenants = tenants.Count(),
+      ActiveLeases = leases.Count(l => l.EndDate >= now),
+      ExpiringLeases = leases.Count(l => l.EndDate > now && l.EndDate <= now.AddDays(30)),
+      PendingRequests = pendingRequests.Count()
     };
 
     return View(model);
@@ -54,6 +75,6 @@ public class HomeController : Controller
   [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
   public IActionResult Error()
   {
-    return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+    return View(new PropertyManagement.Web.ViewModels.ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
   }
 }

@@ -1,4 +1,4 @@
-﻿namespace PropertyManagement.Web.Models
+﻿namespace PropertyManagement.Web.ViewModels
 {
     public class DashboardViewModel
     {

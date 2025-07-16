@@ -1,4 +1,4 @@
-@model List<PropertyManagement.Domain.Entities.Tenant>
+@model List<PropertyManagement.Web.ViewModels.TenantViewModel>
 
 <div class="mb-4 p-3 rounded shadow-sm" style="background-color: #f4f6fb;">
   <div class="table-responsive">
@@ -21,7 +21,7 @@
 
           decimal expectedRent = lease?.RentAmount ?? 0m;
 
-          var rentPayments = tenant.Payments?.Where(p => p.Type == "Rent").ToList() ?? new List<PropertyManagement.Domain.Entities.Payment>();
+          var rentPayments = tenant.Payments?.Where(p => p.Type == "Rent").ToList() ?? new List<PropertyManagement.Web.ViewModels.PaymentViewModel>();
 
           // Build a list of months from January to current month of the current year
           var months = new List<(int Year, int Month)>();

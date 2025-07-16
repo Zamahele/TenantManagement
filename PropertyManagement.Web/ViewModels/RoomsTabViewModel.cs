@@ -1,6 +1,6 @@
 ﻿using PropertyManagement.Domain.Entities;
 
-namespace PropertyManagement.Web.Models
+namespace PropertyManagement.Web.ViewModels
 {
   public class RoomsTabViewModel
   {

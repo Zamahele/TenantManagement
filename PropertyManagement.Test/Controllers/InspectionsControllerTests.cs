@@ -1,16 +1,19 @@
+using AutoMapper;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ViewFeatures;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
+using PropertyManagement.Domain.Entities;
+using PropertyManagement.Infrastructure.Data;
+using PropertyManagement.Infrastructure.Repositories;
+using PropertyManagement.Web.Controllers;
+using PropertyManagement.Web.ViewModels;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.AspNetCore.Mvc.ViewFeatures;
-using Microsoft.EntityFrameworkCore;
-using Moq;
-using PropertyManagement.Domain.Entities;
-using PropertyManagement.Infrastructure.Data;
-using PropertyManagement.Web.Controllers;
 using Xunit;
 using Assert = Xunit.Assert;
 
@@ -33,6 +36,35 @@ namespace PropertyManagement.Test.Controllers
       return context;
     }
 
+    private IMapper GetMapper()
+    {
+      var expr = new MapperConfigurationExpression();
+      expr.CreateMap<Inspection, Inspection>().ReverseMap();
+      expr.CreateMap<Room, Room>().ReverseMap();
+      var config = new MapperConfiguration(expr, NullLoggerFactory.Instance);
+      return config.CreateMapper();
+    }
+
+    private InspectionsController GetController(ApplicationDbContext context)
+    {
+      var inspectionRepo = new Mock<IGenericRepository<Inspection>>();
+      var roomRepo = new Mock<IGenericRepository<Room>>();
+
+      inspectionRepo.Setup(r => r.Query()).Returns(context.Inspections);
+      roomRepo.Setup(r => r.Query()).Returns(context.Rooms);
+
+      var mapper = GetMapper();
+
+      var controller = new InspectionsController(
+          inspectionRepo.Object,
+          roomRepo.Object,
+          mapper
+      );
+
+      controller.TempData = new TempDataDictionary(new DefaultHttpContext(), Mock.Of<ITempDataProvider>());
+      return controller;
+    }
+
     [Fact]
     public async Task Index_ReturnsViewWithInspections()
     {
@@ -41,7 +73,7 @@ namespace PropertyManagement.Test.Controllers
       context.Inspections.Add(new Inspection { RoomId = 1, Date = DateTime.Today });
       context.SaveChanges();
 
-      var controller = new InspectionsController(context);
+      var controller = GetController(context);
 
       // Act
       var result = await controller.Index();
@@ -57,7 +89,7 @@ namespace PropertyManagement.Test.Controllers
     {
       // Arrange
       var context = GetDbContext();
-      var controller = new InspectionsController(context);
+      var controller = GetController(context);
 
       // Act
       var result = await controller.InspectionModal(null);
@@ -77,7 +109,7 @@ namespace PropertyManagement.Test.Controllers
       context.Inspections.Add(inspection);
       context.SaveChanges();
 
-      var controller = new InspectionsController(context);
+      var controller = GetController(context);
 
       // Act
       var result = await controller.InspectionModal(inspection.InspectionId);
@@ -94,11 +126,13 @@ namespace PropertyManagement.Test.Controllers
     {
       // Arrange
       var context = GetDbContext();
-      var controller = new InspectionsController(context);
+      var controller = GetController(context);
       controller.ModelState.AddModelError("Date", "Required");
 
       // Act
-      var result = await controller.SaveInspection(new Inspection());
+
+      var inspectionvw = GetMapper().Map<InspectionViewModel>(new Inspection());
+      var result = await controller.SaveInspection(inspectionvw);
 
       // Assert
       var partial = Assert.IsType<PartialViewResult>(result);
@@ -111,8 +145,7 @@ namespace PropertyManagement.Test.Controllers
     {
       // Arrange
       var context = GetDbContext();
-      var controller = new InspectionsController(context);
-      controller.TempData = new TempDataDictionary(new DefaultHttpContext(), Mock.Of<ITempDataProvider>());
+      var controller = GetController(context);
       var inspection = new Inspection
       {
         RoomId = 1,
@@ -122,7 +155,8 @@ namespace PropertyManagement.Test.Controllers
       };
 
       // Act
-      var result = await controller.SaveInspection(inspection);
+      var agreementVm = GetMapper().Map<InspectionViewModel>(inspection);
+      var result = await controller.SaveInspection(agreementVm);
 
       // Assert
       var viewResult = Assert.IsType<ViewResult>(result);
@@ -145,8 +179,7 @@ namespace PropertyManagement.Test.Controllers
       context.Inspections.Add(inspection);
       context.SaveChanges();
 
-      var controller = new InspectionsController(context);
-      controller.TempData = new TempDataDictionary(new DefaultHttpContext(), Mock.Of<ITempDataProvider>());
+      var controller = GetController(context);
       var updated = new Inspection
       {
         InspectionId = inspection.InspectionId,
@@ -157,7 +190,8 @@ namespace PropertyManagement.Test.Controllers
       };
 
       // Act
-      var result = await controller.SaveInspection(updated);
+      var updatedVm = GetMapper().Map<InspectionViewModel>(updated);
+      var result = await controller.SaveInspection(updatedVm);
 
       // Assert
       var viewResult = Assert.IsType<ViewResult>(result);
@@ -178,8 +212,7 @@ namespace PropertyManagement.Test.Controllers
       context.Inspections.Add(inspection);
       context.SaveChanges();
 
-      var controller = new InspectionsController(context);
-      controller.TempData = new TempDataDictionary(new DefaultHttpContext(), Mock.Of<ITempDataProvider>());
+      var controller = GetController(context);
 
       // Act
       var result = await controller.Delete(inspection.InspectionId);

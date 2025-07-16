@@ -1,6 +1,6 @@
-@model IEnumerable<PropertyManagement.Domain.Entities.MaintenanceRequest>
+@model IEnumerable<PropertyManagement.Web.ViewModels.MaintenanceRequestViewModel>
 @{
-    var room = ViewBag.Room as PropertyManagement.Domain.Entities.Room;
+  var room = ViewBag.Room as PropertyManagement.Web.ViewModels.RoomViewModel;
     ViewData["Title"] = "Maintenance History";
 }
 

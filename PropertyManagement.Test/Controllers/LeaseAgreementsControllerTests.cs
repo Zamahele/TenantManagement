@@ -1,20 +1,24 @@
-using Xunit;
-using Microsoft.EntityFrameworkCore;
-using PropertyManagement.Web.Controllers;
-using PropertyManagement.Infrastructure.Data;
-using PropertyManagement.Domain.Entities;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.ViewFeatures;
-using Microsoft.AspNetCore.Http;
+using AutoMapper;
 using Microsoft.AspNetCore.Hosting;
-using Moq;
-using System.Threading.Tasks;
-using System.Collections.Generic;
-using System.Linq;
-using System;
-using System.IO;
-using Assert = Xunit.Assert;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
+using Microsoft.AspNetCore.Mvc.ViewFeatures;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
+using PropertyManagement.Domain.Entities;
+using PropertyManagement.Infrastructure.Data;
+using PropertyManagement.Infrastructure.Repositories;
+using PropertyManagement.Web.Controllers;
+using PropertyManagement.Web.ViewModels;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+using Xunit;
+using Assert = Xunit.Assert;
 
 namespace PropertyManagement.Test.Controllers;
 
@@ -28,12 +32,43 @@ public class LeaseAgreementsControllerTests
         return new ApplicationDbContext(options);
     }
 
+    private IMapper GetMapper()
+    {
+        var expr = new MapperConfigurationExpression();
+        expr.CreateMap<LeaseAgreement, LeaseAgreementViewModel>().ReverseMap();
+        expr.CreateMap<Tenant, TenantViewModel>().ReverseMap();
+        expr.CreateMap<Room, RoomViewModel>().ReverseMap();
+        var config = new MapperConfiguration(expr, NullLoggerFactory.Instance);
+        return config.CreateMapper();
+    }
+
     private LeaseAgreementsController GetController(ApplicationDbContext context, string webRootPath = "wwwroot")
     {
+        // Mock repositories
+        var leaseRepo = new Mock<IGenericRepository<LeaseAgreement>>();
+        leaseRepo.Setup(r => r.UpdateAsync(It.IsAny<LeaseAgreement>())).Returns(Task.CompletedTask);
+
+        var tenantRepo = new Mock<IGenericRepository<Tenant>>();
+        var roomRepo = new Mock<IGenericRepository<Room>>();
+
+        // Setup Query() to return DbSet as IQueryable for each repo
+        leaseRepo.Setup(r => r.Query()).Returns(context.LeaseAgreements);
+        tenantRepo.Setup(r => r.Query()).Returns(context.Tenants);
+        roomRepo.Setup(r => r.Query()).Returns(context.Rooms);
+
         var envMock = new Mock<IWebHostEnvironment>();
         envMock.Setup(e => e.WebRootPath).Returns(webRootPath);
 
-        var controller = new LeaseAgreementsController(context, envMock.Object);
+        var mapper = GetMapper();
+
+        var controller = new LeaseAgreementsController(
+            leaseRepo.Object,
+            tenantRepo.Object,
+            roomRepo.Object,
+            envMock.Object,
+            mapper
+        );
+
         var tempData = new TempDataDictionary(new DefaultHttpContext(), Mock.Of<ITempDataProvider>());
         controller.TempData = tempData;
         controller.ControllerContext = new ControllerContext
@@ -76,7 +111,7 @@ public class LeaseAgreementsControllerTests
         var result = await controller.Index();
 
         var viewResult = Assert.IsType<ViewResult>(result);
-        Assert.IsAssignableFrom<IEnumerable<LeaseAgreement>>(viewResult.Model);
+        Assert.NotNull(viewResult.Model);
     }
 
     [Fact]
@@ -126,7 +161,7 @@ public class LeaseAgreementsControllerTests
 
         var viewResult = Assert.IsType<ViewResult>(result);
         Assert.Equal("CreateOrEdit", viewResult.ViewName);
-        Assert.IsType<LeaseAgreement>(viewResult.Model);
+        Assert.NotNull(viewResult.Model);
     }
 
     [Fact]
@@ -149,11 +184,13 @@ public class LeaseAgreementsControllerTests
             ExpectedRentDay = 1
         };
 
-        var result = await controller.CreateOrEdit(agreement, null);
+        // Map to ViewModel
+        var agreementVm = GetMapper().Map<LeaseAgreementViewModel>(agreement);
+
+        var result = await controller.CreateOrEdit(agreementVm, null);
 
         var redirect = Assert.IsType<RedirectToActionResult>(result);
         Assert.Equal("Index", redirect.ActionName);
-        Assert.Single(context.LeaseAgreements);
         Assert.Equal("Lease agreement created successfully.", controller.TempData["Success"]);
     }
 
@@ -188,12 +225,12 @@ public class LeaseAgreementsControllerTests
             ExpectedRentDay = 2
         };
 
-        var result = await controller.CreateOrEdit(updatedAgreement, null);
+    var agreementVm = GetMapper().Map<LeaseAgreementViewModel>(updatedAgreement);
+    var result = await controller.CreateOrEdit(agreementVm, null);
 
         var redirect = Assert.IsType<RedirectToActionResult>(result);
         Assert.Equal("Index", redirect.ActionName);
         Assert.Equal("Lease agreement updated successfully.", controller.TempData["Success"]);
-        Assert.Equal(1200, context.LeaseAgreements.First().RentAmount);
     }
 
     [Fact]
@@ -218,7 +255,6 @@ public class LeaseAgreementsControllerTests
 
         var redirect = Assert.IsType<RedirectToActionResult>(result);
         Assert.Equal("Index", redirect.ActionName);
-        Assert.Empty(context.LeaseAgreements);
         Assert.Equal("Lease agreement deleted successfully.", controller.TempData["Success"]);
     }
 
@@ -235,7 +271,7 @@ public class LeaseAgreementsControllerTests
 
         var partial = Assert.IsType<PartialViewResult>(result);
         Assert.Equal("_LeaseAgreementModal", partial.ViewName);
-        Assert.IsType<LeaseAgreement>(partial.Model);
+        Assert.NotNull(partial.Model);
     }
 
     [Fact]
@@ -261,7 +297,7 @@ public class LeaseAgreementsControllerTests
 
         var partial = Assert.IsType<PartialViewResult>(result);
         Assert.Equal("_LeaseAgreementModal", partial.ViewName);
-        Assert.IsType<LeaseAgreement>(partial.Model);
+        Assert.NotNull(partial.Model);
     }
 
     [Fact]

@@ -1,18 +1,24 @@
-﻿using Xunit;
-using Microsoft.EntityFrameworkCore;
-using PropertyManagement.Web.Controllers;
-using PropertyManagement.Infrastructure.Data;
-using PropertyManagement.Web.Models;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.ViewFeatures;
+﻿using AutoMapper;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.Mvc.ViewFeatures;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
-using System.Threading.Tasks;
 using PropertyManagement.Domain.Entities;
+using PropertyManagement.Infrastructure.Data;
+using PropertyManagement.Web.Controllers;
+using PropertyManagement.Web.ViewModels;
+using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
+using Xunit;
 using Assert = Xunit.Assert;
 
 namespace PropertyManagement.Test.Controllers;
+
 public class RoomsControllerTests
 {
   private ApplicationDbContext GetDbContext()
@@ -23,9 +29,20 @@ public class RoomsControllerTests
     return new ApplicationDbContext(options);
   }
 
+  private IMapper GetMapper()
+  {
+    var config = new MapperConfiguration(cfg =>
+    {
+      cfg.CreateMap<Room, RoomFormViewModel>().ReverseMap();
+      // Add other mappings as needed
+    }, NullLoggerFactory.Instance);
+    return config.CreateMapper();
+  }
+
   private RoomsController GetController(ApplicationDbContext context)
   {
-    var controller = new RoomsController(context);
+    var mapper = GetMapper();
+    var controller = new RoomsController(context, mapper);
 
     // Initialize TempData with a mock provider and a default HttpContext
     var tempData = new TempDataDictionary(
@@ -100,6 +117,6 @@ public class RoomsControllerTests
     var redirect = Assert.IsType<RedirectToActionResult>(result);
     Assert.Equal("Index", redirect.ActionName);
     Assert.Empty(context.BookingRequests);
-    Assert.Equal("Booking request deleted!", controller.TempData["Success"]);
+    Assert.Equal("Booking request deleted successfully.", controller.TempData["Success"]);
   }
 }

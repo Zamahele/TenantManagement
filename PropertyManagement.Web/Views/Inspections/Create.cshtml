@@ -1,8 +1,7 @@
-﻿
-@model PropertyManagement.Domain.Entities.Inspection
+﻿@model PropertyManagement.Web.ViewModels.InspectionViewModel
 @{
     ViewData["Title"] = "Schedule Inspection";
-    var rooms = ViewBag.Rooms as List<PropertyManagement.Domain.Entities.Room>;
+  var rooms = ViewBag.Rooms as List<PropertyManagement.Web.ViewModels.RoomViewModel>;
 }
 <h2>Schedule Inspection</h2>
 <form asp-action="Create" method="post">

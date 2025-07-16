@@ -1,4 +1,4 @@
-@model IEnumerable<PropertyManagement.Domain.Entities.MaintenanceRequest>
+@model IEnumerable<PropertyManagement.Web.ViewModels.MaintenanceRequestViewModel>
 @{
   ViewData["Title"] = "Maintenance Requests";
   var isManager = ViewBag.IsManager as bool? ?? false;
@@ -93,7 +93,7 @@
                   </div>
                   @await Html.PartialAsync(
                       "_DeleteModal",
-                      new PropertyManagement.Web.Models.DeleteModalViewModel {
+                      new DeleteModalViewModel {
                           ModalId = $"deleteModal-{req.MaintenanceRequestId}",
                           ModalLabelId = $"deleteModalLabel-{req.MaintenanceRequestId}",
                           Title = "Delete Maintenance Request",

@@ -61,7 +61,7 @@
                     </tr>
                     @await Html.PartialAsync(
                         "_DeleteModal",
-                        new PropertyManagement.Web.Models.DeleteModalViewModel {
+                        new DeleteModalViewModel {
                             ModalId = $"deleteModal-{bill.UtilityBillId}",
                             ModalLabelId = $"deleteModalLabel-{bill.UtilityBillId}",
                             Title = "Delete Utility Bill",

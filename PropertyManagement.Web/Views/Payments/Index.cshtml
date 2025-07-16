@@ -1,7 +1,7 @@
-@model IEnumerable<PropertyManagement.Domain.Entities.Payment>
+@model IEnumerable<PropertyManagement.Web.ViewModels.PaymentViewModel>
 @{
   ViewData["Title"] = "Payments";
-  var tenants = ViewBag.Tenants as List<PropertyManagement.Domain.Entities.Tenant>;
+  var tenants = ViewBag.Tenants as List<PropertyManagement.Web.ViewModels.TenantViewModel>;
 }
 
 <div class="card shadow-lg" style="font-size: 1.15rem;">

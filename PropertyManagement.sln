@@ -13,6 +13,16 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PropertyManagement.Web", "P
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PropertyManagement.Test", "PropertyManagement.Test\PropertyManagement.Test.csproj", "{99E82734-6B9C-4A80-938B-169543352202}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "1.Web", "1.Web", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "2.Domain", "2.Domain", "{A623B7A8-0FB0-4AB2-95F2-06951CF6ACA2}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "3.Application", "3.Application", "{07983990-9874-407A-8B72-F9FB8620B227}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "4.Infrastructure", "4.Infrastructure", "{DB3A1B3C-864D-422B-89CD-2E8421CF72B0}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "5.Test", "5.Test", "{DB09B556-8BC4-48C1-8873-E49351678F03}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -86,6 +96,13 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{09E20881-51EF-49D8-9D2D-97AB5E6BD2A4} = {A623B7A8-0FB0-4AB2-95F2-06951CF6ACA2}
+		{94A4ABDC-2CED-4C68-B262-0588D06A5B38} = {07983990-9874-407A-8B72-F9FB8620B227}
+		{C3A196BF-20C7-46FA-A780-4E20F3F335F0} = {DB3A1B3C-864D-422B-89CD-2E8421CF72B0}
+		{C41A8A66-EBB6-4984-9AD2-2F8E1F7E155C} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{99E82734-6B9C-4A80-938B-169543352202} = {DB09B556-8BC4-48C1-8873-E49351678F03}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {F33FCE2E-D3F6-41C3-9750-495CE26E67B6}

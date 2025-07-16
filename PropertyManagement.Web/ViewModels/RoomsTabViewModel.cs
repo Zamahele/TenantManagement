@@ -4,11 +4,11 @@ namespace PropertyManagement.Web.ViewModels
 {
   public class RoomsTabViewModel
   {
-    public List<Room> AllRooms { get; set; }
-    public List<Room> OccupiedRooms { get; set; }
-    public List<Room> VacantRooms { get; set; }
-    public List<Room> MaintenanceRooms { get; set; }
-    public List<BookingRequest> PendingBookingRequests { get; internal set; }
-    public int PendingRequestCount { get; internal set; }
+    public List<RoomViewModel> AllRooms { get; set; } = new();
+    public List<RoomViewModel> OccupiedRooms { get; set; } = new();
+    public List<RoomViewModel> VacantRooms { get; set; } = new();
+    public List<RoomViewModel> MaintenanceRooms { get; set; } = new();
+    public List<BookingRequestViewModel> PendingBookingRequests { get; set; } = new();
+    public int PendingRequestCount { get; set; }
   }
 }

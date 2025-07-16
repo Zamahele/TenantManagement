@@ -39,8 +39,8 @@ namespace PropertyManagement.Test.Controllers
     private IMapper GetMapper()
     {
       var expr = new MapperConfigurationExpression();
-      expr.CreateMap<Inspection, Inspection>().ReverseMap();
-      expr.CreateMap<Room, Room>().ReverseMap();
+      expr.CreateMap<Inspection, InspectionViewModel>().ReverseMap();
+      expr.CreateMap<Room, RoomViewModel>().ReverseMap();
       var config = new MapperConfiguration(expr, NullLoggerFactory.Instance);
       return config.CreateMapper();
     }
@@ -51,7 +51,20 @@ namespace PropertyManagement.Test.Controllers
       var roomRepo = new Mock<IGenericRepository<Room>>();
 
       inspectionRepo.Setup(r => r.Query()).Returns(context.Inspections);
+      inspectionRepo.Setup(r => r.GetByIdAsync(It.IsAny<int>()))
+          .ReturnsAsync((int id) => context.Inspections.Find(id));
+      inspectionRepo.Setup(r => r.AddAsync(It.IsAny<Inspection>()))
+          .Callback((Inspection inspection) => { context.Inspections.Add(inspection); context.SaveChanges(); })
+          .Returns(Task.CompletedTask);
+      inspectionRepo.Setup(r => r.UpdateAsync(It.IsAny<Inspection>()))
+          .Callback((Inspection inspection) => { context.Entry(inspection).State = EntityState.Modified; context.SaveChanges(); })
+          .Returns(Task.CompletedTask);
+      inspectionRepo.Setup(r => r.DeleteAsync(It.IsAny<Inspection>()))
+          .Callback((Inspection inspection) => { context.Inspections.Remove(inspection); context.SaveChanges(); })
+          .Returns(Task.CompletedTask);
+
       roomRepo.Setup(r => r.Query()).Returns(context.Rooms);
+      roomRepo.Setup(r => r.GetAllAsync()).ReturnsAsync(() => context.Rooms.ToList());
 
       var mapper = GetMapper();
 
@@ -70,7 +83,7 @@ namespace PropertyManagement.Test.Controllers
     {
       // Arrange
       var context = GetDbContext();
-      context.Inspections.Add(new Inspection { RoomId = 1, Date = DateTime.Today });
+      context.Inspections.Add(new Inspection { InspectionId = 1, RoomId = 1, Date = DateTime.Today });
       context.SaveChanges();
 
       var controller = GetController(context);
@@ -80,7 +93,7 @@ namespace PropertyManagement.Test.Controllers
 
       // Assert
       var viewResult = Assert.IsType<ViewResult>(result);
-      var model = Assert.IsAssignableFrom<IEnumerable<Inspection>>(viewResult.Model);
+      var model = Assert.IsAssignableFrom<IEnumerable<InspectionViewModel>>(viewResult.Model);
       Assert.Single(model);
     }
 
@@ -97,7 +110,7 @@ namespace PropertyManagement.Test.Controllers
       // Assert
       var partial = Assert.IsType<PartialViewResult>(result);
       Assert.Equal("_InspectionModal", partial.ViewName);
-      Assert.IsType<Inspection>(partial.Model);
+      Assert.IsType<InspectionViewModel>(partial.Model);
     }
 
     [Fact]
@@ -105,7 +118,7 @@ namespace PropertyManagement.Test.Controllers
     {
       // Arrange
       var context = GetDbContext();
-      var inspection = new Inspection { RoomId = 1, Date = DateTime.Today, Result = "Passed", Notes = "Test" };
+      var inspection = new Inspection { InspectionId = 1, RoomId = 1, Date = DateTime.Today, Result = "Passed", Notes = "Test" };
       context.Inspections.Add(inspection);
       context.SaveChanges();
 
@@ -117,7 +130,7 @@ namespace PropertyManagement.Test.Controllers
       // Assert
       var partial = Assert.IsType<PartialViewResult>(result);
       Assert.Equal("_InspectionModal", partial.ViewName);
-      var model = Assert.IsType<Inspection>(partial.Model);
+      var model = Assert.IsType<InspectionViewModel>(partial.Model);
       Assert.Equal(inspection.InspectionId, model.InspectionId);
     }
 

@@ -16,7 +16,6 @@ using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Xunit;
-using Assert = Xunit.Assert;
 
 namespace PropertyManagement.Test.Controllers;
 
@@ -25,56 +24,78 @@ public class MaintenanceControllerTests
   private ApplicationDbContext GetDbContext()
   {
     var options = new DbContextOptionsBuilder<ApplicationDbContext>()
-        .UseInMemoryDatabase(Guid.NewGuid().ToString())
+        .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
         .Options;
     return new ApplicationDbContext(options);
   }
 
   private IMapper GetMapper()
   {
-    var expr = new MapperConfigurationExpression();
-    expr.CreateMap<Room, RoomViewModel>().ReverseMap();
-    expr.CreateMap<MaintenanceRequest, MaintenanceRequestViewModel>().ReverseMap();
-    var config = new MapperConfiguration(expr, NullLoggerFactory.Instance);
+    var config = new MapperConfiguration(cfg =>
+    {
+      cfg.CreateMap<MaintenanceRequest, MaintenanceRequestViewModel>().ReverseMap();
+      cfg.CreateMap<Room, RoomViewModel>().ReverseMap();
+      cfg.CreateMap<Tenant, TenantViewModel>().ReverseMap();
+    }, NullLoggerFactory.Instance);
     return config.CreateMapper();
   }
 
-  private MaintenanceController GetController(ApplicationDbContext context, ClaimsPrincipal user)
+  private MaintenanceController CreateController(ApplicationDbContext context, ClaimsPrincipal user)
   {
+    var mapper = GetMapper();
+    
     var maintenanceRepo = new Mock<IGenericRepository<MaintenanceRequest>>();
     var roomRepo = new Mock<IGenericRepository<Room>>();
     var tenantRepo = new Mock<IGenericRepository<Tenant>>();
-
+    
     maintenanceRepo.Setup(r => r.Query()).Returns(context.MaintenanceRequests);
+    maintenanceRepo.Setup(r => r.GetByIdAsync(It.IsAny<int>()))
+        .ReturnsAsync((int id) => context.MaintenanceRequests.Find(id));
+    maintenanceRepo.Setup(r => r.AddAsync(It.IsAny<MaintenanceRequest>()))
+        .Callback((MaintenanceRequest req) => { context.MaintenanceRequests.Add(req); context.SaveChanges(); })
+        .Returns(Task.CompletedTask);
+    maintenanceRepo.Setup(r => r.UpdateAsync(It.IsAny<MaintenanceRequest>()))
+        .Callback((MaintenanceRequest req) => { context.Entry(req).State = EntityState.Modified; context.SaveChanges(); })
+        .Returns(Task.CompletedTask);
+    maintenanceRepo.Setup(r => r.DeleteAsync(It.IsAny<MaintenanceRequest>()))
+        .Callback((MaintenanceRequest req) => { context.MaintenanceRequests.Remove(req); context.SaveChanges(); })
+        .Returns(Task.CompletedTask);
+    
     roomRepo.Setup(r => r.Query()).Returns(context.Rooms);
+    roomRepo.Setup(r => r.GetAllAsync()).ReturnsAsync(() => context.Rooms.ToList());
+    roomRepo.Setup(r => r.GetByIdAsync(It.IsAny<int>()))
+        .ReturnsAsync((int id) => context.Rooms.Find(id));
+    roomRepo.Setup(r => r.UpdateAsync(It.IsAny<Room>()))
+        .Callback((Room room) => { context.Entry(room).State = EntityState.Modified; context.SaveChanges(); })
+        .Returns(Task.CompletedTask);
+    
     tenantRepo.Setup(r => r.Query()).Returns(context.Tenants);
-
-    var mapper = GetMapper();
-
+    tenantRepo.Setup(r => r.GetByIdAsync(It.IsAny<int>()))
+        .ReturnsAsync((int id) => context.Tenants.Find(id));
+    
     var controller = new MaintenanceController(
         maintenanceRepo.Object,
         roomRepo.Object,
         tenantRepo.Object,
         mapper
     );
-
-    var tempData = new TempDataDictionary(new DefaultHttpContext(), Mock.Of<ITempDataProvider>());
-    controller.TempData = tempData;
+    
     controller.ControllerContext = new ControllerContext
     {
       HttpContext = new DefaultHttpContext { User = user }
     };
+    controller.TempData = new TempDataDictionary(controller.ControllerContext.HttpContext, Mock.Of<ITempDataProvider>());
     return controller;
   }
 
   private ClaimsPrincipal GetUser(string role, int userId = 1)
   {
     var claims = new List<Claim>
-        {
-            new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
-            new Claim(ClaimTypes.Role, role)
-        };
-    var identity = new ClaimsIdentity(claims, "TestAuthType");
+    {
+      new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
+      new Claim(ClaimTypes.Role, role)
+    };
+    var identity = new ClaimsIdentity(claims, "TestAuth");
     return new ClaimsPrincipal(identity);
   }
 
@@ -82,183 +103,311 @@ public class MaintenanceControllerTests
   public async Task Index_Manager_ReturnsViewWithRequests()
   {
     var context = GetDbContext();
-    context.Rooms.Add(new Room { RoomId = 1, Number = "101", Type = "Single", Status = "Available" });
-    context.MaintenanceRequests.Add(new MaintenanceRequest { MaintenanceRequestId = 1, RoomId = 1, TenantId = "1", Description = "Fix", RequestDate = DateTime.Now, Status = "Pending" });
+    var room = new Room { RoomId = 1, Number = "101", Type = "Single", Status = "Available" };
+    var request = new MaintenanceRequest 
+    { 
+      MaintenanceRequestId = 1, 
+      RoomId = 1, 
+      Room = room,
+      Description = "Test maintenance",
+      RequestDate = DateTime.Now,
+      Status = "Pending",
+      TenantId = "1"
+    };
+    
+    context.Rooms.Add(room);
+    context.MaintenanceRequests.Add(request);
     context.SaveChanges();
 
-    var controller = GetController(context, GetUser("Manager"));
+    var user = GetUser("Manager");
+    var controller = CreateController(context, user);
 
     var result = await controller.Index();
 
     var viewResult = Assert.IsType<ViewResult>(result);
-    Assert.IsAssignableFrom<IEnumerable<MaintenanceRequestViewModel>>(viewResult.Model);
+    Assert.IsAssignableFrom<List<MaintenanceRequestViewModel>>(viewResult.Model);
+    Assert.True((bool)viewResult.ViewData["IsManager"]);
   }
 
   [Fact]
   public async Task Index_Tenant_ReturnsViewWithTenantRequests()
   {
     var context = GetDbContext();
-    context.Rooms.Add(new Room { RoomId = 1, Number = "101", Type = "Single", Status = "Available" });
-    context.Tenants.Add(new Tenant { TenantId = 1, UserId = 2, RoomId = 1, FullName = "Tenant", Contact = "123", EmergencyContactName = "EC", EmergencyContactNumber = "123" });
-    context.MaintenanceRequests.Add(new MaintenanceRequest { MaintenanceRequestId = 1, RoomId = 1, TenantId = "1", Description = "Fix", RequestDate = DateTime.Now, Status = "Pending" });
+    var user = new User { UserId = 2, Username = "tenant", Role = "Tenant" };
+    var room = new Room { RoomId = 1, Number = "101", Type = "Single", Status = "Available" };
+    var tenant = new Tenant { TenantId = 5, UserId = 2, RoomId = 1, FullName = "Test Tenant", Contact = "123", EmergencyContactName = "EC", EmergencyContactNumber = "123" };
+    var request = new MaintenanceRequest { MaintenanceRequestId = 2, RoomId = 1, Room = room, TenantId = "5", Description = "Test", RequestDate = DateTime.Now, Status = "Pending" };
+
+    context.Users.Add(user);
+    context.Rooms.Add(room);
+    context.Tenants.Add(tenant);
+    context.MaintenanceRequests.Add(request);
     context.SaveChanges();
 
-    var controller = GetController(context, GetUser("Tenant", 2));
+    var userClaims = GetUser("Tenant", 2);
+    var controller = CreateController(context, userClaims);
 
     var result = await controller.Index();
 
     var viewResult = Assert.IsType<ViewResult>(result);
-    Assert.IsAssignableFrom<IEnumerable<MaintenanceRequestViewModel>>(viewResult.Model);
+    Assert.IsAssignableFrom<List<MaintenanceRequestViewModel>>(viewResult.Model);
+    Assert.False((bool)viewResult.ViewData["IsManager"]);
   }
 
   [Fact]
-  public async Task TenantCreate_Get_ReturnsViewWithModel()
+  public async Task Index_UnknownRole_ReturnsForbid()
   {
     var context = GetDbContext();
-    context.Rooms.Add(new Room { RoomId = 1, Number = "101", Type = "Single", Status = "Available" });
-    context.Tenants.Add(new Tenant { TenantId = 1, UserId = 2, RoomId = 1, FullName = "Tenant", Contact = "123", EmergencyContactName = "EC", EmergencyContactNumber = "123" });
+    var user = GetUser("UnknownRole");
+    var controller = CreateController(context, user);
+
+    var result = await controller.Index();
+
+    Assert.IsType<ForbidResult>(result);
+  }
+
+  [Fact]
+  public async Task SubmitTenantRequest_Get_TenantNotFound_RedirectsToIndex()
+  {
+    var context = GetDbContext();
+    var user = GetUser("Tenant", 3);
+    var controller = CreateController(context, user);
+
+    var result = await controller.SubmitTenantRequest();
+
+    var redirect = Assert.IsType<RedirectToActionResult>(result);
+    Assert.Equal("Index", redirect.ActionName);
+  }
+
+  [Fact]
+  public async Task SubmitTenantRequest_Get_TenantFound_ReturnsView()
+  {
+    var context = GetDbContext();
+    var room = new Room { RoomId = 1, Number = "101", Type = "Single", Status = "Available" };
+    var tenant = new Tenant { TenantId = 5, UserId = 2, RoomId = 1, Room = room, FullName = "Test Tenant", Contact = "123", EmergencyContactName = "EC", EmergencyContactNumber = "123" };
+    
+    context.Rooms.Add(room);
+    context.Tenants.Add(tenant);
     context.SaveChanges();
 
-    var controller = GetController(context, GetUser("Tenant", 2));
+    var user = GetUser("Tenant", 2);
+    var controller = CreateController(context, user);
 
     var result = await controller.SubmitTenantRequest();
 
     var viewResult = Assert.IsType<ViewResult>(result);
-    Assert.IsType<MaintenanceRequestViewModel>(viewResult.Model);
+    var model = Assert.IsType<MaintenanceRequestViewModel>(viewResult.Model);
+    Assert.Equal(tenant.RoomId, model.RoomId);
+    Assert.Equal(tenant.TenantId.ToString(), model.TenantId);
   }
 
   [Fact]
-  public async Task TenantCreate_Post_ValidModel_CreatesRequestAndRedirects()
+  public async Task SubmitTenantRequest_Post_InvalidModel_ReturnsView()
   {
     var context = GetDbContext();
-    context.Rooms.Add(new Room { RoomId = 1, Number = "101", Type = "Single", Status = "Available" });
-    context.Tenants.Add(new Tenant { TenantId = 1, UserId = 2, RoomId = 1, FullName = "Tenant", Contact = "123", EmergencyContactName = "EC", EmergencyContactNumber = "123" });
+    var room = new Room { RoomId = 1, Number = "101", Type = "Single", Status = "Available" };
+    var tenant = new Tenant { TenantId = 5, UserId = 2, RoomId = 1, Room = room, FullName = "Test Tenant", Contact = "123", EmergencyContactName = "EC", EmergencyContactNumber = "123" };
+    
+    context.Rooms.Add(room);
+    context.Tenants.Add(tenant);
     context.SaveChanges();
 
-    var controller = GetController(context, GetUser("Tenant", 2));
-    var model = new MaintenanceRequestViewModel { Description = "Leaking tap" };
+    var user = GetUser("Tenant", 2);
+    var controller = CreateController(context, user);
+    controller.ModelState.AddModelError("Description", "Required");
+
+    var model = new MaintenanceRequestViewModel();
+    var result = await controller.SubmitTenantRequest(model);
+
+    var viewResult = Assert.IsType<ViewResult>(result);
+    Assert.Equal(model, viewResult.Model);
+  }
+
+  [Fact]
+  public async Task SubmitTenantRequest_Post_ValidModel_AddsRequestAndRedirects()
+  {
+    var context = GetDbContext();
+    var room = new Room { RoomId = 1, Number = "101", Type = "Single", Status = "Available" };
+    var tenant = new Tenant { TenantId = 5, UserId = 2, RoomId = 1, Room = room, FullName = "Test Tenant", Contact = "123", EmergencyContactName = "EC", EmergencyContactNumber = "123" };
+    
+    context.Rooms.Add(room);
+    context.Tenants.Add(tenant);
+    context.SaveChanges();
+
+    var user = GetUser("Tenant", 2);
+    var controller = CreateController(context, user);
+
+    var model = new MaintenanceRequestViewModel 
+    { 
+      Description = "Test maintenance request",
+      RoomId = 1,
+      TenantId = "5"
+    };
 
     var result = await controller.SubmitTenantRequest(model);
 
     var redirect = Assert.IsType<RedirectToActionResult>(result);
     Assert.Equal("Index", redirect.ActionName);
     Assert.Single(context.MaintenanceRequests);
-    Assert.Contains("Reference Number", controller.TempData["Success"].ToString());
   }
 
   [Fact]
-  public async Task Create_Manager_ReturnsView()
+  public async Task Create_Manager_ReturnsViewWithRooms()
   {
     var context = GetDbContext();
-    context.Rooms.Add(new Room { RoomId = 1, Number = "101", Type = "Single", Status = "Available" });
+    var room = new Room { RoomId = 1, Number = "101", Type = "Single", Status = "Available" };
+    context.Rooms.Add(room);
     context.SaveChanges();
 
-    var controller = GetController(context, GetUser("Manager"));
+    var user = GetUser("Manager");
+    var controller = CreateController(context, user);
 
     var result = await controller.Create();
 
     var viewResult = Assert.IsType<ViewResult>(result);
-    Assert.True(((List<RoomViewModel>)controller.ViewBag.Rooms).Count > 0);
+    Assert.IsType<MaintenanceRequestViewModel>(viewResult.Model);
+    Assert.NotNull(viewResult.ViewData["Rooms"]);
   }
 
   [Fact]
-  public async Task RequestModal_Manager_ReturnsPartialView()
+  public async Task Complete_RequestNotFound_ReturnsNotFound()
   {
     var context = GetDbContext();
-    context.Rooms.Add(new Room { RoomId = 1, Number = "101", Type = "Single", Status = "Available" });
-    context.MaintenanceRequests.Add(new MaintenanceRequest { MaintenanceRequestId = 1, RoomId = 1, TenantId = "1", Description = "Fix", RequestDate = DateTime.Now, Status = "Pending" });
-    context.SaveChanges();
+    var user = GetUser("Manager");
+    var controller = CreateController(context, user);
 
-    var controller = GetController(context, GetUser("Manager"));
+    var result = await controller.Complete(99);
 
-    var result = await controller.RequestModal(1);
-
-    var request = await context.MaintenanceRequests
-        .Include(r => r.Room)
-        .FirstOrDefaultAsync(r => r.MaintenanceRequestId == 1);
-
-    if (request == null)
-    {
-      controller.TempData["Error"] = "Maintenance request not found.";
-      Assert.IsType<NotFoundResult>(result);
-      return;
-    }
-
-    var partial = Assert.IsType<PartialViewResult>(result);
-    Assert.Equal("_RequestModal", partial.ViewName);
-    Assert.IsType<MaintenanceRequestViewModel>(partial.Model);
+    Assert.IsType<NotFoundResult>(result);
   }
 
   [Fact]
-  public async Task CreateOrEdit_Manager_CreatesRequestAndRedirects()
+  public async Task Complete_RequestFound_UpdatesStatusAndRedirects()
   {
     var context = GetDbContext();
-    context.Rooms.Add(new Room { RoomId = 1, Number = "101", Type = "Single", Status = "Available" });
-    context.Tenants.Add(new Tenant { TenantId = 1, RoomId = 1, FullName = "Tenant", Contact = "123", EmergencyContactName = "EC", EmergencyContactNumber = "123" });
-    context.SaveChanges();
-
-    var controller = GetController(context, GetUser("Manager"));
-    var request = new MaintenanceRequestViewModel
-    {
+    var request = new MaintenanceRequest 
+    { 
+      MaintenanceRequestId = 1, 
       RoomId = 1,
-      Description = "Broken window",
       Status = "Pending",
-      AssignedTo = "Manager"
+      Description = "Test",
+      RequestDate = DateTime.Now,
+      TenantId = "1"
     };
-
-    var result = await controller.CreateOrEdit(request);
-
-    var redirect = Assert.IsType<RedirectToActionResult>(result);
-    Assert.Equal("Index", redirect.ActionName);
-    Assert.Single(context.MaintenanceRequests);
-    Assert.Equal("Maintenance request created successfully.", controller.TempData["Success"]);
-  }
-
-  [Fact]
-  public async Task CreateOrEdit_Manager_UpdatesRequestAndRedirects()
-  {
-    var context = GetDbContext();
-    context.Rooms.Add(new Room { RoomId = 1, Number = "101", Type = "Single", Status = "Available" });
-    context.Tenants.Add(new Tenant { TenantId = 1, RoomId = 1, FullName = "Tenant", Contact = "123", EmergencyContactName = "EC", EmergencyContactNumber = "123" });
-    context.MaintenanceRequests.Add(new MaintenanceRequest { MaintenanceRequestId = 1, RoomId = 1, TenantId = "1", Description = "Old desc", RequestDate = DateTime.Now, Status = "Pending" });
+    context.MaintenanceRequests.Add(request);
     context.SaveChanges();
 
-    var controller = GetController(context, GetUser("Manager"));
-    var request = new MaintenanceRequestViewModel { MaintenanceRequestId = 1, RoomId = 1, TenantId = "1", Description = "Updated desc", Status = "In Progress", AssignedTo = "Manager" };
-
-    var result = await controller.CreateOrEdit(request);
-
-    var redirect = Assert.IsType<RedirectToActionResult>(result);
-    Assert.Equal("Index", redirect.ActionName);
-    Assert.Equal("Maintenance request updated successfully.", controller.TempData["Success"]);
-    Assert.Equal("Updated desc", context.MaintenanceRequests.First().Description);
-  }
-
-  [Fact]
-  public async Task Complete_Manager_MarksRequestCompletedAndRedirects()
-  {
-    var context = GetDbContext();
-    context.MaintenanceRequests.Add(new MaintenanceRequest { MaintenanceRequestId = 1, RoomId = 1, TenantId = "1", Description = "Fix", RequestDate = DateTime.Now, Status = "Pending" });
-    context.SaveChanges();
-
-    var controller = GetController(context, GetUser("Manager"));
+    var user = GetUser("Manager");
+    var controller = CreateController(context, user);
 
     var result = await controller.Complete(1);
 
     var redirect = Assert.IsType<RedirectToActionResult>(result);
     Assert.Equal("Index", redirect.ActionName);
-    Assert.Equal("Completed", context.MaintenanceRequests.First().Status);
-    Assert.Equal("Maintenance request marked as completed.", controller.TempData["Success"]);
+    Assert.Equal("Completed", request.Status);
   }
 
   [Fact]
-  public async Task GetRequest_Manager_ReturnsJson()
+  public async Task Delete_RequestNotFound_ReturnsNotFound()
   {
     var context = GetDbContext();
-    context.MaintenanceRequests.Add(new MaintenanceRequest { MaintenanceRequestId = 1, RoomId = 1, TenantId = "1", Description = "Fix", RequestDate = DateTime.Now, Status = "Pending" });
+    var user = GetUser("Manager");
+    var controller = CreateController(context, user);
+
+    var result = await controller.Delete(1);
+
+    Assert.IsType<NotFoundResult>(result);
+  }
+
+  [Fact]
+  public async Task Delete_RequestFound_DeletesRequestAndRedirects()
+  {
+    var context = GetDbContext();
+    var room = new Room { RoomId = 1, Number = "101", Type = "Single", Status = "Under Maintenance" };
+    var request = new MaintenanceRequest 
+    { 
+      MaintenanceRequestId = 1, 
+      RoomId = 1, 
+      Room = room,
+      Description = "Test",
+      RequestDate = DateTime.Now,
+      Status = "Pending",
+      TenantId = "1"
+    };
+    
+    context.Rooms.Add(room);
+    context.MaintenanceRequests.Add(request);
     context.SaveChanges();
 
-    var controller = GetController(context, GetUser("Manager"));
+    var user = GetUser("Manager");
+    var controller = CreateController(context, user);
+
+    var result = await controller.Delete(1);
+
+    var redirect = Assert.IsType<RedirectToActionResult>(result);
+    Assert.Equal("Index", redirect.ActionName);
+    Assert.Empty(context.MaintenanceRequests);
+  }
+
+  [Fact]
+  public async Task History_ReturnsViewWithHistory()
+  {
+    var context = GetDbContext();
+    var room = new Room { RoomId = 1, Number = "101", Type = "Single", Status = "Available" };
+    var request = new MaintenanceRequest 
+    { 
+      MaintenanceRequestId = 1, 
+      RoomId = 1, 
+      Room = room,
+      Description = "Test",
+      RequestDate = DateTime.Now,
+      Status = "Completed",
+      TenantId = "1"
+    };
+    
+    context.Rooms.Add(room);
+    context.MaintenanceRequests.Add(request);
+    context.SaveChanges();
+
+    var user = GetUser("Manager");
+    var controller = CreateController(context, user);
+
+    var result = await controller.History(1);
+
+    var viewResult = Assert.IsType<ViewResult>(result);
+    Assert.IsAssignableFrom<List<MaintenanceRequestViewModel>>(viewResult.Model);
+  }
+
+  [Fact]
+  public async Task GetRequest_RequestNotFound_ReturnsNotFound()
+  {
+    var context = GetDbContext();
+    var user = GetUser("Manager");
+    var controller = CreateController(context, user);
+
+    var result = await controller.GetRequest(1);
+
+    Assert.IsType<NotFoundResult>(result);
+  }
+
+  [Fact]
+  public async Task GetRequest_RequestFound_ReturnsJson()
+  {
+    var context = GetDbContext();
+    var request = new MaintenanceRequest 
+    { 
+      MaintenanceRequestId = 1, 
+      RoomId = 1,
+      Description = "Test",
+      RequestDate = DateTime.Now,
+      Status = "Pending",
+      TenantId = "1"
+    };
+    context.MaintenanceRequests.Add(request);
+    context.SaveChanges();
+
+    var user = GetUser("Manager");
+    var controller = CreateController(context, user);
 
     var result = await controller.GetRequest(1);
 
@@ -267,44 +416,212 @@ public class MaintenanceControllerTests
   }
 
   [Fact]
-  public async Task Delete_Manager_DeletesRequestAndRedirects()
+  public async Task Index_Tenant_NoTenantRecord_ReturnsViewWithEmptyModel()
   {
     var context = GetDbContext();
-    context.Rooms.Add(new Room { RoomId = 1, Number = "101", Type = "Single", Status = "Available" });
-    context.MaintenanceRequests.Add(new MaintenanceRequest
-    {
-      MaintenanceRequestId = 1,
-      RoomId = 1,
-      TenantId = "1",
-      Description = "Fix",
-      RequestDate = DateTime.Now,
-      Status = "Pending"
-    });
-    context.SaveChanges();
+    var user = GetUser("Tenant", 999);
+    var controller = CreateController(context, user);
 
-    var controller = GetController(context, GetUser("Manager"));
-
-    var result = await controller.Delete(1);
-
-    var redirect = Assert.IsType<RedirectToActionResult>(result);
-    Assert.Equal("Index", redirect.ActionName);
-    Assert.Empty(context.MaintenanceRequests);
-    Assert.Equal("Maintenance request deleted and room status updated if applicable.", controller.TempData["Success"]);
-  }
-
-  [Fact]
-  public async Task History_Manager_ReturnsViewWithHistory()
-  {
-    var context = GetDbContext();
-    context.Rooms.Add(new Room { RoomId = 1, Number = "101", Type = "Single", Status = "Available" });
-    context.MaintenanceRequests.Add(new MaintenanceRequest { MaintenanceRequestId = 1, RoomId = 1, TenantId = "1", Description = "Fix", RequestDate = DateTime.Now, Status = "Completed" });
-    context.SaveChanges();
-
-    var controller = GetController(context, GetUser("Manager"));
-
-    var result = await controller.History(1);
+    var result = await controller.Index();
 
     var viewResult = Assert.IsType<ViewResult>(result);
     Assert.IsAssignableFrom<IEnumerable<MaintenanceRequestViewModel>>(viewResult.Model);
+    Assert.Empty((IEnumerable<MaintenanceRequestViewModel>)viewResult.Model);
+  }
+
+  [Fact]
+  public async Task SubmitTenantRequest_Post_TenantNotFound_RedirectsToIndex()
+  {
+    var context = GetDbContext();
+    var user = GetUser("Tenant", 999);
+    var controller = CreateController(context, user);
+
+    var model = new MaintenanceRequestViewModel();
+    var result = await controller.SubmitTenantRequest(model);
+
+    var redirect = Assert.IsType<RedirectToActionResult>(result);
+    Assert.Equal("Index", redirect.ActionName);
+  }
+
+  [Fact]
+  public async Task CreateOrEdit_Get_NewRequest_ReturnsViewWithEmptyModel()
+  {
+    var context = GetDbContext();
+    var room = new Room { RoomId = 1, Number = "101", Type = "Single", Status = "Available" };
+    context.Rooms.Add(room);
+    context.SaveChanges();
+
+    var user = GetUser("Manager");
+    var controller = CreateController(context, user);
+
+    var result = await controller.CreateOrEdit();
+
+    var viewResult = Assert.IsType<ViewResult>(result);
+    var model = Assert.IsType<MaintenanceRequestViewModel>(viewResult.Model);
+    Assert.Equal(0, model.MaintenanceRequestId);
+    Assert.NotNull(viewResult.ViewData["Rooms"]);
+  }
+
+  [Fact]
+  public async Task CreateOrEdit_Get_EditRequest_ReturnsViewWithModel()
+  {
+    var context = GetDbContext();
+    var room = new Room { RoomId = 1, Number = "101", Type = "Single", Status = "Available" };
+    var request = new MaintenanceRequest 
+    { 
+      MaintenanceRequestId = 1, 
+      RoomId = 1, 
+      Room = room,
+      Description = "Test maintenance",
+      RequestDate = DateTime.Now,
+      Status = "Pending",
+      TenantId = "1"
+    };
+    
+    context.Rooms.Add(room);
+    context.MaintenanceRequests.Add(request);
+    context.SaveChanges();
+
+    var user = GetUser("Manager");
+    var controller = CreateController(context, user);
+
+    var result = await controller.CreateOrEdit(1);
+
+    var viewResult = Assert.IsType<ViewResult>(result);
+    var model = Assert.IsType<MaintenanceRequestViewModel>(viewResult.Model);
+    Assert.Equal(1, model.MaintenanceRequestId);
+    Assert.Equal("Test maintenance", model.Description);
+    Assert.NotNull(viewResult.ViewData["Rooms"]);
+  }
+
+  [Fact]
+  public async Task CreateOrEdit_Get_RequestNotFound_ReturnsNotFound()
+  {
+    var context = GetDbContext();
+    var user = GetUser("Manager");
+    var controller = CreateController(context, user);
+
+    var result = await controller.CreateOrEdit(999);
+
+    Assert.IsType<NotFoundResult>(result);
+  }
+
+  [Fact]
+  public async Task CreateOrEdit_Post_CreateNewRequest_AddsRequestAndRedirects()
+  {
+    var context = GetDbContext();
+    var room = new Room { RoomId = 1, Number = "101", Type = "Single", Status = "Available" };
+    context.Rooms.Add(room);
+    context.SaveChanges();
+
+    var user = GetUser("Manager");
+    var controller = CreateController(context, user);
+
+    var model = new MaintenanceRequestViewModel
+    {
+      MaintenanceRequestId = 0,
+      RoomId = 1,
+      Description = "New maintenance request",
+      TenantId = "1"
+    };
+
+    var result = await controller.CreateOrEdit(model);
+
+    var redirect = Assert.IsType<RedirectToActionResult>(result);
+    Assert.Equal("Index", redirect.ActionName);
+    Assert.Single(context.MaintenanceRequests);
+    var addedRequest = context.MaintenanceRequests.First();
+    Assert.Equal("New maintenance request", addedRequest.Description);
+    Assert.Equal("Pending", addedRequest.Status);
+  }
+
+  [Fact]
+  public async Task CreateOrEdit_Post_UpdateExistingRequest_UpdatesRequestAndRedirects()
+  {
+    var context = GetDbContext();
+    var room = new Room { RoomId = 1, Number = "101", Type = "Single", Status = "Available" };
+    var request = new MaintenanceRequest 
+    { 
+      MaintenanceRequestId = 1, 
+      RoomId = 1, 
+      Room = room,
+      Description = "Original description",
+      RequestDate = DateTime.Now,
+      Status = "Pending",
+      TenantId = "1"
+    };
+    
+    context.Rooms.Add(room);
+    context.MaintenanceRequests.Add(request);
+    context.SaveChanges();
+
+    var user = GetUser("Manager");
+    var controller = CreateController(context, user);
+
+    var model = new MaintenanceRequestViewModel
+    {
+      MaintenanceRequestId = 1,
+      RoomId = 1,
+      Description = "Updated description",
+      TenantId = "1"
+    };
+
+    var result = await controller.CreateOrEdit(model);
+
+    var redirect = Assert.IsType<RedirectToActionResult>(result);
+    Assert.Equal("Index", redirect.ActionName);
+    Assert.Single(context.MaintenanceRequests);
+    var updatedRequest = context.MaintenanceRequests.First();
+    Assert.Equal("Updated description", updatedRequest.Description);
+  }
+
+  [Fact]
+  public async Task CreateOrEdit_Post_InvalidModel_ReturnsViewWithModel()
+  {
+    var context = GetDbContext();
+    var room = new Room { RoomId = 1, Number = "101", Type = "Single", Status = "Available" };
+    context.Rooms.Add(room);
+    context.SaveChanges();
+
+    var user = GetUser("Manager");
+    var controller = CreateController(context, user);
+    controller.ModelState.AddModelError("Description", "Required");
+
+    var model = new MaintenanceRequestViewModel
+    {
+      MaintenanceRequestId = 0,
+      RoomId = 1
+    };
+
+    var result = await controller.CreateOrEdit(model);
+
+    var viewResult = Assert.IsType<ViewResult>(result);
+    Assert.Equal(model, viewResult.Model);
+    Assert.NotNull(viewResult.ViewData["Rooms"]);
+    Assert.False(controller.ModelState.IsValid);
+  }
+
+  [Fact]
+  public async Task CreateOrEdit_Post_EditRequestNotFound_ReturnsNotFound()
+  {
+    var context = GetDbContext();
+    var room = new Room { RoomId = 1, Number = "101", Type = "Single", Status = "Available" };
+    context.Rooms.Add(room);
+    context.SaveChanges();
+
+    var user = GetUser("Manager");
+    var controller = CreateController(context, user);
+
+    var model = new MaintenanceRequestViewModel
+    {
+      MaintenanceRequestId = 999,
+      RoomId = 1,
+      Description = "Test description",
+      TenantId = "1"
+    };
+
+    var result = await controller.CreateOrEdit(model);
+
+    Assert.IsType<NotFoundResult>(result);
   }
 }

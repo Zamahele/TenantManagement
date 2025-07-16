@@ -85,23 +85,50 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 
 builder.Services.AddAutoMapper(cfg =>
 {
+  // Payment mappings
+  cfg.CreateMap<PaymentViewModel, Payment>()
+      .ForMember(dest => dest.PaymentId, opt => opt.MapFrom(src => src.PaymentId ?? 0))
+      .ForMember(dest => dest.Date, opt => opt.Ignore()); // Set in controller
+  cfg.CreateMap<Payment, PaymentViewModel>();
+
+  // Room mappings
   cfg.CreateMap<Room, RoomViewModel>().ReverseMap();
+  cfg.CreateMap<RoomFormViewModel, Room>().ReverseMap();
 
   cfg.CreateMap<LeaseAgreement, LeaseAgreementViewModel>()
       .ForMember(dest => dest.Room, opt => opt.MapFrom(src => src.Room))
       .ReverseMap();
 
-  cfg.CreateMap<Payment, PaymentViewModel>()
-      .ForMember(dest => dest.Tenant, opt => opt.MapFrom(src => src.Tenant))
-      .ForMember(dest => dest.Room, opt => opt.MapFrom(src => src.Tenant != null ? src.Tenant.Room : null))
-      .ForMember(dest => dest.LeaseAgreement, opt => opt.MapFrom(src => src.LeaseAgreement))
-      .ReverseMap();
-
+  // User mappings
+  cfg.CreateMap<User, UserViewModel>().ReverseMap();
+  
   cfg.CreateMap<Tenant, TenantViewModel>()
       .ForMember(dest => dest.Room, opt => opt.MapFrom(src => src.Room))
       .ForMember(dest => dest.LeaseAgreements, opt => opt.MapFrom(src => src.LeaseAgreements))
       .ForMember(dest => dest.Payments, opt => opt.MapFrom(src => src.Payments))
-      .ReverseMap();
+      .ForMember(dest => dest.User, opt => opt.MapFrom(src => src.User));
+  cfg.CreateMap<TenantViewModel, Tenant>()
+      .ForMember(dest => dest.Room, opt => opt.Ignore())
+      .ForMember(dest => dest.LeaseAgreements, opt => opt.Ignore())
+      .ForMember(dest => dest.Payments, opt => opt.Ignore())
+      .ForMember(dest => dest.User, opt => opt.Ignore());
+
+  // BookingRequest mappings
+  cfg.CreateMap<BookingRequest, BookingRequestViewModel>()
+      .ForMember(dest => dest.Room, opt => opt.MapFrom(src => src.Room))
+      .ForMember(dest => dest.RoomOptions, opt => opt.Ignore());
+  cfg.CreateMap<BookingRequestViewModel, BookingRequest>()
+      .ForMember(dest => dest.Room, opt => opt.Ignore());
+  
+  // Inspection mappings
+  cfg.CreateMap<Inspection, InspectionViewModel>().ReverseMap();
+  cfg.CreateMap<InspectionViewModel, Inspection>()
+      .ForMember(dest => dest.Room, opt => opt.Ignore());
+  
+  // MaintenanceRequest mappings
+  cfg.CreateMap<MaintenanceRequest, MaintenanceRequestViewModel>().ReverseMap();
+  cfg.CreateMap<MaintenanceRequestViewModel, MaintenanceRequest>()
+      .ForMember(dest => dest.Room, opt => opt.Ignore());
 });
 
 builder.WebHost.ConfigureKestrel(options =>

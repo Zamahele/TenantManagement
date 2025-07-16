@@ -46,15 +46,42 @@ public class LeaseAgreementsControllerTests
     {
         // Mock repositories
         var leaseRepo = new Mock<IGenericRepository<LeaseAgreement>>();
-        leaseRepo.Setup(r => r.UpdateAsync(It.IsAny<LeaseAgreement>())).Returns(Task.CompletedTask);
+        leaseRepo.Setup(r => r.Query()).Returns(context.LeaseAgreements);
+        leaseRepo.Setup(r => r.GetByIdAsync(It.IsAny<object>()))
+            .ReturnsAsync((object id) => context.LeaseAgreements.FirstOrDefault(l => l.LeaseAgreementId == (int)id));
+        leaseRepo.Setup(r => r.AddAsync(It.IsAny<LeaseAgreement>()))
+            .Callback((LeaseAgreement agreement) => { context.LeaseAgreements.Add(agreement); context.SaveChanges(); })
+            .Returns(Task.CompletedTask);
+        leaseRepo.Setup(r => r.UpdateAsync(It.IsAny<LeaseAgreement>()))
+            .Callback((LeaseAgreement agreement) => { 
+                var existing = context.LeaseAgreements.FirstOrDefault(l => l.LeaseAgreementId == agreement.LeaseAgreementId);
+                if (existing != null)
+                {
+                    // Detach the entity to avoid tracking issues
+                    context.Entry(existing).State = EntityState.Detached;
+                    
+                    // Update the incoming entity and attach it
+                    context.Entry(agreement).State = EntityState.Modified;
+                    context.SaveChanges();
+                    
+                    // Re-attach the updated entity 
+                    context.Entry(agreement).State = EntityState.Detached;
+                }
+            })
+            .Returns(Task.CompletedTask);
+        leaseRepo.Setup(r => r.DeleteAsync(It.IsAny<LeaseAgreement>()))
+            .Callback((LeaseAgreement agreement) => { context.LeaseAgreements.Remove(agreement); context.SaveChanges(); })
+            .Returns(Task.CompletedTask);
 
         var tenantRepo = new Mock<IGenericRepository<Tenant>>();
-        var roomRepo = new Mock<IGenericRepository<Room>>();
-
-        // Setup Query() to return DbSet as IQueryable for each repo
-        leaseRepo.Setup(r => r.Query()).Returns(context.LeaseAgreements);
         tenantRepo.Setup(r => r.Query()).Returns(context.Tenants);
+        tenantRepo.Setup(r => r.GetByIdAsync(It.IsAny<object>()))
+            .ReturnsAsync((object id) => context.Tenants.FirstOrDefault(t => t.TenantId == (int)id));
+
+        var roomRepo = new Mock<IGenericRepository<Room>>();
         roomRepo.Setup(r => r.Query()).Returns(context.Rooms);
+        roomRepo.Setup(r => r.GetByIdAsync(It.IsAny<object>()))
+            .ReturnsAsync((object id) => context.Rooms.FirstOrDefault(r => r.RoomId == (int)id));
 
         var envMock = new Mock<IWebHostEnvironment>();
         envMock.Setup(e => e.WebRootPath).Returns(webRootPath);

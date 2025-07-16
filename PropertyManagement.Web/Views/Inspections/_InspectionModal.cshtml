@@ -47,11 +47,16 @@
                 type: 'POST',
                 data: form.serialize(),
                 success: function (result) {
-                    if (result.success) {
+                    // If the result is a redirect (success), reload the page
+                    if (result.indexOf('<!DOCTYPE html>') !== -1 || result.indexOf('<script>') !== -1) {
                         location.reload();
                     } else {
+                        // Otherwise, it's a partial view with validation errors
                         $('#inspectionModalBody').html(result);
                     }
+                },
+                error: function () {
+                    location.reload();
                 }
             });
         });

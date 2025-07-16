@@ -75,6 +75,11 @@
 
 @section Scripts {
   <script>
+    // Get CSRF token for AJAX requests
+    function getAntiForgeryToken() {
+        return $('input[name="__RequestVerificationToken"]').val();
+    }
+    
     function openAddModal() {
         document.getElementById('roomForm').reset();
         document.getElementById('RoomId').value = 0;
@@ -99,12 +104,17 @@
             });
     }
     function deleteRoom(id) {
-        if (confirm('Delete this room?')) {
+        if (confirm('Are you sure you want to delete this room? This action cannot be undone.')) {
             document.getElementById('deleteForm-' + id).submit();
         }
     }
     function BookRoom(roomId) {
-        fetch('/Rooms/BookRoom?roomId=' + roomId)
+        fetch('/Rooms/BookRoom?roomId=' + roomId, {
+            method: 'GET',
+            headers: {
+                'RequestVerificationToken': getAntiForgeryToken()
+            }
+        })
             .then(response => response.text())
             .then(html => {
                 document.getElementById('bookingModalContainer').innerHTML = html;
@@ -114,7 +124,12 @@
     }
 
     function editBookingRequest(bookingRequestId) {
-        fetch('/Rooms/EditBookingRequest?bookingRequestId=' + bookingRequestId)
+        fetch('/Rooms/EditBookingRequest?bookingRequestId=' + bookingRequestId, {
+            method: 'GET',
+            headers: {
+                'RequestVerificationToken': getAntiForgeryToken()
+            }
+        })
             .then(response => response.text())
             .then(html => {
                 document.getElementById('bookingModalContainer').innerHTML = html;

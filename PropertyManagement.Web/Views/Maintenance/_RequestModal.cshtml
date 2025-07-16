@@ -1,6 +1,6 @@
 @model PropertyManagement.Web.ViewModels.MaintenanceRequestViewModel
 @{
-  var rooms = ViewBag.Rooms as List<PropertyManagement.Domain.Entities.Room>;
+  var rooms = ViewBag.Rooms as List<PropertyManagement.Web.ViewModels.RoomViewModel>;
 }
 
 <div class="card shadow-lg border-0">
@@ -16,11 +16,14 @@
         <label asp-for="RoomId" class="form-label"></label>
         <select asp-for="RoomId" class="form-control" required>
           <option value="">Select Room</option>
-          @foreach (var room in rooms)
+          @if (rooms != null)
           {
-            <option value="@room.RoomId" selected="@(room.RoomId == Model.RoomId ? "selected" : null)">
-              @room.Number
-            </option>
+            @foreach (var room in rooms)
+            {
+              <option value="@room.RoomId" selected="@(room.RoomId == Model.RoomId ? "selected" : null)">
+                @room.Number
+              </option>
+            }
           }
         </select>
         <span asp-validation-for="RoomId" class="text-danger"></span>

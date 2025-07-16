@@ -46,6 +46,14 @@
                     </a>
                   </li>
                   <li>
+                    <a class="dropdown-item text-warning"
+                       href="#"
+                       onclick="openChangePasswordModal(@tenant.TenantId); return false;">
+                      <i class="bi bi-key"></i> Change Password
+                    </a>
+                  </li>
+                  <li><hr class="dropdown-divider"></li>
+                  <li>
                     <a class="dropdown-item text-danger" href="#" data-bs-toggle="modal" data-bs-target="#deleteModal-@tenant.TenantId">
                       <i class="bi bi-trash"></i> Delete
                     </a>
@@ -75,7 +83,7 @@
   </div>
 </div>
 
-<!-- Modal Container -->
+<!-- Tenant Modal Container -->
 <div class="modal fade" id="tenantModal" tabindex="-1" aria-labelledby="tenantModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered" style="max-width: 500px;">
     <div class="modal-content shadow-lg border-0">
@@ -90,31 +98,87 @@
   </div>
 </div>
 
+<!-- Change Password Modal Container -->
+<div class="modal fade" id="changePasswordModal" tabindex="-1" aria-labelledby="changePasswordModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width: 500px;">
+    <div class="modal-content shadow-lg border-0">
+      <div class="modal-header bg-warning text-dark py-2">
+        <h5 class="modal-title" id="changePasswordModalLabel">Change Password</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-3 custom-modal-body" id="changePasswordModalBody" style="background-color: #f8f9fa;">
+        <!-- Password change form will be loaded here via AJAX -->
+      </div>
+    </div>
+  </div>
+</div>
+
 @section Scripts {
   <script>
+    // Get CSRF token for AJAX requests
+    function getAntiForgeryToken() {
+        return $('input[name="__RequestVerificationToken"]').val();
+    }
+
     function openAddModal() {
-        fetch('/Tenants/TenantForm')
+        fetch('/Tenants/TenantForm', {
+            method: 'GET',
+            headers: {
+                'RequestVerificationToken': getAntiForgeryToken()
+            }
+        })
             .then(response => response.text())
             .then(html => {
                 document.getElementById('tenantModalLabel').innerText = 'Add Tenant';
                 document.getElementById('tenantModalBody').innerHTML = html;
                 var modal = new bootstrap.Modal(document.getElementById('tenantModal'));
                 modal.show();
+            })
+            .catch(error => {
+                console.error('Error loading form:', error);
             });
     }
+    
     function openEditModal(id) {
-        fetch('/Tenants/TenantForm?id=' + id)
+        fetch('/Tenants/TenantForm?id=' + id, {
+            method: 'GET',
+            headers: {
+                'RequestVerificationToken': getAntiForgeryToken()
+            }
+        })
             .then(response => response.text())
             .then(html => {
                 document.getElementById('tenantModalLabel').innerText = 'Edit Tenant';
                 document.getElementById('tenantModalBody').innerHTML = html;
                 var modal = new bootstrap.Modal(document.getElementById('tenantModal'));
                 modal.show();
+            })
+            .catch(error => {
+                console.error('Error loading form:', error);
+            });
+    }
+
+    function openChangePasswordModal(id) {
+        fetch('/Tenants/ChangePassword/' + id, {
+            method: 'GET',
+            headers: {
+                'RequestVerificationToken': getAntiForgeryToken()
+            }
+        })
+            .then(response => response.text())
+            .then(html => {
+                document.getElementById('changePasswordModalLabel').innerText = 'Change Password';
+                document.getElementById('changePasswordModalBody').innerHTML = html;
+                var modal = new bootstrap.Modal(document.getElementById('changePasswordModal'));
+                modal.show();
+            })
+            .catch(error => {
+                console.error('Error loading password change form:', error);
             });
     }
 
     function deleteTenant(id) {
-        if (confirm('Delete this tenant?')) {
+        if (confirm('Are you sure you want to delete this tenant? This action cannot be undone.')) {
             document.getElementById('deleteForm-' + id).submit();
         }
     }

@@ -27,7 +27,6 @@ public class PaymentsControllerTests
         expr.CreateMap<Tenant, TenantViewModel>().ReverseMap();
         expr.CreateMap<Room, RoomViewModel>().ReverseMap();
         expr.CreateMap<LeaseAgreement, LeaseAgreementViewModel>().ReverseMap();
-
         var config = new MapperConfiguration(expr, NullLoggerFactory.Instance);
         return config.CreateMapper();
     }
@@ -40,16 +39,26 @@ public class PaymentsControllerTests
         return new ApplicationDbContext(options);
     }
 
-    private PaymentsController GetController(
-        ApplicationDbContext context,
-        IMapper autoMapper)
+    private PaymentsController GetController(ApplicationDbContext context, IMapper autoMapper)
     {
-        // Mock repositories
         var paymentRepo = new Mock<IGenericRepository<Payment>>();
         paymentRepo.Setup(r => r.Query()).Returns(context.Payments);
+        paymentRepo.Setup(r => r.AddAsync(It.IsAny<Payment>()))
+            .Callback((Payment p) => { context.Payments.Add(p); context.SaveChanges(); })
+            .Returns(Task.CompletedTask);
+        paymentRepo.Setup(r => r.UpdateAsync(It.IsAny<Payment>()))
+            .Callback((Payment p) => { context.Entry(p).State = EntityState.Modified; context.SaveChanges(); })
+            .Returns(Task.CompletedTask);
+        paymentRepo.Setup(r => r.DeleteAsync(It.IsAny<Payment>()))
+            .Callback((Payment p) => { var tracked = context.Payments.Find(p.PaymentId); if (tracked != null) { context.Payments.Remove(tracked); context.SaveChanges(); } })
+            .Returns(Task.CompletedTask);
+        paymentRepo.Setup(r => r.GetByIdAsync(It.IsAny<int>()))
+            .ReturnsAsync((int id) => context.Payments.Find(id));
 
         var tenantRepo = new Mock<IGenericRepository<Tenant>>();
         tenantRepo.Setup(r => r.Query()).Returns(context.Tenants);
+        tenantRepo.Setup(r => r.GetByIdAsync(It.IsAny<int>()))
+            .ReturnsAsync((int id) => context.Tenants.Find(id));
 
         var leaseAgreementRepo = new Mock<IGenericRepository<LeaseAgreement>>();
         leaseAgreementRepo.Setup(r => r.Query()).Returns(context.LeaseAgreements);
@@ -186,16 +195,14 @@ public class PaymentsControllerTests
     }
 
     [Fact]
-    public void Receipt_ValidId_ReturnsPartialViewWithPaymentViewModel()
+    public async Task Receipt_ValidId_ReturnsPartialViewWithPaymentViewModel()
     {
         var context = GetDbContext();
         var mapper = GetMapper();
 
-        // Create Room
         var room = new Room { RoomId = 1, Number = "101", Type = "Single", Status = "Available" };
         context.Rooms.Add(room);
 
-        // Create Tenant with Room
         var tenant = new Tenant
         {
             TenantId = 1,
@@ -209,7 +216,6 @@ public class PaymentsControllerTests
         };
         context.Tenants.Add(tenant);
 
-        // Create Payment with Tenant
         var payment = new Payment
         {
             PaymentId = 1,
@@ -225,9 +231,33 @@ public class PaymentsControllerTests
 
         context.SaveChanges();
 
-        var controller = GetController(context, mapper);
+        // Setup repository mocks to use context for GetByIdAsync
+        var paymentRepo = new Mock<IGenericRepository<Payment>>();
+        paymentRepo.Setup(r => r.GetByIdAsync(It.IsAny<int>()))
+            .ReturnsAsync((int id) => context.Payments.Find(id));
+        paymentRepo.Setup(r => r.Query()).Returns(context.Payments);
 
-        var result = controller.Receipt(1);
+        var tenantRepo = new Mock<IGenericRepository<Tenant>>();
+        tenantRepo.Setup(r => r.GetByIdAsync(It.IsAny<int>()))
+            .ReturnsAsync((int id) => context.Tenants.Find(id));
+        tenantRepo.Setup(r => r.Query()).Returns(context.Tenants);
+
+        var leaseAgreementRepo = new Mock<IGenericRepository<LeaseAgreement>>();
+        leaseAgreementRepo.Setup(r => r.Query()).Returns(context.LeaseAgreements);
+
+        var controller = new PaymentsController(
+            paymentRepo.Object,
+            tenantRepo.Object,
+            leaseAgreementRepo.Object,
+            mapper);
+
+        var tempData = new TempDataDictionary(
+            new DefaultHttpContext(),
+            Mock.Of<ITempDataProvider>()
+        );
+        controller.TempData = tempData;
+
+        var result = await controller.Receipt(1);
 
         var partial = Assert.IsType<PartialViewResult>(result);
         Assert.Equal("_PaymentReceipt", partial.ViewName);
@@ -240,11 +270,9 @@ public class PaymentsControllerTests
         var context = GetDbContext();
         var mapper = GetMapper();
 
-        // Create Room
         var room = new Room { RoomId = 1, Number = "101", Type = "Single", Status = "Available" };
         context.Rooms.Add(room);
 
-        // Create Tenant with Room
         var tenant = new Tenant
         {
             TenantId = 1,
@@ -258,7 +286,6 @@ public class PaymentsControllerTests
         };
         context.Tenants.Add(tenant);
 
-        // Create Payment with Tenant
         var payment = new Payment
         {
             PaymentId = 1,

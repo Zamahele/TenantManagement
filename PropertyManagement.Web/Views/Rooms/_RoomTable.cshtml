@@ -35,8 +35,15 @@
                   <a class="dropdown-item text-success" href="javascript:void(0);" onclick="BookRoom(@room.RoomId)">Book</a>
                 </li>
               }
+              <li>
+                <a class="dropdown-item text-danger" href="javascript:void(0);" onclick="deleteRoom(@room.RoomId)">Delete</a>
+              </li>
             </ul>
           </div>
+          <!-- Hidden Delete Form -->
+          <form id="deleteForm-@room.RoomId" asp-action="Delete" asp-route-id="@room.RoomId" method="post" style="display:none;">
+            @Html.AntiForgeryToken()
+          </form>
         </td>
       </tr>
     }

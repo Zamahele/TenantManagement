@@ -15,8 +15,7 @@
         <form asp-action="EditProfile" method="post" autocomplete="off">
           @Html.AntiForgeryToken()
           @Html.HiddenFor(m => m.TenantId)
-          @Html.HiddenFor(m => m.User.Username)
-          @Html.HiddenFor(m => m.User.PasswordHash)
+          @Html.HiddenFor(m => m.UserId)
           <div class="mb-4">
             <label asp-for="FullName" class="form-label"></label>
             <input asp-for="FullName" class="form-control" />

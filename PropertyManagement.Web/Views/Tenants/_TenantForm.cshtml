@@ -41,10 +41,9 @@
            class="form-control"
            name="plainTextPassword"
            id="plainTextPassword"
-           value="01Pa$$w0rd"
-           readonly
-           required />
-    <small class="text-muted">Password is always set to <b>01Pa$$w0rd</b></small>
+           placeholder="@(isEdit ? "Leave blank to keep current password" : "Enter password (minimum 8 characters)")"
+           required="@(!isEdit)" />
+    <small class="text-muted">@(isEdit ? "Leave blank to keep current password" : "Password must be at least 8 characters long")</small>
   </div>
 
   <div class="mb-3">
@@ -81,9 +80,29 @@
           username.value = contact.value;
         });
       }
-      // Always set password to default
+      
+      // Password validation
       var pwd = document.getElementById('plainTextPassword');
-      if (pwd) pwd.value = "01Pa$$w0rd";
+      var isEdit = @(isEdit.ToString().ToLower());
+      
+      if (pwd) {
+        pwd.addEventListener('input', function() {
+          var value = this.value;
+          
+          // For edit mode, allow empty password (keeps current password)
+          if (isEdit && value === '') {
+            this.setCustomValidity('');
+            return;
+          }
+          
+          // For create mode or when password is provided in edit mode, validate length
+          if (value.length > 0 && value.length < 8) {
+            this.setCustomValidity('Password must be at least 8 characters');
+          } else {
+            this.setCustomValidity('');
+          }
+        });
+      }
     });
   </script>
 }

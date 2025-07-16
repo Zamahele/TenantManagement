@@ -60,15 +60,26 @@ public class HomeControllerTests
     {
         var roomRepo = new Mock<IGenericRepository<Room>>();
         roomRepo.Setup(r => r.Query()).Returns(context.Rooms);
+        roomRepo.Setup(r => r.GetAllAsync()).ReturnsAsync(context.Rooms.ToList());
 
         var tenantRepo = new Mock<IGenericRepository<Tenant>>();
         tenantRepo.Setup(r => r.Query()).Returns(context.Tenants);
+        tenantRepo.Setup(r => r.GetAllAsync()).ReturnsAsync(context.Tenants.ToList());
 
         var leaseRepo = new Mock<IGenericRepository<LeaseAgreement>>();
         leaseRepo.Setup(r => r.Query()).Returns(context.LeaseAgreements);
+        leaseRepo.Setup(r => r.GetAllAsync()).ReturnsAsync(context.LeaseAgreements.ToList());
 
         var maintenanceRepo = new Mock<IGenericRepository<MaintenanceRequest>>();
         maintenanceRepo.Setup(r => r.Query()).Returns(context.MaintenanceRequests);
+        maintenanceRepo.Setup(r => r.GetAllAsync()).ReturnsAsync(context.MaintenanceRequests.ToList());
+        maintenanceRepo.Setup(r => r.GetAllAsync(It.IsAny<System.Linq.Expressions.Expression<Func<MaintenanceRequest, bool>>>(), It.IsAny<System.Linq.Expressions.Expression<Func<MaintenanceRequest, object>>[]>()))
+            .ReturnsAsync((System.Linq.Expressions.Expression<Func<MaintenanceRequest, bool>> filter, System.Linq.Expressions.Expression<Func<MaintenanceRequest, object>>[] includes) => 
+            {
+                var query = context.MaintenanceRequests.AsQueryable();
+                if (filter != null) query = query.Where(filter);
+                return query.ToList();
+            });
 
         var logger = GetLogger();
         var mapper = GetMapper();

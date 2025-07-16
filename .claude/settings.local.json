@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dotnet test:*)",
+      "Bash(./verify-build.sh:*)",
+      "Bash(lsb_release:*)",
+      "Bash(cat:*)",
+      "Bash(find:*)",
+      "Bash(export:*)",
+      "Bash(dotnet restore:*)",
+      "Bash(dotnet build:*)",
+      "Bash(/home/zamajasonn/.dotnet/dotnet test PropertyManagement.Test --verbosity normal)"
+    ],
+    "deny": []
+  }
+}

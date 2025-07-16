@@ -48,6 +48,7 @@ public class TenantsControllerTests
     var roomRepo = new Mock<IGenericRepository<Room>>();
 
     // Setup repository methods to use actual context data
+    tenantRepo.Setup(r => r.Query()).Returns(context.Tenants);
     tenantRepo.Setup(r => r.GetAllAsync()).ReturnsAsync(() => context.Tenants.ToList());
     tenantRepo.Setup(r => r.GetAllAsync(It.IsAny<Expression<Func<Tenant, bool>>>(), It.IsAny<Expression<Func<Tenant, object>>[]>()))
               .ReturnsAsync((Expression<Func<Tenant, bool>> filter, Expression<Func<Tenant, object>>[] includes) =>
@@ -76,6 +77,7 @@ public class TenantsControllerTests
               })
               .Returns(Task.CompletedTask);
 
+    userRepo.Setup(r => r.Query()).Returns(context.Users);
     userRepo.Setup(r => r.GetAllAsync()).ReturnsAsync(() => context.Users.ToList());
     userRepo.Setup(r => r.GetAllAsync(It.IsAny<Expression<Func<User, bool>>>(), It.IsAny<Expression<Func<User, object>>[]>()))
             .ReturnsAsync((Expression<Func<User, bool>> filter, Expression<Func<User, object>>[] includes) =>
@@ -96,6 +98,7 @@ public class TenantsControllerTests
             .Callback((User user) => { context.Users.Remove(user); context.SaveChanges(); })
             .Returns(Task.CompletedTask);
 
+    roomRepo.Setup(r => r.Query()).Returns(context.Rooms);
     roomRepo.Setup(r => r.GetAllAsync()).ReturnsAsync(() => context.Rooms.ToList());
     roomRepo.Setup(r => r.GetAllAsync(It.IsAny<Expression<Func<Room, bool>>>(), It.IsAny<Expression<Func<Room, object>>[]>()))
             .ReturnsAsync((Expression<Func<Room, bool>> filter, Expression<Func<Room, object>>[] includes) =>
@@ -104,6 +107,8 @@ public class TenantsControllerTests
               if (filter != null) query = query.Where(filter);
               return query.ToList();
             });
+    roomRepo.Setup(r => r.GetByIdAsync(It.IsAny<int>()))
+            .ReturnsAsync((int id) => context.Rooms.Find(id));
 
     var mapper = GetMapper();
 

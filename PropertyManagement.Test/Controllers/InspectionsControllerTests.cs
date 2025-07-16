@@ -54,8 +54,14 @@ namespace PropertyManagement.Test.Controllers
       inspectionRepo.Setup(r => r.GetByIdAsync(It.IsAny<int>()))
           .ReturnsAsync((int id) => context.Inspections.Find(id));
       inspectionRepo.Setup(r => r.AddAsync(It.IsAny<Inspection>()))
-          .Callback((Inspection inspection) => { context.Inspections.Add(inspection); context.SaveChanges(); })
+          .Callback((Inspection inspection) => { 
+            inspection.InspectionId = context.Inspections.Count() + 1; 
+            context.Inspections.Add(inspection); 
+            context.SaveChanges(); 
+          })
           .Returns(Task.CompletedTask);
+      inspectionRepo.Setup(r => r.GetAllAsync(null, It.IsAny<System.Linq.Expressions.Expression<Func<Inspection, object>>[]>()))
+          .ReturnsAsync(() => context.Inspections.ToList());
       inspectionRepo.Setup(r => r.UpdateAsync(It.IsAny<Inspection>()))
           .Callback((Inspection inspection) => { context.Entry(inspection).State = EntityState.Modified; context.SaveChanges(); })
           .Returns(Task.CompletedTask);
@@ -83,10 +89,17 @@ namespace PropertyManagement.Test.Controllers
     {
       // Arrange
       var context = GetDbContext();
-      context.Inspections.Add(new Inspection { InspectionId = 1, RoomId = 1, Date = DateTime.Today });
+      var inspection = new Inspection { InspectionId = 1, RoomId = 1, Date = DateTime.Today, Result = "Passed", Notes = "Test" };
+      context.Inspections.Add(inspection);
       context.SaveChanges();
 
-      var controller = GetController(context);
+      var inspectionRepo = new Mock<IGenericRepository<Inspection>>();
+      inspectionRepo.Setup(r => r.GetAllAsync(null, It.IsAny<System.Linq.Expressions.Expression<Func<Inspection, object>>[]>()))
+          .ReturnsAsync(new List<Inspection> { inspection });
+
+      var roomRepo = new Mock<IGenericRepository<Room>>();
+      var mapper = GetMapper();
+      var controller = new InspectionsController(inspectionRepo.Object, roomRepo.Object, mapper);
 
       // Act
       var result = await controller.Index();
@@ -154,7 +167,7 @@ namespace PropertyManagement.Test.Controllers
     }
 
     [Fact]
-    public async Task SaveInspection_Post_AddsInspection_AndReturnsView()
+    public async Task SaveInspection_Post_AddsInspection_AndReturnsRedirect()
     {
       // Arrange
       var context = GetDbContext();
@@ -172,13 +185,14 @@ namespace PropertyManagement.Test.Controllers
       var result = await controller.SaveInspection(agreementVm);
 
       // Assert
-      var viewResult = Assert.IsType<ViewResult>(result);
+      var redirectResult = Assert.IsType<RedirectToActionResult>(result);
+      Assert.Equal("Index", redirectResult.ActionName);
       Assert.Contains("Success", controller.TempData.Keys);
       Assert.Single(context.Inspections.ToList());
     }
 
     [Fact]
-    public async Task SaveInspection_Post_UpdatesInspection_AndReturnsView()
+    public async Task SaveInspection_Post_UpdatesInspection_AndReturnsRedirect()
     {
       // Arrange
       var context = GetDbContext();
@@ -207,7 +221,8 @@ namespace PropertyManagement.Test.Controllers
       var result = await controller.SaveInspection(updatedVm);
 
       // Assert
-      var viewResult = Assert.IsType<ViewResult>(result);
+      var redirectResult = Assert.IsType<RedirectToActionResult>(result);
+      Assert.Equal("Index", redirectResult.ActionName);
       Assert.Contains("Success", controller.TempData.Keys);
 
       var dbInspection = context.Inspections.First();
@@ -217,11 +232,11 @@ namespace PropertyManagement.Test.Controllers
     }
 
     [Fact]
-    public async Task Delete_RemovesInspectionAndReturnsView()
+    public async Task Delete_RemovesInspectionAndReturnsRedirect()
     {
       // Arrange
       var context = GetDbContext();
-      var inspection = new Inspection { RoomId = 1, Date = DateTime.Today };
+      var inspection = new Inspection { RoomId = 1, Date = DateTime.Today, Result = "Passed", Notes = "Test" };
       context.Inspections.Add(inspection);
       context.SaveChanges();
 
@@ -231,7 +246,8 @@ namespace PropertyManagement.Test.Controllers
       var result = await controller.Delete(inspection.InspectionId);
 
       // Assert
-      var viewResult = Assert.IsType<ViewResult>(result);
+      var redirectResult = Assert.IsType<RedirectToActionResult>(result);
+      Assert.Equal("Index", redirectResult.ActionName);
       Assert.Contains("Success", controller.TempData.Keys);
       Assert.Empty(context.Inspections);
     }

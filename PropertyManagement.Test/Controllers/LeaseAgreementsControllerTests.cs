@@ -54,19 +54,9 @@ public class LeaseAgreementsControllerTests
             .Returns(Task.CompletedTask);
         leaseRepo.Setup(r => r.UpdateAsync(It.IsAny<LeaseAgreement>()))
             .Callback((LeaseAgreement agreement) => { 
-                var existing = context.LeaseAgreements.FirstOrDefault(l => l.LeaseAgreementId == agreement.LeaseAgreementId);
-                if (existing != null)
-                {
-                    // Detach the entity to avoid tracking issues
-                    context.Entry(existing).State = EntityState.Detached;
-                    
-                    // Update the incoming entity and attach it
-                    context.Entry(agreement).State = EntityState.Modified;
-                    context.SaveChanges();
-                    
-                    // Re-attach the updated entity 
-                    context.Entry(agreement).State = EntityState.Detached;
-                }
+                // The controller gets the existing entity and updates properties manually
+                // The entity is already tracked, so we just need to save changes
+                context.SaveChanges();
             })
             .Returns(Task.CompletedTask);
         leaseRepo.Setup(r => r.DeleteAsync(It.IsAny<LeaseAgreement>()))

@@ -12,7 +12,7 @@ This is a comprehensive property management web application built with .NET 8 an
 - **PropertyManagement.Domain**: Core business entities (Tenant, Room, Payment, LeaseAgreement, etc.)
 - **PropertyManagement.Infrastructure**: Data access with EF Core, generic repository pattern, SQL Server
 - **PropertyManagement.Application**: Application services (currently minimal)
-- **PropertyManagement.Web**: MVC web application with Razor views, controllers, and ViewModels
+- **PropertyManagement.Web**: ASP.NET Core MVC web application with Controllers, Views, and ViewModels
 - **PropertyManagement.Test**: xUnit tests with Moq
 
 **Key Technologies:**
@@ -55,6 +55,17 @@ dotnet test PropertyManagement.Test --collect:"XPlat Code Coverage"
 
 # Run tests with detailed output
 dotnet test --verbosity detailed
+
+# Quick build verification and test compilation check
+./verify-build.sh    # Linux/Mac
+.\verify-build.ps1   # Windows
+
+# Comprehensive test run with coverage reports
+./run-tests.sh       # Linux/Mac
+.\run-tests.ps1      # Windows
+
+# Analyze test code for common issues
+.\test-status-check.ps1  # Windows only
 ```
 
 **Database:**

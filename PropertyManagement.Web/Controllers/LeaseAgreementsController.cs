@@ -178,7 +178,13 @@ public class LeaseAgreementsController : BaseController
         return NotFound();
       }
 
-      _mapper.Map(agreementVm, existing);
+      // Update properties manually to avoid navigation property issues
+      existing.TenantId = agreementVm.TenantId;
+      existing.RoomId = agreementVm.RoomId;
+      existing.StartDate = agreementVm.StartDate;
+      existing.EndDate = agreementVm.EndDate;
+      existing.RentAmount = agreementVm.RentAmount;
+      existing.ExpectedRentDay = agreementVm.ExpectedRentDay;
       if (!string.IsNullOrEmpty(agreementVm.FilePath))
         existing.FilePath = agreementVm.FilePath;
       await _leaseAgreementRepository.UpdateAsync(existing);

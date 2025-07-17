@@ -12,7 +12,18 @@
     </button>
   </div>
   <div class="card-body p-4" style="background-color: #f8f9fa;">
-    <table class="table table-striped table-bordered align-middle mb-0">
+    @{
+      ViewData["SearchId"] = "tenants-search";
+      ViewData["SearchPlaceholder"] = "Search tenants by name, contact, or room...";
+      ViewData["SearchLabel"] = "Search Tenants";
+    }
+    @await Html.PartialAsync("_TableSearch")
+
+    <table class="table table-striped table-bordered align-middle mb-0"
+           id="tenantsTable"
+           data-pagination
+           data-items-per-page="10"
+           data-search-input="#tenants-search">
       <thead class="table-light">
         <tr>
           <th>Name</th>
@@ -115,7 +126,6 @@
 
 @section Scripts {
   <script>
-    // Get CSRF token for AJAX requests
     function getAntiForgeryToken() {
         return $('input[name="__RequestVerificationToken"]').val();
     }

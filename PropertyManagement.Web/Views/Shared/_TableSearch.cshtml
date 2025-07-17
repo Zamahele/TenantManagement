@@ -1,0 +1,44 @@
+@{
+    var searchId = ViewData["SearchId"]?.ToString() ?? "table-search";
+    var placeholder = ViewData["SearchPlaceholder"]?.ToString() ?? "Search...";
+    var showLabel = ViewData["ShowSearchLabel"] as bool? ?? true;
+    var labelText = ViewData["SearchLabel"]?.ToString() ?? "Search";
+    var containerClass = ViewData["SearchContainerClass"]?.ToString() ?? "mb-3";
+}
+
+<div class="search-pagination-container @containerClass">
+    <div class="row align-items-end">
+        <div class="col-md-6">
+            @if (showLabel)
+            {
+                <label for="@searchId" class="form-label">@labelText</label>
+            }
+            <div class="input-group">
+                <span class="input-group-text">
+                    <i class="bi bi-search"></i>
+                </span>
+                <input type="text" 
+                       id="@searchId" 
+                       class="form-control" 
+                       placeholder="@placeholder"
+                       autocomplete="off">
+                <button class="btn btn-outline-secondary" 
+                        type="button" 
+                        onclick="document.getElementById('@searchId').value = ''; document.getElementById('@searchId').dispatchEvent(new Event('input'));">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+        </div>
+        <div class="col-md-6">
+            @if (ViewData["ShowExtraActions"] as bool? == true)
+            {
+                <div class="d-flex justify-content-end gap-2">
+                    @if (ViewData["ExtraActionsContent"] != null)
+                    {
+                        @Html.Raw(ViewData["ExtraActionsContent"])
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>

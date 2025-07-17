@@ -47,6 +47,91 @@ A comprehensive Razor Pages solution for managing rental properties, tenants, an
 - Generate reports on occupancy rates, rent collection, maintenance costs, and more.
 - Visual dashboards for property performance.
 
+### 11. Advanced Table Pagination System ?
+- **Client-side pagination** with configurable page sizes (5, 10, 25, 50, 100)
+- **Real-time search functionality** across all table data
+- **Responsive design** optimized for mobile and desktop
+- **Export to CSV** functionality for data analysis
+- **Print support** for filtered/visible data
+- **Auto-initialization** via HTML data attributes
+- **Bootstrap 5 integration** with consistent styling
+
+## Table Pagination Implementation
+
+### Features
+- ? **Search Integration:** Real-time filtering across all columns
+- ? **Export Options:** CSV export of visible/filtered data
+- ? **Print Support:** Print visible table data with formatting
+- ? **Responsive Design:** Mobile-friendly pagination controls
+- ? **Auto-initialization:** Simple data attribute setup
+- ? **Empty State Handling:** User-friendly "no results" messages
+
+### Current Implementations
+- **Payments Table:** Full pagination with search and export
+- **Inspections Table:** Pagination with enhanced search
+- **Ready for:** All other data tables in the application
+
+### Quick Usage Examples
+
+**Basic Implementation:**
+```html
+<table id="myTable" data-pagination data-items-per-page="10">
+    <thead>
+        <tr><th>Column 1</th><th>Column 2</th></tr>
+    </thead>
+    <tbody>
+        <!-- table rows -->
+    </tbody>
+</table>
+```
+
+**With Search Component:**
+```razor
+@{
+    ViewData["SearchId"] = "my-search";
+    ViewData["SearchPlaceholder"] = "Search data...";
+}
+@await Html.PartialAsync("_TableSearch")
+
+<table id="myTable" 
+       data-pagination 
+       data-search-input="#my-search"
+       data-items-per-page="15">
+    <!-- table content -->
+</table>
+```
+
+**JavaScript Integration:**
+```javascript
+// Auto-initialization (preferred)
+// Just add data-pagination attribute
+
+// Manual initialization (for advanced control)
+const pagination = new TablePagination({
+    tableSelector: '#myTable',
+    itemsPerPage: 20,
+    searchInputSelector: '#search',
+    maxVisiblePages: 7
+});
+
+// Helper functions available
+PaginationHelpers.exportVisibleToCSV('myTable', 'export.csv');
+PaginationHelpers.printVisibleRows('myTable', 'Report Title');
+```
+
+### Files Structure
+```
+wwwroot/
+??? js/
+?   ??? table-pagination.js          # Core pagination library
+?   ??? table-pagination-helpers.js  # Utilities (export, print, etc.)
+??? css/
+?   ??? table-pagination.css         # Bootstrap 5 compatible styling
+??? docs/
+    ??? table-pagination-guide.md    # Complete implementation guide
+    ??? table-pagination-template.md # Quick reference template
+```
+
 ## Observability
 
 - **Prometheus** is used for application metrics (e.g., payment creation counters).
@@ -56,10 +141,52 @@ A comprehensive Razor Pages solution for managing rental properties, tenants, an
 
 - The solution uses **xUnit** and **Moq** for unit testing.
 - Example: `PaymentsControllerTests` covers payment creation, editing, deletion, and receipt generation.
+- **Compilation Tests:** Ensure all projects build successfully including pagination assets.
 
 ## Getting Started
 
-1. **Clone the repository**
+### Prerequisites
+- .NET 8 SDK
+- SQL Server (LocalDB for development)
+- Visual Studio 2022 or VS Code
+
+### Setup
+```bash
+# Clone and restore packages
+git clone <repository-url>
+dotnet restore
+dotnet build
+
+# Setup database
+dotnet ef database update
+
+# Run application
+dotnet run
+```
+
+**Default Login:**
+- Username: `Admin`
+- Password: `01Pa$$w0rd2025#`
+
+### Adding Pagination to New Tables
+
+1. **Include pagination assets** (already done in `_Layout.cshtml`)
+2. **Add search component** (optional):
+   ```razor
+   @{
+       ViewData["SearchId"] = "your-search";
+       ViewData["SearchPlaceholder"] = "Search...";
+   }
+   @await Html.PartialAsync("_TableSearch")
+   ```
+3. **Add pagination attributes** to your table:
+   ```html
+   <table id="yourTable" 
+          data-pagination 
+          data-items-per-page="10"
+          data-search-input="#your-search">
+   ```
+4. **Test and customize** as needed
 
 ## Data Validation Rules
 
@@ -135,7 +262,29 @@ This project uses [FluentValidation](https://fluentvalidation.net/) to enforce b
 - **Total Amount:** Zero or positive.
 - **Notes:** Optional, max 1000 characters.
 
+## Technical Architecture
+
+### Clean Architecture Layers
+- **Domain:** Core business entities and rules
+- **Application:** Use cases and business logic
+- **Infrastructure:** Data access and external services  
+- **Web:** Razor Pages UI with table pagination
+
+### Key Technologies
+- **ASP.NET Core 8:** Razor Pages web framework
+- **Entity Framework Core:** Data access with SQL Server
+- **AutoMapper:** Object-to-object mapping
+- **FluentValidation:** Input validation
+- **Bootstrap 5:** Responsive UI framework
+- **jQuery:** DOM manipulation for pagination
+- **Prometheus:** Application metrics
+- **xUnit + Moq:** Testing framework
+
 ---
 
 **Note:**  
 Some rules (like uniqueness and referential integrity) are enforced both in the application and at the database level for maximum reliability.
+
+**Documentation:**
+- [Table Pagination Guide](wwwroot/docs/table-pagination-guide.md) - Complete implementation guide
+- [Pagination Template](wwwroot/docs/table-pagination-template.md) - Quick reference

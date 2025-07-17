@@ -1,6 +1,21 @@
 @model IEnumerable<PropertyManagement.Web.ViewModels.RoomViewModel>
 
-<table class="table table-bordered">
+<!-- Search Component for Rooms -->
+@{
+  ViewData["SearchId"] = "rooms-search";
+  ViewData["SearchPlaceholder"] = "Search by room number, type, or status...";
+  ViewData["SearchLabel"] = "Search Rooms";
+  ViewData["ShowExtraActions"] = true;
+  ViewData["ExtraActionsContent"] = "<button class='btn btn-outline-secondary btn-sm' onclick='exportRooms()'><i class='bi bi-download'></i> Export</button><button class='btn btn-outline-success btn-sm' onclick='filterAvailable()'><i class='bi bi-check-circle'></i> Available Only</button>";
+}
+@await Html.PartialAsync("_TableSearch")
+
+<table class="table table-bordered paginated-table"
+       id="roomsTable"
+       data-pagination
+       data-items-per-page="8"
+       data-search-input="#rooms-search"
+       data-max-visible-pages="5">
   <thead>
     <tr>
       <th>Number</th>
@@ -12,10 +27,16 @@
   <tbody>
     @foreach (var room in Model)
     {
-      <tr>
-        <td>@room.Number</td>
+      <tr class="@(room.Status == "Available" ? "table-success" : room.Status == "Occupied" ? "table-info" : "table-warning")">
+        <td>
+          <span class="fw-semibold">@room.Number</span>
+        </td>
         <td>@room.Type</td>
-        <td>@room.Status</td>
+        <td>
+          <span class="badge bg-@(room.Status == "Available" ? "success" : room.Status == "Occupied" ? "primary" : "warning")">
+            @room.Status
+          </span>
+        </td>
         <td>
           <!-- Action Dropdown -->
           <div class="btn-group">
@@ -24,19 +45,28 @@
             </button>
             <ul class="dropdown-menu">
               <li>
-                <a class="dropdown-item" href="javascript:void(0);" onclick="openEditModal(@room.RoomId)">Edit</a>
+                <a class="dropdown-item" href="javascript:void(0);" onclick="openEditModal(@room.RoomId)">
+                  <i class="bi bi-pencil"></i> Edit
+                </a>
               </li>
               <li>
-                <a class="dropdown-item" asp-action="GetRoom" asp-route-id="@room.RoomId">Details</a>
+                <a class="dropdown-item" asp-action="GetRoom" asp-route-id="@room.RoomId">
+                  <i class="bi bi-info-circle"></i> Details
+                </a>
               </li>
               @if (room.Status == "Available")
               {
                 <li>
-                  <a class="dropdown-item text-success" href="javascript:void(0);" onclick="BookRoom(@room.RoomId)">Book</a>
+                  <a class="dropdown-item text-success" href="javascript:void(0);" onclick="BookRoom(@room.RoomId)">
+                    <i class="bi bi-calendar-check"></i> Book
+                  </a>
                 </li>
               }
+              <li><hr class="dropdown-divider"></li>
               <li>
-                <a class="dropdown-item text-danger" href="javascript:void(0);" onclick="deleteRoom(@room.RoomId)">Delete</a>
+                <a class="dropdown-item text-danger" href="javascript:void(0);" onclick="deleteRoom(@room.RoomId)">
+                  <i class="bi bi-trash"></i> Delete
+                </a>
               </li>
             </ul>
           </div>
@@ -49,3 +79,17 @@
     }
   </tbody>
 </table>
+
+<script>
+  // Pagination helper functions for rooms
+  function exportRooms() {
+      PaginationHelpers.exportVisibleToCSV('roomsTable', 'rooms-export.csv');
+  }
+
+  function filterAvailable() {
+      const searchInput = document.getElementById('rooms-search');
+      searchInput.value = 'Available';
+      searchInput.dispatchEvent(new Event('input'));
+      toastr.info('Filtered to show available rooms only');
+  }
+</script>

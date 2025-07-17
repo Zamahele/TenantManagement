@@ -47,14 +47,25 @@
         <option value="Other">Other</option>
       </select>
     </div>
-
     <div class="col-12 col-md-auto">
       <button type="submit" class="btn btn-primary w-100">
         <i class="bi bi-plus-circle"></i> Add Payment
       </button>
     </div>
   </form>
-  <table class="table table-striped table-bordered align-middle mb-0">
+
+  @{
+    ViewData["SearchId"] = "payments-search";
+    ViewData["SearchPlaceholder"] = "Search payments by tenant, amount, type...";
+    ViewData["SearchLabel"] = "Search Payments";
+  }
+  @await Html.PartialAsync("_TableSearch")
+
+  <table class="table table-striped table-bordered align-middle mb-0" 
+         id="paymentsTable"
+         data-pagination
+         data-items-per-page="10"
+         data-search-input="#payments-search">
     <thead class="table-light">
       <tr>
         <th>Amount</th>
@@ -72,7 +83,7 @@
             .OrderBy(g => g.Key.FullName))
       {
         <tr class="table-primary">
-          <td class="fw-bold" colspan="7">
+          <td class="fw-bold" colspan="6">
             @tenantGroup.Key.FullName (@tenantGroup.Key.Room)
           </td>
         </tr>
@@ -86,35 +97,35 @@
               @(payment.PaymentMonth >= 1 && payment.PaymentMonth <= 12
                         ? System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(payment.PaymentMonth)
                         : "Invalid")
-        </td>
-        <td>@payment.PaymentYear</td>
-        <td>
-          <div class="dropdown">
-            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="actionsDropdown-@payment.PaymentId" data-bs-toggle="dropdown" aria-expanded="false">
-              Actions
-            </button>
-            <ul class="dropdown-menu" aria-labelledby="actionsDropdown-@payment.PaymentId">
-              <li>
-                <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#editModal-@payment.PaymentId">
-                  <i class="bi bi-pencil-square"></i> Edit
-                </a>
-              </li>
-              <li>
-                <a class="dropdown-item text-danger" href="#" data-bs-toggle="modal" data-bs-target="#deleteModal-@payment.PaymentId">
-                  <i class="bi bi-trash"></i> Delete
-                </a>
-              </li>
-              <li>
-                <a class="dropdown-item" href="javascript:void(0);" onclick="showReceiptModal(@payment.PaymentId)">
-                  <i class="bi bi-receipt"></i> View Receipt
-                </a>
-              </li>
-            </ul>
-          </div>
-        </td>
-      </tr>
-      @await Html.PartialAsync("_PaymentModals", payment)
-            }
+            </td>
+            <td>@payment.PaymentYear</td>
+            <td>
+              <div class="dropdown">
+                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="actionsDropdown-@payment.PaymentId" data-bs-toggle="dropdown" aria-expanded="false">
+                  Actions
+                </button>
+                <ul class="dropdown-menu" aria-labelledby="actionsDropdown-@payment.PaymentId">
+                  <li>
+                    <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#editModal-@payment.PaymentId">
+                      <i class="bi bi-pencil-square"></i> Edit
+                    </a>
+                  </li>
+                  <li>
+                    <a class="dropdown-item text-danger" href="#" data-bs-toggle="modal" data-bs-target="#deleteModal-@payment.PaymentId">
+                      <i class="bi bi-trash"></i> Delete
+                    </a>
+                  </li>
+                  <li>
+                    <a class="dropdown-item" href="javascript:void(0);" onclick="showReceiptModal(@payment.PaymentId)">
+                      <i class="bi bi-receipt"></i> View Receipt
+                    </a>
+                  </li>
+                </ul>
+              </div>
+            </td>
+          </tr>
+          @await Html.PartialAsync("_PaymentModals", payment)
+        }
       }
     </tbody>
   </table>

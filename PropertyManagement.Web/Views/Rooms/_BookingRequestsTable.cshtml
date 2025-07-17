@@ -1,6 +1,16 @@
 @model IEnumerable<PropertyManagement.Web.ViewModels.BookingRequestViewModel>
 
-<table class="table table-bordered">
+@{
+  ViewData["SearchId"] = "booking-search";
+  ViewData["SearchPlaceholder"] = "Search by room, name, contact, or status...";
+}
+@await Html.PartialAsync("_TableSearch")
+
+<table class="table table-bordered"
+       id="bookingRequestsTable"
+       data-pagination
+       data-items-per-page="10"
+       data-search-input="#booking-search">
   <thead>
     <tr>
       <th>Room</th>

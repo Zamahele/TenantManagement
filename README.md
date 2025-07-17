@@ -1,161 +1,229 @@
-﻿# Property Management Web Application
+﻿# Property Management System Workspace
 
-A comprehensive solution for managing rental properties, tenants, and operations. Built with modern, open-source technologies for reliability, scalability, and observability.
+## 🏗️ Workspace Overview
+
+**Location:** `C:\Users\zamajasonn\source\repos\TenantManagement\`
+
+This is a comprehensive .NET 8 property management solution built with Clean Architecture principles, featuring a Razor Pages web application with advanced table pagination and data management capabilities.
+
+## 📁 Project Structure
+
+```
+TenantManagement/
+├── PropertyManagement.Domain/           # Domain entities and business logic
+├── PropertyManagement.Application/      # Application services and DTOs
+├── PropertyManagement.Infrastructure/   # Data access and external services
+├── PropertyManagement.Web/             # Razor Pages web application (Main UI)
+└── PropertyManagement.Test/            # Unit and integration tests
+```
+
+### Project Dependencies
+
+| Project | Target Framework | Key Dependencies |
+|---------|------------------|------------------|
+| **PropertyManagement.Web** | .NET 8 | ASP.NET Core, Entity Framework, AutoMapper, FluentValidation, Bootstrap 5 |
+| **PropertyManagement.Application** | .NET 8 | MediatR, AutoMapper, FluentValidation |
+| **PropertyManagement.Infrastructure** | .NET 8 | Entity Framework Core, SQL Server |
+| **PropertyManagement.Domain** | .NET 8 | Core business entities (no dependencies) |
+| **PropertyManagement.Test** | .NET 8 | xUnit, Moq, Entity Framework InMemory |
+
+## 🎯 Key Features Implemented
+
+### ✅ Core Property Management
+- Tenant management with user authentication
+- Room availability and booking system
+- Lease agreement management with file uploads
+- Payment tracking with receipt generation
+- Maintenance request system
+- Inspection scheduling and reporting
+- Utility billing and tracking
+
+### ✅ Advanced Table Pagination System
+- **Client-side pagination** with configurable page sizes
+- **Real-time search functionality** across all table data
+- **Responsive design** optimized for mobile devices
+- **Export to CSV** functionality for data analysis
+- **Print support** for filtered/visible data
+- **Auto-initialization** via HTML data attributes
+- **Bootstrap 5 integration** with consistent styling
+
+## 🚀 Table Pagination Implementation
+
+### Files Structure
+```
+PropertyManagement.Web/
+├── wwwroot/
+│   ├── js/
+│   │   ├── table-pagination.js          # Core pagination library
+│   │   └── table-pagination-helpers.js  # Helper functions and utilities
+│   ├── css/
+│   │   └── table-pagination.css         # Pagination styling
+│   └── docs/
+│       ├── table-pagination-guide.md    # Comprehensive usage guide
+│       └── table-pagination-template.md # Quick reference template
+├── Views/
+│   └── Shared/
+│       ├── _Layout.cshtml              # Global layout (includes pagination assets)
+│       └── _TableSearch.cshtml         # Reusable search component
+```
+
+### Currently Implemented Views
+- ✅ **Payments Table** (`Views/Payments/`)
+- ✅ **Inspections Table** (`Views/Inspections/`)
+- 🔄 Ready for implementation in other views
+
+### Quick Implementation Guide
+
+**1. Basic Table Pagination:**
+```html
+<table id="myTable" data-pagination data-items-per-page="10">
+    <!-- table content -->
+</table>
+```
+
+**2. With Search:**
+```html
+@{
+    ViewData["SearchId"] = "my-search";
+    ViewData["SearchPlaceholder"] = "Search...";
+}
+@await Html.PartialAsync("_TableSearch")
+
+<table id="myTable" 
+       data-pagination 
+       data-search-input="#my-search">
+    <!-- table content -->
+</table>
+```
+
+**3. Advanced Configuration:**
+```javascript
+new TablePagination({
+    tableSelector: '#myTable',
+    itemsPerPage: 15,
+    searchInputSelector: '#search-input',
+    maxVisiblePages: 7
+});
+```
+
+## 🛠️ Development Guidelines
+
+### Build Requirements
+- **.NET 8 SDK** (C# 12 language features)
+- **SQL Server** (LocalDB for development)
+- **Node.js** (for frontend package management)
+- **Visual Studio 2022** or **VS Code** with C# extension
+
+### Code Standards
+- **Clean Architecture** patterns throughout
+- **Repository Pattern** with Unit of Work
+- **AutoMapper** for DTO/ViewModel mapping
+- **FluentValidation** for input validation
+- **xUnit + Moq** for comprehensive testing
+
+### Common Build Issues to Avoid
+- ❌ Incomplete Razor syntax (missing closing braces `}`)
+- ❌ Truncated HTML tags in views
+- ❌ Missing ViewData properties for partial views
+- ❌ Incorrect table column spans in pagination tables
+
+## 🧪 Testing Strategy
+
+### Test Coverage
+- **Unit Tests:** Controllers, Services, Validators
+- **Integration Tests:** Database operations, API endpoints
+- **Compilation Tests:** Ensures all projects build successfully
+
+### Test Projects Structure
+```
+PropertyManagement.Test/
+├── Controllers/        # Controller-specific tests
+├── Services/          # Application service tests
+├── Validators/        # FluentValidation tests
+└── TestBaseClass.cs   # Shared test utilities and setup
+```
+
+## 📊 Monitoring & Observability
+
+- **Prometheus Metrics:** Payment creation counters and system metrics
+- **Structured Logging:** Comprehensive application logging
+- **Health Checks:** Database connectivity and system health monitoring
+
+## 🔐 Security Features
+
+- **Role-based Authentication:** Manager and Tenant roles
+- **Input Validation:** FluentValidation across all forms
+- **File Upload Security:** Restricted file types and size limits
+- **SQL Injection Protection:** Entity Framework parameterized queries
+
+## 🎨 UI/UX Features
+
+- **Bootstrap 5** responsive design
+- **Bootstrap Icons** for consistent iconography
+- **Toastr Notifications** for user feedback
+- **Modal Dialogs** for form interactions
+- **Table Pagination** with search and export capabilities
+
+## 📝 Validation Rules Summary
+
+The system implements comprehensive validation using FluentValidation:
+
+### Key Entity Validations
+- **Tenants:** Name validation, SA phone numbers, unique usernames
+- **Payments:** Amount validation, no duplicates, date constraints
+- **Rooms:** Unique numbers, status constraints
+- **Maintenance:** Description length, status workflow validation
+
+[See PropertyManagement.Web/README.md for complete validation rules]
+
+## 🚀 Getting Started
+
+### 1. Initial Setup
+```bash
+git clone <repository-url>
+cd TenantManagement
+dotnet restore
+dotnet build
+```
+
+### 2. Database Setup
+```bash
+cd PropertyManagement.Web
+dotnet ef database update
+```
+
+### 3. Run Application
+```bash
+dotnet run --project PropertyManagement.Web
+```
+
+**Default Login:**
+- Username: `Admin`
+- Password: `01Pa$$w0rd2025#`
+
+## 📚 Documentation References
+
+- **[Table Pagination Guide](PropertyManagement.Web/wwwroot/docs/table-pagination-guide.md)** - Complete implementation guide
+- **[Pagination Template](PropertyManagement.Web/wwwroot/docs/table-pagination-template.md)** - Quick reference
+- **[Web Application README](PropertyManagement.Web/README.md)** - Detailed feature documentation
+
+## 🔄 Future Development
+
+### Ready for Implementation
+- Additional table pagination in remaining views
+- Advanced reporting with pagination
+- Bulk operations with table selection
+- Real-time updates with SignalR integration
+
+### Architecture Extensions
+- API endpoints for mobile applications
+- Multi-tenant support
+- Advanced caching strategies
+- Message queue integration
 
 ---
 
-## Tech Stack
-
-- ![dotnet](https://img.shields.io/badge/.NET-8.0-blueviolet?logo=dotnet&logoColor=white) **.NET 8** (C# 12) — Main backend framework, using ASP.NET Core MVC for UI.
-- ![sqlserver](https://img.shields.io/badge/SQL%20Server-2022-CC2927?logo=microsoftsqlserver&logoColor=white) **SQL Server 2022** — Relational database for persistent storage.
-- ![serilog](https://img.shields.io/badge/Serilog-structured%20logging-blue?logo=serilog&logoColor=white) **Serilog** — Structured logging for diagnostics and monitoring.
-- ![elasticsearch](https://img.shields.io/badge/Elasticsearch-ELK-005571?logo=elasticsearch&logoColor=white) **ELK Stack (Elasticsearch, Kibana)** — Open-source log aggregation and visualization.
-- ![docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white) **Docker & Docker Compose** — Containerized deployment for all services.
-- ![bootstrap](https://img.shields.io/badge/Bootstrap-5-7952B3?logo=bootstrap&logoColor=white) **Bootstrap 5** — Responsive UI components.
-- ![jquery](https://img.shields.io/badge/jQuery-0769AD?logo=jquery&logoColor=white) **jQuery** & ![toastr](https://img.shields.io/badge/Toastr-notifications-ffcc00?logo=javascript&logoColor=black) **Toastr** — Client-side interactivity and notifications.
-
----
-
-## Architecture Overview
-
-- **Web App**: ASP.NET Core MVC with Clean Architecture, runs in a container.
-- **Database**: SQL Server, runs in a container.
-- **Logging**: Serilog writes logs to both console and Elasticsearch.
-- **Log Visualization**: Kibana (with Elasticsearch) for searching and visualizing logs/errors.
-- **All services are orchestrated via Docker Compose.**
-
----
-
-## Core Functionality
-
-### 1. Maintenance Request Management
-- Tenants can submit maintenance requests for their rooms.
-- Property managers can assign, track, and update the status of maintenance tasks.
-- Maintenance history is logged per room.
-
-### 2. Lease Agreement Management
-- Store and manage digital copies of lease agreements.
-- Track lease start and end dates, and notify tenants and managers of upcoming expirations.
-
-### 3. Payment Tracking and Receipts
-- Record all rent and deposit payments.
-- Generate and send payment receipts to tenants.
-- Track outstanding balances and payment history.
-
-### 4. Automated Notifications
-- Send reminders to tenants for upcoming rent due dates.
-- Notify property managers of overdue rents or expiring leases.
-- Alert maintenance staff of new or urgent requests.
-
-### 5. Room Availability and Booking
-- Track which rooms are occupied, vacant, or under maintenance.
-- Allow prospective tenants to view available rooms and submit booking requests.
-
-### 6. Tenant Profile Management
-- Maintain detailed profiles for each tenant (contact info, emergency contacts, rental history).
-- Allow tenants to update their own information.
-
-### 7. Inspection Scheduling and Records
-- Schedule regular room inspections.
-- Record inspection results and follow-up actions.
-
-### 8. Utility Billing and Tracking
-- Track utility usage (water, electricity) per room or tenant.
-- Generate and send utility bills.
-
-### 9. Document Management
-- Store important documents (insurance, compliance certificates) related to the property.
-
-### 10. Reporting and Analytics
-- Generate reports on occupancy rates, rent collection, maintenance costs, etc.
-- Visual dashboards for property performance.
-
----
-
-## Running the Stack Locally
-
-1. **Clone the repository**
-
-## Project Structure
-
-PropertyManagement (Solution) - Clean Architecture Implementation
-│
-├── PropertyManagement.Domain
-│   └── Entities
-│       ├── Tenant.cs
-│       ├── Room.cs
-│       ├── LeaseAgreement.cs
-│       ├── Payment.cs
-│       ├── User.cs
-│       ├── BookingRequest.cs
-│       ├── Inspection.cs
-│       ├── MaintenanceRequest.cs
-│       └── UtilityBill.cs
-│
-├── PropertyManagement.Application
-│   ├── Common
-│   │   └── ServiceResult.cs
-│   ├── DTOs
-│   │   ├── TenantDto.cs
-│   │   ├── PaymentDto.cs
-│   │   ├── LeaseAgreementDto.cs
-│   │   └── UserDto.cs
-│   └── Services
-│       ├── ITenantApplicationService.cs
-│       ├── TenantApplicationService.cs
-│       ├── IPaymentApplicationService.cs
-│       ├── PaymentApplicationService.cs
-│       ├── ILeaseAgreementApplicationService.cs
-│       └── LeaseAgreementApplicationService.cs
-│
-├── PropertyManagement.Infrastructure
-│   ├── Data
-│   │   ├── ApplicationDbContext.cs
-│   │   └── DatabaseSeeder.cs
-│   ├── Repositories
-│   │   ├── IGenericRepository.cs
-│   │   └── GenericRepository.cs
-│   └── Migrations
-│       └── ... (Entity Framework migrations)
-│
-├── PropertyManagement.Web
-│   ├── Controllers
-│   │   ├── BaseController.cs
-│   │   ├── TenantsController.cs
-│   │   ├── PaymentsController.cs
-│   │   ├── LeaseAgreementsController.cs
-│   │   ├── RoomsController.cs
-│   │   └── ... (other controllers)
-│   ├── ViewModels
-│   │   ├── TenantViewModel.cs
-│   │   ├── PaymentViewModel.cs
-│   │   ├── LeaseAgreementViewModel.cs
-│   │   └── ... (other view models)
-│   ├── Views
-│   │   ├── Tenants
-│   │   ├── Payments
-│   │   ├── LeaseAgreements
-│   │   └── Shared
-│   ├── Services
-│   │   ├── IEmailService.cs
-│   │   ├── ISmsService.cs
-│   │   └── ... (infrastructure services)
-│   └── Validators
-│       └── ... (FluentValidation validators)
-│
-└── PropertyManagement.Test
-    ├── Controllers
-    │   └── ... (controller tests)
-    ├── Domain
-    │   └── ... (domain tests)
-    ├── Infrastructure
-    │   └── ... (infrastructure tests)
-    └── ViewModels
-        └── ... (view model tests)
-
-## Clean Architecture Layers
-
-- **Domain**: Core business entities and domain logic
-- **Application**: Application services, DTOs, and business use cases
-- **Infrastructure**: Data access, external services, and infrastructure concerns
-- **Web**: MVC controllers, view models, and presentation logic
+**Last Updated:** January 2025  
+**Framework Version:** .NET 8  
+**Database:** SQL Server  
+**Architecture:** Clean Architecture with Razor Pages

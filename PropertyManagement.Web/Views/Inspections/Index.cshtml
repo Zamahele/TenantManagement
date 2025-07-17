@@ -11,7 +11,23 @@
         </button>
     </div>
     <div class="card-body p-4" style="background-color: #f8f9fa;">
-        <table class="table table-striped table-bordered align-middle mb-0">
+        <!-- Search Component -->
+        @{
+            ViewData["SearchId"] = "inspections-search";
+            ViewData["SearchPlaceholder"] = "Search inspections by room, result, or notes...";
+            ViewData["SearchLabel"] = "Search Inspections";
+            ViewData["ShowExtraActions"] = true;
+            ViewData["ExtraActionsContent"] = "<button class='btn btn-outline-secondary btn-sm' onclick='exportInspections()'><i class='bi bi-download'></i> Export</button><button class='btn btn-outline-primary btn-sm' onclick='refreshInspections()'><i class='bi bi-arrow-clockwise'></i> Refresh</button>";
+        }
+        @await Html.PartialAsync("_TableSearch")
+
+        <!-- Inspections Table with Pagination -->
+        <table class="table table-striped table-bordered align-middle mb-0 paginated-table" 
+               id="inspectionsTable"
+               data-pagination
+               data-items-per-page="10"
+               data-search-input="#inspections-search"
+               data-max-visible-pages="5">
             <thead class="table-light">
                 <tr>
                     <th>Room</th>
@@ -25,10 +41,22 @@
                 @foreach (var inspection in Model)
                 {
                     <tr>
-                        <td>@inspection.Room?.Number</td>
-                        <td>@inspection.Date.ToShortDateString()</td>
-                        <td>@inspection.Result</td>
-                        <td>@inspection.Notes</td>
+                        <td>
+                            <span class="fw-semibold">@inspection.Room?.Number</span>
+                        </td>
+                        <td>
+                            <span class="text-muted">@inspection.Date.ToShortDateString()</span>
+                        </td>
+                        <td>
+                            <span class="badge bg-@(inspection.Result?.ToLower() == "passed" ? "success" : inspection.Result?.ToLower() == "failed" ? "danger" : "warning")">
+                                @inspection.Result
+                            </span>
+                        </td>
+                        <td>
+                            <span class="text-truncate d-inline-block" style="max-width: 200px;" title="@inspection.Notes">
+                                @inspection.Notes
+                            </span>
+                        </td>
                         <td>
                             <div class="dropdown">
                                 <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -73,42 +101,4 @@
 </div>
 
 <!-- Modal Container -->
-<div class="modal fade" id="inspectionModal" tabindex="-1" aria-labelledby="inspectionModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered" style="max-width: 500px;">
-    <div class="modal-content shadow-lg border-0">
-      <div class="modal-header bg-primary text-white py-2">
-        <h5 class="modal-title" id="inspectionModalLabel">Add Inspection</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body p-3 custom-modal-body" id="inspectionModalBody" style="background-color: #f8f9fa;">
-        <!-- Form will be loaded here via AJAX -->
-      </div>
-    </div>
-  </div>
-</div>
-
-@section Scripts {
-    <script>
-        function openAddInspectionModal() {
-            fetch('/Inspections/InspectionModal')
-                .then(response => response.text())
-                .then(html => {
-                    document.getElementById('inspectionModalLabel').innerText = 'Add Inspection';
-                    document.getElementById('inspectionModalBody').innerHTML = html;
-                    var modal = new bootstrap.Modal(document.getElementById('inspectionModal'));
-                    modal.show();
-                });
-        }
-        function openEditInspectionModal(id) {
-            fetch('/Inspections/InspectionModal?id=' + id)
-                .then(response => response.text())
-                .then(html => {
-                    document.getElementById('inspectionModalLabel').innerText = 'Edit Inspection';
-                    document.getElementById('inspectionModalBody').innerHTML = html;
-                    var modal = new bootstrap.Modal(document.getElementById('inspectionModal'));
-                    modal.show();
-                });
-        }
-    </script>
-    <partial name="_ValidationScriptsPartial" />
-}
+<div class="modal fade

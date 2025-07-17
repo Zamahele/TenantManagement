@@ -1,5 +1,4 @@
-﻿
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -15,8 +14,11 @@
   <link href="~/css/receipt.css" rel="stylesheet" />
   <link rel="stylesheet" href="~/css/rooms-dashboard.css" asp-append-version="true" />
   <link rel="stylesheet" href="~/css/layout-custom.css" asp-append-version="true" />
+  <!-- Table Pagination CSS -->
+  <link rel="stylesheet" href="~/css/table-pagination.css" asp-append-version="true" />
   <!-- Toastr CSS -->
   <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet" />
+  @await RenderSectionAsync("Styles", required: false)
 </head>
 <body>
   @using System.Security.Claims
@@ -121,6 +123,8 @@
   <script src="~/lib/jquery/dist/jquery.min.js"></script>
   <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
   <script src="~/js/site.js" asp-append-version="true"></script>
+  <!-- Table Pagination Script -->
+  <script src="~/js/table-pagination.js" asp-append-version="true"></script>
   <!-- Toastr JS -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
   <!-- Before the closing </body> tag -->

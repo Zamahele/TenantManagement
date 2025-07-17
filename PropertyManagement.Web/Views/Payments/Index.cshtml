@@ -7,17 +7,25 @@
 <div class="card shadow-lg" style="font-size: 1.15rem;">
   <div class="card-header bg-primary text-white d-flex align-items-center justify-content-between">
     <h2 class="mb-0 display-6"><i class="bi bi-cash-coin"></i> Payments</h2>
+    <div class="d-flex gap-2">
+      <button class="btn btn-light text-primary fw-bold" onclick="openAddPaymentModal()">
+        <i class="bi bi-plus-circle"></i> Add Payment
+      </button>
+      <button class="btn btn-outline-light" onclick="generatePaymentReport()">
+        <i class="bi bi-bar-chart"></i> Report
+      </button>
+    </div>
   </div>
   <div class="card-body p-4" style="background-color: #f4f6fb;">
     <ul class="nav nav-tabs mb-3" id="paymentsTab" role="tablist">
       <li class="nav-item" role="presentation">
         <button class="nav-link active" id="payments-tab" data-bs-toggle="tab" data-bs-target="#payments" type="button" role="tab" aria-controls="payments" aria-selected="true">
-          Payments
+          <i class="bi bi-credit-card"></i> Payments
         </button>
       </li>
       <li class="nav-item" role="presentation">
         <button class="nav-link" id="balances-tab" data-bs-toggle="tab" data-bs-target="#balances" type="button" role="tab" aria-controls="balances" aria-selected="false">
-          Outstanding Balances
+          <i class="bi bi-exclamation-triangle"></i> Outstanding Balances
         </button>
       </li>
     </ul>
@@ -32,7 +40,7 @@
   </div>
 </div>
 
-<!-- Modal Container -->
+<!-- Payment Modal -->
 <div class="modal fade" id="paymentModal" tabindex="-1" aria-labelledby="paymentModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered" style="max-width: 500px;">
     <div class="modal-content shadow-lg border-0">
@@ -47,6 +55,7 @@
   </div>
 </div>
 
+<!-- Receipt Modal -->
 <div class="modal fade" id="receiptModal" tabindex="-1" aria-labelledby="receiptModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
@@ -61,7 +70,6 @@
   </div>
 </div>
 
-
 @section Scripts {
   <script>
     function openAddPaymentModal() {
@@ -74,6 +82,7 @@
           modal.show();
         });
     }
+
     function openEditPaymentModal(id) {
       fetch('/Payments/PaymentForm?id=' + id)
         .then(response => response.text())
@@ -84,6 +93,7 @@
           modal.show();
         });
     }
+
     function deletePayment(id) {
       if (confirm('Delete this payment?')) {
         document.getElementById('deleteForm-' + id).submit();

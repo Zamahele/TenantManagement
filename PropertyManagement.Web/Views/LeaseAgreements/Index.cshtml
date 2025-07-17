@@ -14,7 +14,17 @@
     </button>
   </div>
   <div class="card-body p-4" style="background-color: #f8f9fa;">
-    <table class="table table-striped table-bordered align-middle mb-0">
+    @{
+      ViewData["SearchId"] = "leases-search";
+      ViewData["SearchPlaceholder"] = "Search by tenant, room, or rent amount...";
+    }
+    @await Html.PartialAsync("_TableSearch")
+
+    <table class="table table-striped table-bordered align-middle mb-0"
+           id="leasesTable"
+           data-pagination
+           data-items-per-page="10"
+           data-search-input="#leases-search">
       <thead class="table-light">
         <tr>
           <th>Tenant</th>
@@ -78,7 +88,7 @@
               </form>
             </td>
           </tr>
-             @await Html.PartialAsync(
+          @await Html.PartialAsync(
               "_DeleteModal",
               new PropertyManagement.Web.ViewModels.DeleteModalViewModel {
                   ModalId = $"deleteModal-{agreement.LeaseAgreementId}",
@@ -96,7 +106,6 @@
   </div>
 </div>
 
-<!-- Modal Container -->
 <div id="leaseAgreementModalContainer"></div>
 
 @section Scripts {
@@ -111,39 +120,22 @@
             });
     }
 
-    function deleteAgreement(id) {
-        if (confirm('Delete this agreement?')) {
-            document.getElementById('deleteForm-' + id).submit();
-        }
-    }
-
     function updateRoomFields() {
-      console.log("updateRoomFields called");
       var tenantSelect = document.getElementById('TenantId');
-      if (!tenantSelect) {
-        console.log("Tenant select not found");
-        return;
-      }
+      if (!tenantSelect) return;
       var tenantId = tenantSelect.value;
-      console.log("Selected tenantId:", tenantId);
       if (!tenantId) {
         document.getElementById('RoomId').value = '';
         document.getElementById('RoomDisplay').value = '';
         return;
       }
       fetch('/LeaseAgreements/GetRoomIdByTenant?tenantId=' + tenantId)
-        .then(response => {
-          return response.json();
-        })
+        .then(response => response.json())
         .then(data => {
-
           document.getElementById('RoomId').value = data.roomId || '';
           var selectedOption = tenantSelect.options[tenantSelect.selectedIndex];
           var roomNumber = selectedOption.getAttribute('data-room-number') || '';
           document.getElementById('RoomDisplay').value = roomNumber;
-        })
-        .catch(error => {
-          console.error("AJAX error:", error);
         });
     }
 

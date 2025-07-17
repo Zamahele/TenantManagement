@@ -1,8 +1,18 @@
 @model List<PropertyManagement.Web.ViewModels.TenantViewModel>
 
 <div class="mb-4 p-3 rounded shadow-sm" style="background-color: #f4f6fb;">
+  @{
+    ViewData["SearchId"] = "balances-search";
+    ViewData["SearchPlaceholder"] = "Search by tenant name or room...";
+  }
+  @await Html.PartialAsync("_TableSearch")
+
   <div class="table-responsive">
-    <table class="table table-striped table-bordered align-middle mb-0">
+    <table class="table table-striped table-bordered align-middle mb-0"
+           id="balancesTable"
+           data-pagination
+           data-items-per-page="8"
+           data-search-input="#balances-search">
       <thead class="table-light">
         <tr>
           <th>Tenant</th>
@@ -23,7 +33,6 @@
 
           var rentPayments = tenant.Payments?.Where(p => p.Type == "Rent").ToList() ?? new List<PropertyManagement.Web.ViewModels.PaymentViewModel>();
 
-          // Build a list of months from January to current month of the current year
           var months = new List<(int Year, int Month)>();
           int currentYear = DateTime.Today.Year;
           int currentMonth = DateTime.Today.Month;
@@ -35,7 +44,6 @@
           int outstandingMonths = 0;
           decimal outstandingAmount = 0m;
 
-          // For payment history display
           var paymentLookup = rentPayments
           .GroupBy(p => (p.PaymentYear, p.PaymentMonth))
           .ToDictionary(g => g.Key, g => g.OrderByDescending(p => p.Date).FirstOrDefault());
@@ -81,7 +89,6 @@
               <strong>Payment History:</strong>
               <ul class="list-group list-group-flush">
                 @{
-                  // Show all months from January to current month, highlight missing months in red
                   foreach (var m in months)
                   {
                     var key = (m.Year, m.Month);

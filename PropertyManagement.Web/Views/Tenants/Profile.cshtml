@@ -8,7 +8,6 @@
       .Select(m => new DateTime(now.Year, m, 1))
       .ToList();
 
-  // Group payments by year and month for quick lookup
   var paymentLookup = Model.Payments?
       .Where(p => p.Date.Year == now.Year)
       .GroupBy(p => p.Date.Month)
@@ -16,7 +15,6 @@
       ?? new Dictionary<int, PropertyManagement.Web.ViewModels.PaymentViewModel>();
 }
 
-<!-- Card wrapping only the heading -->
 <div class="card mb-4">
   <div class="card-header bg-primary text-white">
     <h2 class="mb-0"><i class="bi bi-person-circle"></i> My Profile</h2>
@@ -63,7 +61,17 @@
     </dl>
   </div>
   <div class="tab-pane fade" id="history" role="tabpanel" aria-labelledby="history-tab">
-    <table class="table table-striped mb-0 align-middle mt-3">
+    @{
+      ViewData["SearchId"] = "history-search";
+      ViewData["SearchPlaceholder"] = "Search by month or payment status...";
+    }
+    @await Html.PartialAsync("_TableSearch")
+
+    <table class="table table-striped mb-0 align-middle mt-3"
+           id="historyTable"
+           data-pagination
+           data-items-per-page="6"
+           data-search-input="#history-search">
       <thead class="table-light">
         <tr>
           <th>Month</th>
@@ -124,7 +132,6 @@
             });
     }
 
-    // Auto-dismiss alert after 4 seconds
     document.addEventListener('DOMContentLoaded', function () {
       var alert = document.querySelector('.alert-dismissible');
       if (alert) {

@@ -2,10 +2,8 @@ using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.EntityFrameworkCore;
-using PropertyManagement.Domain.Entities;
-using PropertyManagement.Infrastructure.Data;
-using PropertyManagement.Infrastructure.Repositories;
+using PropertyManagement.Application.DTOs;
+using PropertyManagement.Application.Services;
 using PropertyManagement.Web.Controllers;
 using PropertyManagement.Web.ViewModels;
 using System.Collections.Generic;
@@ -18,26 +16,31 @@ namespace PropertyManagement.Web.Controllers
   [Authorize(Roles = "Manager")]
   public class InspectionsController : BaseController
   {
-    private readonly IGenericRepository<Inspection> _inspectionRepository;
-    private readonly IGenericRepository<Room> _roomRepository;
+    private readonly IInspectionApplicationService _inspectionApplicationService;
+    private readonly IRoomApplicationService _roomApplicationService;
     private readonly IMapper _mapper;
 
     public InspectionsController(
-        IGenericRepository<Inspection> inspectionRepository,
-        IGenericRepository<Room> roomRepository,
+        IInspectionApplicationService inspectionApplicationService,
+        IRoomApplicationService roomApplicationService,
         IMapper mapper)
     {
-      _inspectionRepository = inspectionRepository;
-      _roomRepository = roomRepository;
+      _inspectionApplicationService = inspectionApplicationService;
+      _roomApplicationService = roomApplicationService;
       _mapper = mapper;
     }
 
     // GET: /Inspections
     public async Task<IActionResult> Index()
     {
-      var inspections = await _inspectionRepository.GetAllAsync(null, i => i.Room);
-      var orderedInspections = inspections.OrderByDescending(i => i.Date).ToList();
-      
+      var result = await _inspectionApplicationService.GetAllInspectionsAsync();
+      if (!result.IsSuccess)
+      {
+        SetErrorMessage(result.ErrorMessage);
+        return View(new List<InspectionViewModel>());
+      }
+
+      var orderedInspections = result.Data.OrderByDescending(i => i.Date).ToList();
       var inspectionVms = _mapper.Map<List<InspectionViewModel>>(orderedInspections);
       return View(inspectionVms);
     }
@@ -45,8 +48,15 @@ namespace PropertyManagement.Web.Controllers
     // GET: /Inspections/Create
     public async Task<IActionResult> Create()
     {
-      var rooms = await _roomRepository.GetAllAsync();
-      ViewBag.Rooms = new SelectList(rooms, "RoomId", "Number");
+      var roomsResult = await _roomApplicationService.GetAllRoomsAsync();
+      if (roomsResult.IsSuccess)
+      {
+        ViewBag.Rooms = new SelectList(roomsResult.Data, "RoomId", "Number");
+      }
+      else
+      {
+        ViewBag.Rooms = new SelectList(new List<RoomDto>(), "RoomId", "Number");
+      }
       
       var model = new InspectionViewModel();
       return PartialView("_InspectionModal", model);
@@ -55,13 +65,24 @@ namespace PropertyManagement.Web.Controllers
     // GET: /Inspections/Edit/5
     public async Task<IActionResult> Edit(int id)
     {
-      var inspection = await _inspectionRepository.GetByIdAsync(id);
-      if (inspection == null) return NotFound();
+      var inspectionResult = await _inspectionApplicationService.GetInspectionByIdAsync(id);
+      if (!inspectionResult.IsSuccess)
+      {
+        SetErrorMessage(inspectionResult.ErrorMessage);
+        return NotFound();
+      }
 
-      var rooms = await _roomRepository.GetAllAsync();
-      ViewBag.Rooms = new SelectList(rooms, "RoomId", "Number", inspection.RoomId);
+      var roomsResult = await _roomApplicationService.GetAllRoomsAsync();
+      if (roomsResult.IsSuccess)
+      {
+        ViewBag.Rooms = new SelectList(roomsResult.Data, "RoomId", "Number", inspectionResult.Data.RoomId);
+      }
+      else
+      {
+        ViewBag.Rooms = new SelectList(new List<RoomDto>(), "RoomId", "Number");
+      }
 
-      var model = _mapper.Map<InspectionViewModel>(inspection);
+      var model = _mapper.Map<InspectionViewModel>(inspectionResult.Data);
       return PartialView("_InspectionModal", model);
     }
 
@@ -88,39 +109,47 @@ namespace PropertyManagement.Web.Controllers
       {
         if (!ModelState.IsValid)
         {
-          var rooms = await _roomRepository.GetAllAsync();
-          ViewBag.Rooms = new SelectList(rooms, "RoomId", "Number", model.RoomId);
+          var roomsResult = await _roomApplicationService.GetAllRoomsAsync();
+          if (roomsResult.IsSuccess)
+          {
+            ViewBag.Rooms = new SelectList(roomsResult.Data, "RoomId", "Number", model.RoomId);
+          }
           SetErrorMessage("Please correct the errors in the form.");
           return PartialView("_InspectionModal", model);
         }
 
-        Inspection inspection;
         if (model.InspectionId == 0)
         {
-          inspection = _mapper.Map<Inspection>(model);
-          await _inspectionRepository.AddAsync(inspection);
+          var createInspectionDto = _mapper.Map<CreateInspectionDto>(model);
+          var result = await _inspectionApplicationService.CreateInspectionAsync(createInspectionDto);
+          
+          if (!result.IsSuccess)
+          {
+            SetErrorMessage(result.ErrorMessage);
+            return await PrepareInspectionModal(model);
+          }
+          
           SetSuccessMessage("Inspection created successfully.");
         }
         else
         {
-          inspection = await _inspectionRepository.GetByIdAsync(model.InspectionId);
-          if (inspection == null)
+          var updateInspectionDto = _mapper.Map<UpdateInspectionDto>(model);
+          var result = await _inspectionApplicationService.UpdateInspectionAsync(model.InspectionId, updateInspectionDto);
+          
+          if (!result.IsSuccess)
           {
-            SetErrorMessage("Inspection not found.");
-            return NotFound();
+            SetErrorMessage(result.ErrorMessage);
+            return await PrepareInspectionModal(model);
           }
-          _mapper.Map(model, inspection);
-          await _inspectionRepository.UpdateAsync(inspection);
+          
           SetSuccessMessage("Inspection updated successfully.");
         }
         return RedirectToAction(nameof(Index));
       }
       catch (Exception ex)
       {
-        var rooms = await _roomRepository.GetAllAsync();
-        ViewBag.Rooms = new SelectList(rooms, "RoomId", "Number", model.RoomId);
         SetErrorMessage("Error saving inspection: " + ex.Message);
-        return PartialView("_InspectionModal", model);
+        return await PrepareInspectionModal(model);
       }
     }
 
@@ -139,14 +168,13 @@ namespace PropertyManagement.Web.Controllers
     {
       try
       {
-        var inspection = await _inspectionRepository.GetByIdAsync(id);
-        if (inspection == null)
+        var result = await _inspectionApplicationService.DeleteInspectionAsync(id);
+        if (!result.IsSuccess)
         {
-          SetErrorMessage("Inspection not found.");
+          SetErrorMessage(result.ErrorMessage);
           return RedirectToAction(nameof(Index));
         }
 
-        await _inspectionRepository.DeleteAsync(inspection);
         SetSuccessMessage("Inspection deleted successfully.");
       }
       catch (Exception ex)
@@ -155,6 +183,21 @@ namespace PropertyManagement.Web.Controllers
       }
       
       return RedirectToAction(nameof(Index));
+    }
+
+    private async Task<PartialViewResult> PrepareInspectionModal(InspectionViewModel model)
+    {
+      var roomsResult = await _roomApplicationService.GetAllRoomsAsync();
+      if (roomsResult.IsSuccess)
+      {
+        ViewBag.Rooms = new SelectList(roomsResult.Data, "RoomId", "Number", model.RoomId);
+      }
+      else
+      {
+        ViewBag.Rooms = new SelectList(new List<RoomDto>(), "RoomId", "Number");
+      }
+      
+      return PartialView("_InspectionModal", model);
     }
   }
 }

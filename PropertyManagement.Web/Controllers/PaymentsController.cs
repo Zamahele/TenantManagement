@@ -1,10 +1,9 @@
 using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Prometheus;
-using PropertyManagement.Domain.Entities;
-using PropertyManagement.Infrastructure.Repositories;
+using PropertyManagement.Application.DTOs;
+using PropertyManagement.Application.Services;
 using PropertyManagement.Web.Controllers;
 using PropertyManagement.Web.ViewModels;
 
@@ -12,9 +11,8 @@ using PropertyManagement.Web.ViewModels;
 [Authorize(Roles = "Manager")]
 public class PaymentsController : BaseController
 {
-  private readonly IGenericRepository<Payment> _paymentRepository;
-  private readonly IGenericRepository<Tenant> _tenantRepository;
-  private readonly IGenericRepository<LeaseAgreement> _leaseAgreementRepository;
+  private readonly IPaymentApplicationService _paymentApplicationService;
+  private readonly ITenantApplicationService _tenantApplicationService;
   private readonly IMapper _mapper;
 
   // Prometheus counter for payment creations
@@ -22,34 +20,33 @@ public class PaymentsController : BaseController
       Metrics.CreateCounter("payments_created_total", "Total number of payments created.");
 
   public PaymentsController(
-      IGenericRepository<Payment> paymentRepository,
-      IGenericRepository<Tenant> tenantRepository,
-      IGenericRepository<LeaseAgreement> leaseAgreementRepository,
+      IPaymentApplicationService paymentApplicationService,
+      ITenantApplicationService tenantApplicationService,
       IMapper mapper)
   {
-    _paymentRepository = paymentRepository;
-    _tenantRepository = tenantRepository;
-    _leaseAgreementRepository = leaseAgreementRepository;
+    _paymentApplicationService = paymentApplicationService;
+    _tenantApplicationService = tenantApplicationService;
     _mapper = mapper;
   }
 
   public async Task<IActionResult> Index()
   {
-    // Use Query() for ThenInclude support
-    var payments = await _paymentRepository.Query()
-        .Include(p => p.Tenant)
-            .ThenInclude(t => t.Room)
-        .Include(p => p.LeaseAgreement)
-            .ThenInclude(l => l.Room)
-        .ToListAsync();
+    var paymentsResult = await _paymentApplicationService.GetAllPaymentsAsync();
+    if (!paymentsResult.IsSuccess)
+    {
+      SetErrorMessage(paymentsResult.ErrorMessage);
+      return View(new List<PaymentViewModel>());
+    }
 
-    var tenants = await _tenantRepository.Query()
-        .Include(t => t.Room)
-        .Include(t => t.LeaseAgreements)
-        .ToListAsync();
+    var tenantsResult = await _tenantApplicationService.GetAllTenantsAsync();
+    if (!tenantsResult.IsSuccess)
+    {
+      SetErrorMessage(tenantsResult.ErrorMessage);
+      return View(new List<PaymentViewModel>());
+    }
 
-    ViewBag.Tenants = _mapper.Map<List<TenantViewModel>>(tenants);
-    var paymentVm = _mapper.Map<List<PaymentViewModel>>(payments);
+    ViewBag.Tenants = _mapper.Map<List<TenantViewModel>>(tenantsResult.Data);
+    var paymentVm = _mapper.Map<List<PaymentViewModel>>(paymentsResult.Data);
 
     return View(paymentVm);
   }
@@ -63,7 +60,7 @@ public class PaymentsController : BaseController
     if (!ModelState.IsValid)
     {
       SetErrorMessage("Please correct the errors in the form.");
-      return View(payment);
+      return await GetIndexViewWithData();
     }
 
     if (payment.PaymentMonth < 1 || payment.PaymentMonth > 12)
@@ -71,93 +68,72 @@ public class PaymentsController : BaseController
     if (payment.PaymentYear < 2000 || payment.PaymentYear > DateTime.Now.Year + 1)
       payment.PaymentYear = DateTime.Now.Year;
 
-    var getLeaseAgreement = await _leaseAgreementRepository.Query()
-        .FirstOrDefaultAsync(la => la.TenantId == payment.TenantId);
-    if (getLeaseAgreement != null)
-      payment.LeaseAgreementId = getLeaseAgreement.LeaseAgreementId;
-    else
-      payment.LeaseAgreementId = null;
-
-    if (ModelState.IsValid)
+    var createPaymentDto = new CreatePaymentDto
     {
-      payment.Date = DateTime.Now;
+      TenantId = payment.TenantId,
+      Amount = payment.Amount,
+      PaymentDate = DateTime.Now,
+      Type = payment.Type,
+      PaymentMonth = payment.PaymentMonth,
+      PaymentYear = payment.PaymentYear,
+      ReceiptPath = payment.ReceiptPath
+    };
 
-      var paymentEntity = _mapper.Map<Payment>(payment);
-      await _paymentRepository.AddAsync(paymentEntity);
-
-      PaymentCreatedCounter.Inc();
-
-      SetSuccessMessage("Payment recorded successfully.");
-      return RedirectToAction(nameof(Index));
+    var result = await _paymentApplicationService.CreatePaymentAsync(createPaymentDto);
+    if (!result.IsSuccess)
+    {
+      SetErrorMessage(result.ErrorMessage);
+      return await GetIndexViewWithData();
     }
 
-    SetErrorMessage("Failed to record payment. Please check the form.");
-    var payments = await _paymentRepository.Query()
-        .Include(p => p.Tenant)
-            .ThenInclude(t => t.Room)
-        .ToListAsync();
+    PaymentCreatedCounter.Inc();
 
-    var tenants = await _tenantRepository.Query()
-        .Include(t => t.Room)
-        .ToListAsync();
-
-    ViewBag.Tenants = _mapper.Map<List<TenantViewModel>>(tenants);
-
-    return View("Index", _mapper.Map<List<PaymentViewModel>>(payments));
+    SetSuccessMessage("Payment recorded successfully.");
+    return RedirectToAction(nameof(Index));
   }
 
   [HttpPost]
   [ValidateAntiForgeryToken]
   public async Task<IActionResult> Edit(PaymentViewModel payment)
   {
-    if (ModelState.IsValid)
+    if (!ModelState.IsValid)
     {
-      var existing = await _paymentRepository.GetByIdAsync(payment.PaymentId ?? 0);
-      if (existing == null)
-      {
-        SetErrorMessage("Payment not found.");
-        return NotFound();
-      }
-
-      existing.Amount = payment.Amount;
-      existing.Type = payment.Type;
-      existing.PaymentMonth = payment.PaymentMonth;
-      existing.PaymentYear = payment.PaymentYear;
-
-      await _paymentRepository.UpdateAsync(existing);
-      SetSuccessMessage("Payment updated successfully.");
-      return RedirectToAction(nameof(Index));
+      SetErrorMessage("Failed to update payment. Please check the form.");
+      return await GetIndexViewWithData();
     }
 
-    SetErrorMessage("Failed to update payment. Please check the form.");
-    var payments = await _paymentRepository.Query()
-        .Include(p => p.Tenant)
-        .Include(p => p.LeaseAgreement)
-            .ThenInclude(l => l.Room)
-        .ToListAsync();
+    var updatePaymentDto = new UpdatePaymentDto
+    {
+      Amount = payment.Amount,
+      PaymentDate = payment.Date,
+      Type = payment.Type,
+      PaymentMonth = payment.PaymentMonth,
+      PaymentYear = payment.PaymentYear,
+      ReceiptPath = payment.ReceiptPath
+    };
 
-    var tenants = await _tenantRepository.Query()
-        .Include(t => t.Room)
-        .Include(t => t.LeaseAgreements)
-        .ToListAsync();
+    var result = await _paymentApplicationService.UpdatePaymentAsync(payment.PaymentId ?? 0, updatePaymentDto);
+    if (!result.IsSuccess)
+    {
+      SetErrorMessage(result.ErrorMessage);
+      return await GetIndexViewWithData();
+    }
 
-    ViewBag.Tenants = _mapper.Map<List<TenantViewModel>>(tenants);
-
-    return View("Index", _mapper.Map<List<PaymentViewModel>>(payments));
+    SetSuccessMessage("Payment updated successfully.");
+    return RedirectToAction(nameof(Index));
   }
 
   [HttpPost]
   [ValidateAntiForgeryToken]
   public async Task<IActionResult> Delete(int id)
   {
-    var payment = await _paymentRepository.GetByIdAsync(id);
-    if (payment == null)
+    var result = await _paymentApplicationService.DeletePaymentAsync(id);
+    if (!result.IsSuccess)
     {
-      SetErrorMessage("Payment not found.");
+      SetErrorMessage(result.ErrorMessage);
       return NotFound();
     }
 
-    await _paymentRepository.DeleteAsync(payment);
     SetSuccessMessage("Payment deleted successfully.");
     return RedirectToAction(nameof(Index));
   }
@@ -165,20 +141,14 @@ public class PaymentsController : BaseController
   [HttpGet]
   public async Task<IActionResult> Receipt(int id)
   {
-    var payment = await _paymentRepository.Query()
-        .Include(p => p.Tenant)
-            .ThenInclude(t => t.Room)
-        .Include(p => p.LeaseAgreement)
-            .ThenInclude(l => l.Room)
-        .FirstOrDefaultAsync(p => p.PaymentId == id);
-
-    if (payment == null)
+    var result = await _paymentApplicationService.GetPaymentByIdAsync(id);
+    if (!result.IsSuccess)
     {
-      SetErrorMessage("Payment not found.");
+      SetErrorMessage(result.ErrorMessage);
       return NotFound();
     }
 
-    var paymentVm = _mapper.Map<PaymentViewModel>(payment);
+    var paymentVm = _mapper.Map<PaymentViewModel>(result.Data);
 
     SetInfoMessage("Payment receipt loaded.");
     return PartialView("_PaymentReceipt", paymentVm);
@@ -186,18 +156,28 @@ public class PaymentsController : BaseController
 
   public async Task<IActionResult> ReceiptPartial(int id)
   {
-    var payment = await _paymentRepository.Query()
-        .Include(p => p.Tenant)
-            .ThenInclude(t => t.Room)
-        .Include(p => p.LeaseAgreement)
-            .ThenInclude(l => l.Room)
-        .FirstOrDefaultAsync(p => p.PaymentId == id);
-
-    if (payment == null)
+    var result = await _paymentApplicationService.GetPaymentByIdAsync(id);
+    if (!result.IsSuccess)
       return NotFound();
 
-    var paymentVm = _mapper.Map<PaymentViewModel>(payment);
+    var paymentVm = _mapper.Map<PaymentViewModel>(result.Data);
 
     return PartialView("_ReceiptPartial", paymentVm);
+  }
+
+  private async Task<IActionResult> GetIndexViewWithData()
+  {
+    var paymentsResult = await _paymentApplicationService.GetAllPaymentsAsync();
+    var tenantsResult = await _tenantApplicationService.GetAllTenantsAsync();
+    
+    ViewBag.Tenants = tenantsResult.IsSuccess ? 
+        _mapper.Map<List<TenantViewModel>>(tenantsResult.Data) : 
+        new List<TenantViewModel>();
+
+    var paymentVms = paymentsResult.IsSuccess ? 
+        _mapper.Map<List<PaymentViewModel>>(paymentsResult.Data) : 
+        new List<PaymentViewModel>();
+
+    return View("Index", paymentVms);
   }
 }

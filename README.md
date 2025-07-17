@@ -6,7 +6,7 @@ A comprehensive solution for managing rental properties, tenants, and operations
 
 ## Tech Stack
 
-- ![dotnet](https://img.shields.io/badge/.NET-8.0-blueviolet?logo=dotnet&logoColor=white) **.NET 8** (C# 12) — Main backend framework, using Razor Pages for UI.
+- ![dotnet](https://img.shields.io/badge/.NET-8.0-blueviolet?logo=dotnet&logoColor=white) **.NET 8** (C# 12) — Main backend framework, using ASP.NET Core MVC for UI.
 - ![sqlserver](https://img.shields.io/badge/SQL%20Server-2022-CC2927?logo=microsoftsqlserver&logoColor=white) **SQL Server 2022** — Relational database for persistent storage.
 - ![serilog](https://img.shields.io/badge/Serilog-structured%20logging-blue?logo=serilog&logoColor=white) **Serilog** — Structured logging for diagnostics and monitoring.
 - ![elasticsearch](https://img.shields.io/badge/Elasticsearch-ELK-005571?logo=elasticsearch&logoColor=white) **ELK Stack (Elasticsearch, Kibana)** — Open-source log aggregation and visualization.
@@ -18,7 +18,7 @@ A comprehensive solution for managing rental properties, tenants, and operations
 
 ## Architecture Overview
 
-- **Web App**: ASP.NET Core Razor Pages, runs in a container.
+- **Web App**: ASP.NET Core MVC with Clean Architecture, runs in a container.
 - **Database**: SQL Server, runs in a container.
 - **Logging**: Serilog writes logs to both console and Elasticsearch.
 - **Log Visualization**: Kibana (with Elasticsearch) for searching and visualizing logs/errors.
@@ -78,7 +78,7 @@ A comprehensive solution for managing rental properties, tenants, and operations
 
 ## Project Structure
 
-PropertyManagement (Solution)
+PropertyManagement (Solution) - Clean Architecture Implementation
 │
 ├── PropertyManagement.Domain
 │   └── Entities
@@ -87,23 +87,75 @@ PropertyManagement (Solution)
 │       ├── LeaseAgreement.cs
 │       ├── Payment.cs
 │       ├── User.cs
-│       └── ... (other domain entities)
+│       ├── BookingRequest.cs
+│       ├── Inspection.cs
+│       ├── MaintenanceRequest.cs
+│       └── UtilityBill.cs
+│
+├── PropertyManagement.Application
+│   ├── Common
+│   │   └── ServiceResult.cs
+│   ├── DTOs
+│   │   ├── TenantDto.cs
+│   │   ├── PaymentDto.cs
+│   │   ├── LeaseAgreementDto.cs
+│   │   └── UserDto.cs
+│   └── Services
+│       ├── ITenantApplicationService.cs
+│       ├── TenantApplicationService.cs
+│       ├── IPaymentApplicationService.cs
+│       ├── PaymentApplicationService.cs
+│       ├── ILeaseAgreementApplicationService.cs
+│       └── LeaseAgreementApplicationService.cs
 │
 ├── PropertyManagement.Infrastructure
 │   ├── Data
-│   │   └── ApplicationDbContext.cs
-│   └── Repositories
-│       ├── IGenericRepository.cs
-│       └── GenericRepository.cs
+│   │   ├── ApplicationDbContext.cs
+│   │   └── DatabaseSeeder.cs
+│   ├── Repositories
+│   │   ├── IGenericRepository.cs
+│   │   └── GenericRepository.cs
+│   └── Migrations
+│       └── ... (Entity Framework migrations)
 │
-└── PropertyManagement.Web
+├── PropertyManagement.Web
+│   ├── Controllers
+│   │   ├── BaseController.cs
+│   │   ├── TenantsController.cs
+│   │   ├── PaymentsController.cs
+│   │   ├── LeaseAgreementsController.cs
+│   │   ├── RoomsController.cs
+│   │   └── ... (other controllers)
+│   ├── ViewModels
+│   │   ├── TenantViewModel.cs
+│   │   ├── PaymentViewModel.cs
+│   │   ├── LeaseAgreementViewModel.cs
+│   │   └── ... (other view models)
+│   ├── Views
+│   │   ├── Tenants
+│   │   ├── Payments
+│   │   ├── LeaseAgreements
+│   │   └── Shared
+│   ├── Services
+│   │   ├── IEmailService.cs
+│   │   ├── ISmsService.cs
+│   │   └── ... (infrastructure services)
+│   └── Validators
+│       └── ... (FluentValidation validators)
+│
+└── PropertyManagement.Test
     ├── Controllers
-    │   └── TenantsController.cs
-    ├── ViewModels
-    │   ├── TenantViewModel.cs
-    │   ├── RoomViewModel.cs
-    │   └── ... (other view models)
-    ├── Pages
-    │   └── ... (Razor Pages and partials)
-    └── Views
-        └── ... (if using MVC views or shared partials)
+    │   └── ... (controller tests)
+    ├── Domain
+    │   └── ... (domain tests)
+    ├── Infrastructure
+    │   └── ... (infrastructure tests)
+    └── ViewModels
+        └── ... (view model tests)
+
+## Clean Architecture Layers
+
+- **Domain**: Core business entities and domain logic
+- **Application**: Application services, DTOs, and business use cases
+- **Infrastructure**: Data access, external services, and infrastructure concerns
+- **Web**: MVC controllers, view models, and presentation logic

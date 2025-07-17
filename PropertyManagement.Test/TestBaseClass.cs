@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using PropertyManagement.Application.DTOs;
 using PropertyManagement.Domain.Entities;
 using PropertyManagement.Infrastructure.Data;
 using PropertyManagement.Infrastructure.Repositories;
@@ -41,6 +42,52 @@ namespace PropertyManagement.Test
                 cfg.CreateMap<BookingRequest, BookingRequestViewModel>().ReverseMap();
                 cfg.CreateMap<Inspection, InspectionViewModel>().ReverseMap();
                 cfg.CreateMap<UtilityBill, UtilityBill>().ReverseMap();
+
+                // Add DTOs to ViewModels mappings for comprehensive test coverage
+                cfg.CreateMap<TenantDto, TenantViewModel>()
+                    .ForMember(dest => dest.Room, opt => opt.MapFrom(src => src.Room))
+                    .ForMember(dest => dest.User, opt => opt.MapFrom(src => src.User))
+                    .ReverseMap();
+                    
+                cfg.CreateMap<UserDto, UserViewModel>()
+                    .ForMember(dest => dest.PasswordHash, opt => opt.Ignore()) // PasswordHash is not in UserDto
+                    .ReverseMap()
+                    .ForMember(dest => dest.Username, opt => opt.MapFrom(src => src.Username))
+                    .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.UserId))
+                    .ForMember(dest => dest.Role, opt => opt.MapFrom(src => src.Role));
+                    
+                cfg.CreateMap<RoomDto, RoomViewModel>().ReverseMap();
+                
+                // MISSING MAPPINGS ADDED
+                cfg.CreateMap<LeaseAgreementDto, LeaseAgreementViewModel>()
+                    .ForMember(dest => dest.Tenant, opt => opt.MapFrom(src => src.Tenant))
+                    .ForMember(dest => dest.Room, opt => opt.MapFrom(src => src.Room))
+                    .ForMember(dest => dest.File, opt => opt.Ignore()) // IFormFile is not in DTO
+                    .ForMember(dest => dest.RentDueDate, opt => opt.Ignore()) // Computed property
+                    .ReverseMap();
+                    
+                cfg.CreateMap<PaymentDto, PaymentViewModel>()
+                    .ForMember(dest => dest.Date, opt => opt.MapFrom(src => src.PaymentDate))
+                    .ForMember(dest => dest.Tenant, opt => opt.MapFrom(src => src.Tenant))
+                    .ForMember(dest => dest.LeaseAgreement, opt => opt.MapFrom(src => src.LeaseAgreement))
+                    .ForMember(dest => dest.Room, opt => opt.Ignore()) // Room comes through Tenant navigation
+                    .ReverseMap();
+                    
+                cfg.CreateMap<MaintenanceRequestDto, MaintenanceRequestViewModel>().ReverseMap();
+                cfg.CreateMap<BookingRequestDto, BookingRequestViewModel>().ReverseMap();
+                cfg.CreateMap<InspectionDto, InspectionViewModel>().ReverseMap();
+                cfg.CreateMap<UtilityBillDto, UtilityBillDto>().ReverseMap();
+
+                // Entity to DTO mappings
+                cfg.CreateMap<Tenant, TenantDto>().ReverseMap();
+                cfg.CreateMap<User, UserDto>().ReverseMap();
+                cfg.CreateMap<Room, RoomDto>().ReverseMap();
+                cfg.CreateMap<Payment, PaymentDto>().ReverseMap();
+                cfg.CreateMap<LeaseAgreement, LeaseAgreementDto>().ReverseMap();
+                cfg.CreateMap<MaintenanceRequest, MaintenanceRequestDto>().ReverseMap();
+                cfg.CreateMap<BookingRequest, BookingRequestDto>().ReverseMap();
+                cfg.CreateMap<Inspection, InspectionDto>().ReverseMap();
+                cfg.CreateMap<UtilityBill, UtilityBillDto>().ReverseMap();
             }, NullLoggerFactory.Instance);
             return config.CreateMapper();
         }

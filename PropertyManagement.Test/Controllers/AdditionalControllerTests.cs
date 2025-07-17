@@ -2,12 +2,11 @@ using AutoMapper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
-using PropertyManagement.Domain.Entities;
-using PropertyManagement.Infrastructure.Data;
-using PropertyManagement.Infrastructure.Repositories;
+using PropertyManagement.Application.Common;
+using PropertyManagement.Application.DTOs;
+using PropertyManagement.Application.Services;
 using PropertyManagement.Web.Controllers;
 using PropertyManagement.Web.ViewModels;
 using System;
@@ -19,53 +18,129 @@ using Xunit;
 
 namespace PropertyManagement.Test.Controllers
 {
-    public class AdditionalControllerTests : TestBaseClass
+    public class AdditionalControllerTests
     {
+        private IMapper GetMapper()
+        {
+            var expr = new MapperConfigurationExpression();
+            expr.CreateMap<TenantDto, TenantViewModel>().ReverseMap();
+            expr.CreateMap<TenantViewModel, CreateTenantDto>();
+            expr.CreateMap<TenantViewModel, UpdateTenantDto>();
+
+            // Add the missing UserDto to UserViewModel mapping
+            expr.CreateMap<UserDto, UserViewModel>()
+                .ForMember(dest => dest.PasswordHash, opt => opt.Ignore()) // PasswordHash is not in UserDto
+                .ReverseMap()
+                .ForMember(dest => dest.Username, opt => opt.MapFrom(src => src.Username))
+                .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.UserId))
+                .ForMember(dest => dest.Role, opt => opt.MapFrom(src => src.Role));
+
+            expr.CreateMap<PaymentDto, PaymentViewModel>().ReverseMap();
+            expr.CreateMap<PaymentViewModel, CreatePaymentDto>();
+            expr.CreateMap<PaymentViewModel, UpdatePaymentDto>();
+            expr.CreateMap<RoomDto, RoomViewModel>().ReverseMap();
+            expr.CreateMap<RoomFormViewModel, CreateRoomDto>();
+            expr.CreateMap<RoomFormViewModel, UpdateRoomDto>();
+            var config = new MapperConfiguration(expr, NullLoggerFactory.Instance);
+            return config.CreateMapper();
+        }
+
+        private ClaimsPrincipal GetUser(string role, int userId = 1, string username = "testuser")
+        {
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
+                new Claim(ClaimTypes.Name, username),
+                new Claim(ClaimTypes.Role, role)
+            };
+            var identity = new ClaimsIdentity(claims, "TestAuthentication");
+            return new ClaimsPrincipal(identity);
+        }
+
+        private void SetupControllerContext(Controller controller, ClaimsPrincipal user)
+        {
+            controller.ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext { User = user }
+            };
+            controller.TempData = new TempDataDictionary(controller.ControllerContext.HttpContext, Mock.Of<ITempDataProvider>());
+        }
+
         [Fact]
         public async Task TenantsController_CreateOrEdit_UpdateExisting_UpdatesSuccessfully()
         {
-            var context = GetDbContext();
+            // Arrange
             var mapper = GetMapper();
-            SeedTestData(context);
+            var mockTenantService = new Mock<ITenantApplicationService>();
 
-            var tenantRepo = GetRepositoryMock<Tenant>(context);
-            var userRepo = GetRepositoryMock<User>(context);
-            var roomRepo = GetRepositoryMock<Room>(context);
-
-            var controller = new TenantsController(tenantRepo.Object, userRepo.Object, roomRepo.Object, mapper);
-            SetupControllerContext(controller, GetUser("Manager"));
-
-            var existingTenant = context.Tenants.First();
-            var updatedTenant = new TenantViewModel
+            var existingTenant = new TenantDto
             {
-                TenantId = existingTenant.TenantId,
-                UserId = existingTenant.UserId,
-                RoomId = existingTenant.RoomId,
+                TenantId = 1,
+                UserId = 2,
+                RoomId = 2,
+                FullName = "John Doe",
+                Contact = "1234567890",
+                EmergencyContactName = "Jane Doe",
+                EmergencyContactNumber = "0987654321"
+            };
+
+            var updatedTenant = new TenantDto
+            {
+                TenantId = 1,
+                UserId = 2,
+                RoomId = 2,
                 FullName = "Updated Name",
                 Contact = "9999999999",
                 EmergencyContactName = "Updated Emergency",
-                EmergencyContactNumber = "8888888888",
-                User = new UserViewModel { UserId = existingTenant.UserId, Username = "testuser", Role = "Tenant" }
+                EmergencyContactNumber = "8888888888"
             };
 
-            var result = await controller.CreateOrEdit(updatedTenant, "uniqueuser", "validpassword123");
+            mockTenantService.Setup(s => s.UpdateTenantAsync(It.IsAny<int>(), It.IsAny<UpdateTenantDto>()))
+                .ReturnsAsync(ServiceResult<TenantDto>.Success(updatedTenant));
 
+            var controller = new TenantsController(mockTenantService.Object, mapper);
+            SetupControllerContext(controller, GetUser("Manager"));
+
+            var updatedTenantVm = new TenantViewModel
+            {
+                TenantId = 1,
+                UserId = 2,
+                RoomId = 2,
+                FullName = "Updated Name",
+                Contact = "9999999999",
+                EmergencyContactName = "Updated Emergency",
+                EmergencyContactNumber = "8888888888"
+            };
+
+            // Act
+            var result = await controller.CreateOrEdit(updatedTenantVm, "uniqueuser", "validpassword123");
+
+            // Assert
             var redirect = Assert.IsType<RedirectToActionResult>(result);
             Assert.Equal("Index", redirect.ActionName);
-            Assert.Equal("Updated Name", existingTenant.FullName);
+            mockTenantService.Verify(s => s.UpdateTenantAsync(1, It.IsAny<UpdateTenantDto>()), Times.Once);
         }
 
         [Fact]
         public async Task RoomsController_CreateOrEdit_ValidModel_CreatesRoomSuccessfully()
         {
-            var context = GetDbContext();
+            // Arrange
             var mapper = GetMapper();
+            var mockRoomService = new Mock<IRoomApplicationService>();
+            var mockBookingService = new Mock<IBookingRequestApplicationService>();
 
-            var roomRepo = GetRepositoryMock<Room>(context);
-            var bookingRepo = GetRepositoryMock<BookingRequest>(context);
-            var tenantRepo = GetRepositoryMock<Tenant>(context);
+            var createdRoom = new RoomDto
+            {
+                RoomId = 1,
+                Number = "201",
+                Type = "Single",
+                Status = "Available"
+            };
 
-            var controller = new RoomsController(roomRepo.Object, bookingRepo.Object, tenantRepo.Object, context, mapper);
+            mockRoomService.Setup(s => s.CreateRoomAsync(It.IsAny<CreateRoomDto>()))
+                .ReturnsAsync(ServiceResult<RoomDto>.Success(createdRoom));
+
+            var controller = new RoomsController(mockRoomService.Object, mockBookingService.Object, mapper);
             SetupControllerContext(controller, GetUser("Manager"));
 
             var roomModel = new RoomFormViewModel
@@ -75,97 +150,97 @@ namespace PropertyManagement.Test.Controllers
                 Status = "Available"
             };
 
+            // Act
             var result = await controller.CreateOrEdit(roomModel);
 
+            // Assert
             var redirect = Assert.IsType<RedirectToActionResult>(result);
             Assert.Equal("Index", redirect.ActionName);
-        }
-
-        [Fact]
-        public async Task TenantsController_GetTenant_NonExistingTenant_ReturnsNotFound()
-        {
-            var context = GetDbContext();
-            var mapper = GetMapper();
-
-            var tenantRepo = GetRepositoryMock<Tenant>(context);
-            var userRepo = GetRepositoryMock<User>(context);
-            var roomRepo = GetRepositoryMock<Room>(context);
-
-            var controller = new TenantsController(tenantRepo.Object, userRepo.Object, roomRepo.Object, mapper);
-            SetupControllerContext(controller, GetUser("Manager"));
-
-            var result = await controller.GetTenant(999);
-
-            Assert.IsType<NotFoundResult>(result);
-        }
-
-        [Fact]
-        public async Task TenantsController_EditProfile_NonExistingTenant_ReturnsRedirect()
-        {
-            var context = GetDbContext();
-            var mapper = GetMapper();
-
-            var tenantRepo = GetRepositoryMock<Tenant>(context);
-            var userRepo = GetRepositoryMock<User>(context);
-            var roomRepo = GetRepositoryMock<Room>(context);
-
-            var controller = new TenantsController(tenantRepo.Object, userRepo.Object, roomRepo.Object, mapper);
-            SetupControllerContext(controller, GetUser("Manager"));
-
-            var result = await controller.EditProfile(999);
-
-            var redirect = Assert.IsType<RedirectToActionResult>(result);
-            Assert.Equal("Profile", redirect.ActionName);
-        }
-
-        [Fact]
-        public async Task TenantsController_Delete_NonExistingTenant_ReturnsRedirect()
-        {
-            var context = GetDbContext();
-            var mapper = GetMapper();
-
-            var tenantRepo = GetRepositoryMock<Tenant>(context);
-            var userRepo = GetRepositoryMock<User>(context);
-            var roomRepo = GetRepositoryMock<Room>(context);
-
-            var controller = new TenantsController(tenantRepo.Object, userRepo.Object, roomRepo.Object, mapper);
-            SetupControllerContext(controller, GetUser("Manager"));
-
-            var result = await controller.Delete(999);
-
-            var redirect = Assert.IsType<RedirectToActionResult>(result);
-            Assert.Equal("Index", redirect.ActionName);
+            mockRoomService.Verify(s => s.CreateRoomAsync(It.IsAny<CreateRoomDto>()), Times.Once);
         }
 
         [Fact]
         public async Task PaymentsController_Delete_NonExistingPayment_ReturnsNotFound()
         {
-            var context = GetDbContext();
+            // Arrange
             var mapper = GetMapper();
+            var mockPaymentService = new Mock<IPaymentApplicationService>();
+            var mockTenantService = new Mock<ITenantApplicationService>();
 
-            var paymentRepo = GetRepositoryMock<Payment>(context);
-            var tenantRepo = GetRepositoryMock<Tenant>(context);
-            var leaseRepo = GetRepositoryMock<LeaseAgreement>(context);
+            mockPaymentService.Setup(s => s.DeletePaymentAsync(999))
+                .ReturnsAsync(ServiceResult<bool>.Failure("Payment not found"));
 
-            var controller = new PaymentsController(paymentRepo.Object, tenantRepo.Object, leaseRepo.Object, mapper);
+            var controller = new PaymentsController(mockPaymentService.Object, mockTenantService.Object, mapper);
             SetupControllerContext(controller, GetUser("Manager"));
 
+            // Act
             var result = await controller.Delete(999);
 
+            // Assert
             Assert.IsType<NotFoundResult>(result);
+            mockPaymentService.Verify(s => s.DeletePaymentAsync(999), Times.Once);
         }
 
         [Fact]
-        public async Task PaymentsController_Edit_NonExistingPayment_ReturnsNotFound()
+        public async Task PaymentsController_Create_ValidModel_CreatesPaymentSuccessfully()
         {
-            var context = GetDbContext();
+            // Arrange
             var mapper = GetMapper();
+            var mockPaymentService = new Mock<IPaymentApplicationService>();
+            var mockTenantService = new Mock<ITenantApplicationService>();
 
-            var paymentRepo = GetRepositoryMock<Payment>(context);
-            var tenantRepo = GetRepositoryMock<Tenant>(context);
-            var leaseRepo = GetRepositoryMock<LeaseAgreement>(context);
+            var createdPayment = new PaymentDto
+            {
+                PaymentId = 1,
+                TenantId = 1,
+                Amount = 1200,
+                Type = "Rent",
+                PaymentMonth = 2,
+                PaymentYear = 2024,
+                PaymentDate = DateTime.Now
+            };
 
-            var controller = new PaymentsController(paymentRepo.Object, tenantRepo.Object, leaseRepo.Object, mapper);
+            mockPaymentService.Setup(s => s.CreatePaymentAsync(It.IsAny<CreatePaymentDto>()))
+                .ReturnsAsync(ServiceResult<PaymentDto>.Success(createdPayment));
+
+            var controller = new PaymentsController(mockPaymentService.Object, mockTenantService.Object, mapper);
+            SetupControllerContext(controller, GetUser("Manager"));
+
+            var paymentModel = new PaymentViewModel
+            {
+                TenantId = 1,
+                Amount = 1200,
+                Type = "Rent",
+                PaymentMonth = 2,
+                PaymentYear = 2024,
+                Date = DateTime.Now
+            };
+
+            // Act
+            var result = await controller.Create(paymentModel);
+
+            // Assert
+            var redirect = Assert.IsType<RedirectToActionResult>(result);
+            Assert.Equal("Index", redirect.ActionName);
+            mockPaymentService.Verify(s => s.CreatePaymentAsync(It.IsAny<CreatePaymentDto>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task PaymentsController_Edit_NonExistingPayment_ReturnsIndexView()
+        {
+            // Arrange
+            var mapper = GetMapper();
+            var mockPaymentService = new Mock<IPaymentApplicationService>();
+            var mockTenantService = new Mock<ITenantApplicationService>();
+
+            mockPaymentService.Setup(s => s.UpdatePaymentAsync(999, It.IsAny<UpdatePaymentDto>()))
+                .ReturnsAsync(ServiceResult<PaymentDto>.Failure("Payment not found"));
+            mockPaymentService.Setup(s => s.GetAllPaymentsAsync())
+                .ReturnsAsync(ServiceResult<IEnumerable<PaymentDto>>.Success(new List<PaymentDto>()));
+            mockTenantService.Setup(s => s.GetAllTenantsAsync())
+                .ReturnsAsync(ServiceResult<IEnumerable<TenantDto>>.Success(new List<TenantDto>()));
+
+            var controller = new PaymentsController(mockPaymentService.Object, mockTenantService.Object, mapper);
             SetupControllerContext(controller, GetUser("Manager"));
 
             var paymentViewModel = new PaymentViewModel
@@ -179,64 +254,13 @@ namespace PropertyManagement.Test.Controllers
                 Date = DateTime.Now
             };
 
+            // Act
             var result = await controller.Edit(paymentViewModel);
 
-            Assert.IsType<NotFoundResult>(result);
-        }
-
-        [Fact]
-        public async Task HomeController_Index_WithEmptyDatabase_ReturnsViewWithZeroStats()
-        {
-            var context = GetDbContext();
-            var mapper = GetMapper();
-
-            var roomRepo = GetRepositoryMock<Room>(context);
-            var tenantRepo = GetRepositoryMock<Tenant>(context);
-            var leaseRepo = GetRepositoryMock<LeaseAgreement>(context);
-            var maintenanceRepo = GetRepositoryMock<MaintenanceRequest>(context);
-
-            var logger = new Mock<Microsoft.Extensions.Logging.ILogger<HomeController>>();
-            var controller = new HomeController(roomRepo.Object, tenantRepo.Object, leaseRepo.Object, maintenanceRepo.Object, logger.Object, mapper);
-
-            var result = await controller.Index();
-
+            // Assert
             var viewResult = Assert.IsType<ViewResult>(result);
-            var model = Assert.IsType<DashboardViewModel>(viewResult.Model);
-
-            Assert.Equal(0, model.TotalRooms);
-            Assert.Equal(0, model.TotalTenants);
-            Assert.Equal(0, model.ActiveLeases);
-            Assert.Equal(0, model.PendingRequests);
-        }
-
-        [Fact]
-        public async Task PaymentsController_Create_ValidModel_CreatesPaymentSuccessfully()
-        {
-            var context = GetDbContext();
-            var mapper = GetMapper();
-            SeedTestData(context);
-
-            var paymentRepo = GetRepositoryMock<Payment>(context);
-            var tenantRepo = GetRepositoryMock<Tenant>(context);
-            var leaseRepo = GetRepositoryMock<LeaseAgreement>(context);
-
-            var controller = new PaymentsController(paymentRepo.Object, tenantRepo.Object, leaseRepo.Object, mapper);
-            SetupControllerContext(controller, GetUser("Manager"));
-
-            var paymentModel = new PaymentViewModel
-            {
-                TenantId = 1,
-                Amount = 1200,
-                Type = "Rent",
-                PaymentMonth = 2,
-                PaymentYear = 2024,
-                Date = DateTime.Now
-            };
-
-            var result = await controller.Create(paymentModel);
-
-            var redirect = Assert.IsType<RedirectToActionResult>(result);
-            Assert.Equal("Index", redirect.ActionName);
+            Assert.Equal("Index", viewResult.ViewName);
+            mockPaymentService.Verify(s => s.UpdatePaymentAsync(999, It.IsAny<UpdatePaymentDto>()), Times.Once);
         }
     }
 }

@@ -41,7 +41,7 @@ public class TenantsControllerTests
     return config.CreateMapper();
   }
 
-  private TenantsController GetController(ApplicationDbContext context, ClaimsPrincipal user)
+  private TenantsController_ GetController(ApplicationDbContext context, ClaimsPrincipal user)
   {
     var tenantRepo = new Mock<IGenericRepository<Tenant>>();
     var userRepo = new Mock<IGenericRepository<User>>();
@@ -112,7 +112,7 @@ public class TenantsControllerTests
 
     var mapper = GetMapper();
 
-    var controller = new TenantsController(
+    var controller = new TenantsController_(
         tenantRepo.Object,
         userRepo.Object,
         roomRepo.Object,

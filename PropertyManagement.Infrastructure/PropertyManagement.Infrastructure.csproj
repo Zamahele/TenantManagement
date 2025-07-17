@@ -17,7 +17,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\PropertyManagement.Application\PropertyManagement.Application.csproj" />
     <ProjectReference Include="..\PropertyManagement.Domain\PropertyManagement.Domain.csproj" />
   </ItemGroup>
 

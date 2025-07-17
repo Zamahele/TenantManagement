@@ -20,6 +20,7 @@
     <PackageReference Include="Serilog.Sinks.Elasticsearch" Version="10.0.0" />
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
     <PackageReference Include="Twilio" Version="7.11.3" />
+    <PackageReference Include="PuppeteerSharp" Version="20.0.0" />
   </ItemGroup>
 
   <ItemGroup>

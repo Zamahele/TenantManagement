@@ -2,70 +2,66 @@ using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.EntityFrameworkCore;
-using PropertyManagement.Domain.Entities;
-using PropertyManagement.Infrastructure.Data;
-using PropertyManagement.Infrastructure.Repositories;
+using PropertyManagement.Application.DTOs;
+using PropertyManagement.Application.Services;
 using PropertyManagement.Web.Controllers;
 using PropertyManagement.Web.ViewModels;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 [Authorize]
 [Authorize(Roles = "Manager")]
 public class RoomsController : BaseController
 {
-  private readonly IGenericRepository<Room> _roomRepository;
-  private readonly IGenericRepository<BookingRequest> _bookingRepository;
-  private readonly IGenericRepository<Tenant> _tenantRepository;
-  private readonly ApplicationDbContext _context;
+  private readonly IRoomApplicationService _roomApplicationService;
+  private readonly IBookingRequestApplicationService _bookingRequestApplicationService;
   private readonly IMapper _mapper;
 
   public RoomsController(
-    IGenericRepository<Room> roomRepository,
-    IGenericRepository<BookingRequest> bookingRepository,
-    IGenericRepository<Tenant> tenantRepository,
-    ApplicationDbContext context,
+    IRoomApplicationService roomApplicationService,
+    IBookingRequestApplicationService bookingRequestApplicationService,
     IMapper mapper)
   {
-    _roomRepository = roomRepository;
-    _bookingRepository = bookingRepository;
-    _tenantRepository = tenantRepository;
-    _context = context;
+    _roomApplicationService = roomApplicationService;
+    _bookingRequestApplicationService = bookingRequestApplicationService;
     _mapper = mapper;
   }
 
   // GET: /Rooms
   public async Task<IActionResult> Index()
   {
-    // Get all rooms with tenants in one query
-    var allRooms = await _roomRepository.GetAllAsync(null, r => r.Tenants);
-    
-    // Get confirmed booking room IDs
-    var confirmedBookings = await _bookingRepository.GetAllAsync(b => b.Status == "Confirmed");
-    var confirmedRoomIds = confirmedBookings.Select(b => b.RoomId).ToHashSet();
+    var allRoomsResult = await _roomApplicationService.GetAllRoomsWithTenantsAsync();
+    if (!allRoomsResult.IsSuccess)
+    {
+      SetErrorMessage(allRoomsResult.ErrorMessage);
+      return View(new RoomsTabViewModel());
+    }
 
-    // Filter rooms by status at database level
-    var occupiedRooms = await _roomRepository.GetAllAsync(r => r.Status == "Occupied", r => r.Tenants);
-    var maintenanceRooms = await _roomRepository.GetAllAsync(r => r.Status == "Under Maintenance", r => r.Tenants);
-    
+    var occupiedRoomsResult = await _roomApplicationService.GetOccupiedRoomsAsync();
+    var availableRoomsResult = await _roomApplicationService.GetAvailableRoomsAsync();
+    var pendingRequestsResult = await _bookingRequestApplicationService.GetPendingBookingRequestsAsync();
+    var confirmedBookingsResult = await _bookingRequestApplicationService.GetConfirmedBookingRequestsAsync();
+
+    var allRooms = allRoomsResult.Data.ToList();
+    var confirmedRoomIds = confirmedBookingsResult.IsSuccess ? 
+        confirmedBookingsResult.Data.Select(b => b.RoomId).ToHashSet() : 
+        new HashSet<int>();
+
     // Available rooms excluding confirmed bookings
     var availableRooms = allRooms
         .Where(r => r.Status == "Available" && !confirmedRoomIds.Contains(r.RoomId))
         .ToList();
 
-    // Get pending booking requests
-    var pendingRequests = await _bookingRepository.GetAllAsync(b => b.Status == "Pending", b => b.Room);
+    var maintenanceRooms = allRooms
+        .Where(r => r.Status == "Under Maintenance")
+        .ToList();
 
     var model = new RoomsTabViewModel
     {
       AllRooms = _mapper.Map<List<RoomViewModel>>(allRooms),
-      OccupiedRooms = _mapper.Map<List<RoomViewModel>>(occupiedRooms),
+      OccupiedRooms = occupiedRoomsResult.IsSuccess ? _mapper.Map<List<RoomViewModel>>(occupiedRoomsResult.Data) : new List<RoomViewModel>(),
       VacantRooms = _mapper.Map<List<RoomViewModel>>(availableRooms),
       MaintenanceRooms = _mapper.Map<List<RoomViewModel>>(maintenanceRooms),
-      PendingBookingRequests = _mapper.Map<List<BookingRequestViewModel>>(pendingRequests.ToList()),
-      PendingRequestCount = pendingRequests.Count()
+      PendingBookingRequests = pendingRequestsResult.IsSuccess ? _mapper.Map<List<BookingRequestViewModel>>(pendingRequestsResult.Data) : new List<BookingRequestViewModel>(),
+      PendingRequestCount = pendingRequestsResult.IsSuccess ? pendingRequestsResult.Data.Count() : 0
     };
     return View(model);
   }
@@ -83,10 +79,14 @@ public class RoomsController : BaseController
   // GET: /Rooms/Edit/5
   public async Task<IActionResult> Edit(int id)
   {
-    var room = await _roomRepository.GetByIdAsync(id);
-    if (room == null) return NotFound();
+    var result = await _roomApplicationService.GetRoomByIdAsync(id);
+    if (!result.IsSuccess)
+    {
+      SetErrorMessage(result.ErrorMessage);
+      return NotFound();
+    }
 
-    var model = _mapper.Map<RoomFormViewModel>(room);
+    var model = _mapper.Map<RoomFormViewModel>(result.Data);
     model.StatusOptions = GetStatusOptions();
     return View("CreateOrEdit", model);
   }
@@ -97,52 +97,43 @@ public class RoomsController : BaseController
   [Authorize(Roles = "Manager")]
   public async Task<IActionResult> CreateOrEdit(RoomFormViewModel model)
   {
-    try
-    {
-      if (!ModelState.IsValid)
-      {
-        model.StatusOptions = GetStatusOptions();
-        SetErrorMessage("Please correct the errors in the form.");
-        return View("_RoomModal", model);
-      }
-
-      // Check for duplicate room number
-      var existingRooms = await _roomRepository.GetAllAsync(r => r.Number == model.Number && r.RoomId != model.RoomId);
-      if (existingRooms.Any())
-      {
-        ModelState.AddModelError(nameof(model.Number), "A room with this number already exists.");
-        model.StatusOptions = GetStatusOptions();
-        SetErrorMessage("Room number already exists.");
-        return View("_RoomModal", model);
-      }
-
-      Room room;
-      if (model.RoomId == 0)
-      {
-        room = _mapper.Map<Room>(model);
-        await _roomRepository.AddAsync(room);
-        SetSuccessMessage("Room created successfully.");
-      }
-      else
-      {
-        room = await _roomRepository.GetByIdAsync(model.RoomId);
-        if (room == null)
-        {
-          SetErrorMessage("Room not found.");
-          return NotFound();
-        }
-        _mapper.Map(model, room);
-        await _roomRepository.UpdateAsync(room);
-        SetSuccessMessage("Room updated successfully.");
-      }
-      return RedirectToAction(nameof(Index));
-    }
-    catch (Exception ex)
+    if (!ModelState.IsValid)
     {
       model.StatusOptions = GetStatusOptions();
-      SetErrorMessage("Error saving room: " + ex.Message);
+      SetErrorMessage("Please correct the errors in the form.");
       return View("_RoomModal", model);
     }
+
+    if (model.RoomId == 0)
+    {
+      var createRoomDto = _mapper.Map<CreateRoomDto>(model);
+      var result = await _roomApplicationService.CreateRoomAsync(createRoomDto);
+      
+      if (!result.IsSuccess)
+      {
+        model.StatusOptions = GetStatusOptions();
+        SetErrorMessage(result.ErrorMessage);
+        return View("_RoomModal", model);
+      }
+      
+      SetSuccessMessage("Room created successfully.");
+    }
+    else
+    {
+      var updateRoomDto = _mapper.Map<UpdateRoomDto>(model);
+      var result = await _roomApplicationService.UpdateRoomAsync(model.RoomId, updateRoomDto);
+      
+      if (!result.IsSuccess)
+      {
+        model.StatusOptions = GetStatusOptions();
+        SetErrorMessage(result.ErrorMessage);
+        return View("_RoomModal", model);
+      }
+      
+      SetSuccessMessage("Room updated successfully.");
+    }
+    
+    return RedirectToAction(nameof(Index));
   }
 
   private IEnumerable<SelectListItem> GetStatusOptions()
@@ -158,10 +149,11 @@ public class RoomsController : BaseController
   // GET: /Rooms/GetRoom/5
   public async Task<IActionResult> GetRoom(int id)
   {
-    var rooms = await _roomRepository.GetAllAsync(r => r.RoomId == id, r => r.Tenants);
-    var room = rooms.FirstOrDefault();
-    if (room == null) return NotFound();
+    var result = await _roomApplicationService.GetRoomByIdAsync(id);
+    if (!result.IsSuccess)
+      return NotFound();
 
+    var room = result.Data;
     return Json(new
     {
       roomId = room.RoomId,
@@ -178,36 +170,14 @@ public class RoomsController : BaseController
   [Authorize(Roles = "Manager")]
   public async Task<IActionResult> Delete(int id)
   {
-    try
+    var result = await _roomApplicationService.DeleteRoomAsync(id);
+    if (!result.IsSuccess)
     {
-      var room = await _context.Rooms.FindAsync(id);
-      if (room == null)
-      {
-        SetErrorMessage("Room not found.");
-        return NotFound();
-      }
-
-      // Check if room has active bookings or tenants
-      var hasActiveBookings = await _context.BookingRequests
-          .AnyAsync(b => b.RoomId == id && b.Status == "Confirmed");
-      var hasTenants = await _context.Tenants
-          .AnyAsync(t => t.RoomId == id);
-
-      if (hasActiveBookings || hasTenants)
-      {
-        SetErrorMessage("Cannot delete room. It has active bookings or tenants.");
-        return RedirectToAction(nameof(Index));
-      }
-
-      _context.Rooms.Remove(room);
-      await _context.SaveChangesAsync();
-      SetSuccessMessage("Room deleted successfully.");
+      SetErrorMessage(result.ErrorMessage);
+      return RedirectToAction(nameof(Index));
     }
-    catch (Exception ex)
-    {
-      SetErrorMessage("Error deleting room: " + ex.Message);
-    }
-    
+
+    SetSuccessMessage("Room deleted successfully.");
     return RedirectToAction(nameof(Index));
   }
 
@@ -215,16 +185,17 @@ public class RoomsController : BaseController
   [Authorize(Roles = "Manager")]
   public async Task<IActionResult> BookRoom(int roomId)
   {
-    var room = await _roomRepository.GetByIdAsync(roomId);
-    if (room == null) return NotFound();
+    var roomResult = await _roomApplicationService.GetRoomByIdAsync(roomId);
+    if (!roomResult.IsSuccess) return NotFound();
 
-    var availableRooms = await _roomRepository.GetAllAsync(r => r.Status == "Available");
-    var roomOptions = availableRooms.Select(r => new SelectListItem
-    {
-      Value = r.RoomId.ToString(),
-      Text = $"Room {r.Number} - {r.Type}",
-      Selected = r.RoomId == roomId
-    }).ToList();
+    var availableRoomsResult = await _roomApplicationService.GetAvailableRoomsAsync();
+    var roomOptions = availableRoomsResult.IsSuccess ? 
+      availableRoomsResult.Data.Select(r => new SelectListItem
+      {
+        Value = r.RoomId.ToString(),
+        Text = $"Room {r.Number} - {r.Type}",
+        Selected = r.RoomId == roomId
+      }).ToList() : new List<SelectListItem>();
 
     var model = new BookingRequestViewModel
     {
@@ -241,95 +212,72 @@ public class RoomsController : BaseController
   [Authorize(Roles = "Manager")]
   public async Task<IActionResult> BookRoom(BookingRequestViewModel model, IFormFile? ProofOfPayment)
   {
-    try
+    if (!ModelState.IsValid)
     {
-      if (!ModelState.IsValid)
-      {
-        var availableRooms = await _context.Rooms
-            .Where(r => r.Status == "Available")
-            .Select(r => new SelectListItem
-            {
-              Value = r.RoomId.ToString(),
-              Text = $"Room {r.Number} - {r.Type}"
-            })
-            .ToListAsync();
-        model.RoomOptions = availableRooms;
-        
-        SetErrorMessage("Please correct the errors in the form.");
-        return PartialView("_BookingModal", model);
-      }
-
-      var bookingRequest = new BookingRequest
-      {
-        RoomId = model.RoomId,
-        FullName = model.FullName,
-        Contact = model.Contact,
-        RequestDate = DateTime.Now,
-        Status = "Pending",
-        Note = model.Note,
-        DepositPaid = model.DepositPaid
-      };
-
-      // Handle file upload
-      if (ProofOfPayment != null && ProofOfPayment.Length > 0)
-      {
-        var uploadsFolder = Path.Combine("wwwroot", "uploads", "proofs");
-        Directory.CreateDirectory(uploadsFolder);
-        
-        var fileName = $"{Guid.NewGuid()}_{ProofOfPayment.FileName}";
-        var filePath = Path.Combine(uploadsFolder, fileName);
-        
-        using var stream = new FileStream(filePath, FileMode.Create);
-        await ProofOfPayment.CopyToAsync(stream);
-        
-        bookingRequest.ProofOfPaymentPath = $"uploads/proofs/{fileName}";
-      }
-
-      _context.BookingRequests.Add(bookingRequest);
-      await _context.SaveChangesAsync();
+      var availableRoomsResult = await _roomApplicationService.GetAvailableRoomsAsync();
+      model.RoomOptions = availableRoomsResult.IsSuccess ? 
+        availableRoomsResult.Data.Select(r => new SelectListItem
+        {
+          Value = r.RoomId.ToString(),
+          Text = $"Room {r.Number} - {r.Type}"
+        }).ToList() : new List<SelectListItem>();
       
-      SetSuccessMessage("Booking request submitted successfully.");
-      return RedirectToAction(nameof(Index));
+      SetErrorMessage("Please correct the errors in the form.");
+      return PartialView("_BookingModal", model);
     }
-    catch (Exception ex)
+
+    var createBookingDto = new CreateBookingRequestDto
     {
-      SetErrorMessage("Error submitting booking request: " + ex.Message);
+      RoomId = model.RoomId,
+      FullName = model.FullName,
+      Contact = model.Contact,
+      DepositPaid = model.DepositPaid,
+      Note = model.Note
+    };
+
+    // Handle file upload
+    if (ProofOfPayment != null && ProofOfPayment.Length > 0)
+    {
+      var uploadsFolder = Path.Combine("wwwroot", "uploads", "proofs");
+      Directory.CreateDirectory(uploadsFolder);
+      
+      var fileName = $"{Guid.NewGuid()}_{ProofOfPayment.FileName}";
+      var filePath = Path.Combine(uploadsFolder, fileName);
+      
+      using var stream = new FileStream(filePath, FileMode.Create);
+      await ProofOfPayment.CopyToAsync(stream);
+      
+      createBookingDto.ProofOfPaymentPath = $"uploads/proofs/{fileName}";
+    }
+
+    var result = await _bookingRequestApplicationService.CreateBookingRequestAsync(createBookingDto);
+    if (!result.IsSuccess)
+    {
+      SetErrorMessage(result.ErrorMessage);
       return RedirectToAction(nameof(Index));
     }
+    
+    SetSuccessMessage("Booking request submitted successfully.");
+    return RedirectToAction(nameof(Index));
   }
 
   // GET: /Rooms/EditBookingRequest
   public async Task<IActionResult> EditBookingRequest(int bookingRequestId)
   {
-    var bookingRequest = await _context.BookingRequests
-        .Include(b => b.Room)
-        .FirstOrDefaultAsync(b => b.BookingRequestId == bookingRequestId);
-    
-    if (bookingRequest == null) return NotFound();
+    var bookingResult = await _bookingRequestApplicationService.GetBookingRequestByIdAsync(bookingRequestId);
+    if (!bookingResult.IsSuccess) return NotFound();
 
-    var availableRooms = await _context.Rooms
-        .Where(r => r.Status == "Available")
-        .Select(r => new SelectListItem
-        {
-          Value = r.RoomId.ToString(),
-          Text = $"Room {r.Number} - {r.Type}",
-          Selected = r.RoomId == bookingRequest.RoomId
-        })
-        .ToListAsync();
+    var availableRoomsResult = await _roomApplicationService.GetAvailableRoomsAsync();
+    var roomOptions = availableRoomsResult.IsSuccess ? 
+      availableRoomsResult.Data.Select(r => new SelectListItem
+      {
+        Value = r.RoomId.ToString(),
+        Text = $"Room {r.Number} - {r.Type}",
+        Selected = r.RoomId == bookingResult.Data.RoomId
+      }).ToList() : new List<SelectListItem>();
 
-    var model = new BookingRequestViewModel
-    {
-      BookingRequestId = bookingRequest.BookingRequestId,
-      RoomId = bookingRequest.RoomId,
-      FullName = bookingRequest.FullName,
-      Contact = bookingRequest.Contact,
-      RequestDate = bookingRequest.RequestDate,
-      Status = bookingRequest.Status,
-      Note = bookingRequest.Note,
-      DepositPaid = bookingRequest.DepositPaid,
-      ProofOfPaymentPath = bookingRequest.ProofOfPaymentPath,
-      RoomOptions = availableRooms
-    };
+    var model = _mapper.Map<BookingRequestViewModel>(bookingResult.Data);
+    model.RoomOptions = roomOptions;
 
     return PartialView("_BookingModal", model);
   }
@@ -339,72 +287,53 @@ public class RoomsController : BaseController
   [ValidateAntiForgeryToken]
   public async Task<IActionResult> EditBookingRequest(BookingRequestViewModel model, IFormFile? ProofOfPayment)
   {
-    try
+    if (!ModelState.IsValid)
     {
-      if (!ModelState.IsValid)
-      {
-        var availableRooms = await _context.Rooms
-            .Where(r => r.Status == "Available")
-            .Select(r => new SelectListItem
-            {
-              Value = r.RoomId.ToString(),
-              Text = $"Room {r.Number} - {r.Type}"
-            })
-            .ToListAsync();
-        model.RoomOptions = availableRooms;
-        
-        SetErrorMessage("Please correct the errors in the form.");
-        return PartialView("_BookingModal", model);
-      }
-
-      var bookingRequest = await _context.BookingRequests.FindAsync(model.BookingRequestId);
-      if (bookingRequest == null)
-      {
-        SetErrorMessage("Booking request not found.");
-        return NotFound();
-      }
-
-      // Update booking request
-      bookingRequest.RoomId = model.RoomId;
-      bookingRequest.FullName = model.FullName;
-      bookingRequest.Contact = model.Contact;
-      bookingRequest.Note = model.Note;
-      bookingRequest.DepositPaid = model.DepositPaid;
-
-      // Handle file upload
-      if (ProofOfPayment != null && ProofOfPayment.Length > 0)
-      {
-        // Delete old file if exists
-        if (!string.IsNullOrEmpty(bookingRequest.ProofOfPaymentPath))
+      var availableRoomsResult = await _roomApplicationService.GetAvailableRoomsAsync();
+      model.RoomOptions = availableRoomsResult.IsSuccess ? 
+        availableRoomsResult.Data.Select(r => new SelectListItem
         {
-          var oldFilePath = Path.Combine("wwwroot", bookingRequest.ProofOfPaymentPath);
-          if (System.IO.File.Exists(oldFilePath))
-          {
-            System.IO.File.Delete(oldFilePath);
-          }
-        }
-
-        var uploadsFolder = Path.Combine("wwwroot", "uploads", "proofs");
-        Directory.CreateDirectory(uploadsFolder);
-        
-        var fileName = $"{Guid.NewGuid()}_{ProofOfPayment.FileName}";
-        var filePath = Path.Combine(uploadsFolder, fileName);
-        
-        using var stream = new FileStream(filePath, FileMode.Create);
-        await ProofOfPayment.CopyToAsync(stream);
-        
-        bookingRequest.ProofOfPaymentPath = $"uploads/proofs/{fileName}";
-      }
-
-      await _context.SaveChangesAsync();
-      SetSuccessMessage("Booking request updated successfully.");
-      return RedirectToAction(nameof(Index));
+          Value = r.RoomId.ToString(),
+          Text = $"Room {r.Number} - {r.Type}"
+        }).ToList() : new List<SelectListItem>();
+      
+      SetErrorMessage("Please correct the errors in the form.");
+      return PartialView("_BookingModal", model);
     }
-    catch (Exception ex)
+
+    var updateBookingDto = new UpdateBookingRequestDto
     {
-      SetErrorMessage("Error updating booking request: " + ex.Message);
+      RoomId = model.RoomId,
+      FullName = model.FullName,
+      Contact = model.Contact,
+      DepositPaid = model.DepositPaid,
+      Note = model.Note
+    };
+
+    // Handle file upload
+    if (ProofOfPayment != null && ProofOfPayment.Length > 0)
+    {
+      var uploadsFolder = Path.Combine("wwwroot", "uploads", "proofs");
+      Directory.CreateDirectory(uploadsFolder);
+      
+      var fileName = $"{Guid.NewGuid()}_{ProofOfPayment.FileName}";
+      var filePath = Path.Combine(uploadsFolder, fileName);
+      
+      using var stream = new FileStream(filePath, FileMode.Create);
+      await ProofOfPayment.CopyToAsync(stream);
+      
+      updateBookingDto.ProofOfPaymentPath = $"uploads/proofs/{fileName}";
+    }
+
+    var result = await _bookingRequestApplicationService.UpdateBookingRequestAsync(model.BookingRequestId, updateBookingDto);
+    if (!result.IsSuccess)
+    {
+      SetErrorMessage(result.ErrorMessage);
       return RedirectToAction(nameof(Index));
     }
+    
+    SetSuccessMessage("Booking request updated successfully.");
+    return RedirectToAction(nameof(Index));
   }
 
   // POST: /Rooms/DeleteBookingRequest
@@ -412,34 +341,14 @@ public class RoomsController : BaseController
   [ValidateAntiForgeryToken]
   public async Task<IActionResult> DeleteBookingRequest(int bookingRequestId)
   {
-    try
+    var result = await _bookingRequestApplicationService.DeleteBookingRequestAsync(bookingRequestId);
+    if (!result.IsSuccess)
     {
-      var booking = await _context.BookingRequests.FindAsync(bookingRequestId);
-      if (booking == null)
-      {
-        SetErrorMessage("Booking request not found.");
-        return NotFound();
-      }
-
-      // Delete associated file if exists
-      if (!string.IsNullOrEmpty(booking.ProofOfPaymentPath))
-      {
-        var filePath = Path.Combine("wwwroot", booking.ProofOfPaymentPath);
-        if (System.IO.File.Exists(filePath))
-        {
-          System.IO.File.Delete(filePath);
-        }
-      }
-
-      _context.BookingRequests.Remove(booking);
-      await _context.SaveChangesAsync();
-      SetSuccessMessage("Booking request deleted successfully.");
-    }
-    catch (Exception ex)
-    {
-      SetErrorMessage("Error deleting booking request: " + ex.Message);
+      SetErrorMessage(result.ErrorMessage);
+      return RedirectToAction(nameof(Index));
     }
     
+    SetSuccessMessage("Booking request deleted successfully.");
     return RedirectToAction(nameof(Index));
   }
 }

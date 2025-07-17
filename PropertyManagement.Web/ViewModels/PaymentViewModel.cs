@@ -33,6 +33,9 @@ namespace PropertyManagement.Web.ViewModels
         // For displaying receipt or audit
         public DateTime Date { get; set; }
 
+        // Receipt path for file uploads
+        public string? ReceiptPath { get; set; }
+
         // Navigation properties for UI display
         public TenantViewModel? Tenant { get; set; }
         public RoomViewModel? Room { get; set; }

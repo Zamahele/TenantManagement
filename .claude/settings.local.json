@@ -9,7 +9,9 @@
       "Bash(export:*)",
       "Bash(dotnet restore:*)",
       "Bash(dotnet build:*)",
-      "Bash(/home/zamajasonn/.dotnet/dotnet test PropertyManagement.Test --verbosity normal)"
+      "Bash(/home/zamajasonn/.dotnet/dotnet test PropertyManagement.Test --verbosity normal)",
+      "Bash(rm:*)",
+      "Bash(/home/zamajasonn/.dotnet/dotnet build)"
     ],
     "deny": []
   }

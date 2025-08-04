@@ -1,0 +1,25 @@
+# Offline build Dockerfile
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+WORKDIR /app
+EXPOSE 80
+EXPOSE 443
+
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+
+# Copy everything first to use local packages if available
+COPY . .
+WORKDIR "/src/PropertyManagement.Web"
+
+# Try to use any local packages
+RUN dotnet restore --source ../packages --source https://api.nuget.org/v3/index.json --disable-parallel || dotnet restore --disable-parallel
+
+RUN dotnet build "PropertyManagement.Web.csproj" -c Release -o /app/build
+
+FROM build AS publish
+RUN dotnet publish "PropertyManagement.Web.csproj" -c Release -o /app/publish /p:UseAppHost=false
+
+FROM base AS final
+WORKDIR /app
+COPY --from=publish /app/publish .
+ENTRYPOINT ["dotnet", "PropertyManagement.Web.dll"]

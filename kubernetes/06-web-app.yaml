@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: property-management-web
+  namespace: property-management
+  labels:
+    app: property-management-web
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: property-management-web
+  template:
+    metadata:
+      labels:
+        app: property-management-web
+    spec:
+      containers:
+      - name: property-management-web
+        image: zamahele/property-management:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 80
+        - containerPort: 443
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Production"
+        - name: ConnectionStrings__DefaultConnection
+          valueFrom:
+            secretKeyRef:
+              name: property-management-secrets
+              key: DB_CONNECTION_STRING
+        volumeMounts:
+        - name: app-config
+          mountPath: /app/appsettings.Production.json
+          subPath: appsettings.json
+        - name: app-logs
+          mountPath: /app/logs
+        - name: app-uploads
+          mountPath: /app/wwwroot/uploads
+        - name: https-cert
+          mountPath: /https/aspnetapp.pfx
+          subPath: aspnetapp.pfx
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+      volumes:
+      - name: app-config
+        configMap:
+          name: property-management-config
+      - name: app-logs
+        persistentVolumeClaim:
+          claimName: app-logs-pvc
+      - name: app-uploads
+        emptyDir: {}
+      - name: https-cert
+        secret:
+          secretName: https-cert
+      initContainers:
+      - name: wait-for-db
+        image: mcr.microsoft.com/mssql-tools
+        command: ['sh', '-c']
+        args:
+        - |
+          until /opt/mssql-tools/bin/sqlcmd -S sql-server-service,1433 -U sa -P "$SA_PASSWORD" -Q "SELECT 1"; do
+            echo "Waiting for SQL Server to be ready..."
+            sleep 5
+          done
+          echo "SQL Server is ready!"
+        env:
+        - name: SA_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: property-management-secrets
+              key: SA_PASSWORD

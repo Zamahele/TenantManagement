@@ -1,0 +1,51 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: property-management-config
+  namespace: property-management
+data:
+  appsettings.json: |
+    {
+      "Logging": {
+        "LogLevel": {
+          "Default": "Information",
+          "Microsoft.AspNetCore": "Warning",
+          "Microsoft.EntityFrameworkCore.Database.Command": "Warning"
+        }
+      },
+      "AllowedHosts": "*",
+      "Serilog": {
+        "Using": ["Serilog.Sinks.Console", "Serilog.Sinks.File", "Serilog.Sinks.Elasticsearch"],
+        "MinimumLevel": {
+          "Default": "Information",
+          "Override": {
+            "Microsoft": "Warning",
+            "System": "Warning"
+          }
+        },
+        "WriteTo": [
+          {
+            "Name": "Console",
+            "Args": {
+              "outputTemplate": "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}"
+            }
+          },
+          {
+            "Name": "File",
+            "Args": {
+              "path": "/app/logs/property-management-.txt",
+              "rollingInterval": "Day",
+              "retainedFileCountLimit": 30,
+              "outputTemplate": "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}"
+            }
+          }
+        ],
+        "Enrich": ["FromLogContext", "WithMachineName", "WithThreadId"]
+      },
+      "HealthChecks": {
+        "UI": {
+          "EvaluationTimeInSeconds": 10,
+          "MinimumSecondsBetweenFailureNotifications": 60
+        }
+      }
+    }

@@ -1,0 +1,261 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: property-management
+  labels:
+    app: property-management
+    environment: production
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sql-server-secret
+  namespace: property-management
+type: Opaque
+data:
+  # Base64 encoded: Your_password123
+  SA_PASSWORD: WW91cl9wYXNzd29yZDEyMw==
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: app-secrets
+  namespace: property-management
+type: Opaque
+data:
+  # Base64 encoded: Production
+  ASPNETCORE_ENVIRONMENT: UHJvZHVjdGlvbg==
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: property-management
+data:
+  appsettings.Production.json: |
+    {
+        "Logging": {
+            "LogLevel": {
+                "Default": "Information",
+                "Microsoft.AspNetCore": "Warning"
+            }
+        },
+        "EnableDatabaseSeeding": true,
+        "ConnectionStrings": {
+            "DefaultConnection": "Server=sql-server-service,1433;Database=PropertyManagementDb;User=sa;Password=Your_password123;MultipleActiveResultSets=true;TrustServerCertificate=True"
+        },
+        "AllowedHosts": "*",
+        "UtilityRates": {
+            "WaterPerLiter": 0.02,
+            "ElectricityPerKwh": 1.50
+        },
+        "Serilog": {
+            "MinimumLevel": "Information",
+            "WriteTo": [
+                {
+                    "Name": "File",
+                    "Args": {
+                        "path": "/app/logs/propertymanagement.log",
+                        "rollingInterval": "Day"
+                    }
+                },
+                {
+                    "Name": "Console"
+                }
+            ]
+        }
+    }
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: sql-server-pvc
+  namespace: property-management
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: app-logs-pvc
+  namespace: property-management
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sql-server
+  namespace: property-management
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sql-server
+  template:
+    metadata:
+      labels:
+        app: sql-server
+    spec:
+      containers:
+      - name: sql-server
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        ports:
+        - containerPort: 1433
+        env:
+        - name: ACCEPT_EULA
+          value: "Y"
+        - name: SA_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: sql-server-secret
+              key: SA_PASSWORD
+        - name: MSSQL_PID
+          value: "Express"
+        volumeMounts:
+        - name: sql-storage
+          mountPath: /var/opt/mssql
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "500m"
+          limits:
+            memory: "4Gi"
+            cpu: "1"
+        livenessProbe:
+          tcpSocket:
+            port: 1433
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        readinessProbe:
+          tcpSocket:
+            port: 1433
+          initialDelaySeconds: 30
+          periodSeconds: 10
+      volumes:
+      - name: sql-storage
+        persistentVolumeClaim:
+          claimName: sql-server-pvc
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: property-management-web
+  namespace: property-management
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: property-management-web
+  template:
+    metadata:
+      labels:
+        app: property-management-web
+    spec:
+      initContainers:
+      - name: wait-for-db
+        image: busybox:1.35
+        command: 
+        - sh
+        - -c
+        - |
+          until nc -z sql-server-service 1433; do
+            echo "Waiting for SQL Server..."
+            sleep 5
+          done
+      containers:
+      - name: web-app
+        image: localhost/property-management:latest  # Podman local image
+        ports:
+        - containerPort: 80
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Production"
+        - name: ConnectionStrings__DefaultConnection
+          value: "Server=sql-server-service,1433;Database=PropertyManagementDb;User=sa;Password=Your_password123;MultipleActiveResultSets=true;TrustServerCertificate=True"
+        volumeMounts:
+        - name: app-config
+          mountPath: /app/appsettings.Production.json
+          subPath: appsettings.Production.json
+        - name: app-logs
+          mountPath: /app/logs
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 30
+          periodSeconds: 10
+      volumes:
+      - name: app-config
+        configMap:
+          name: app-config
+      - name: app-logs
+        persistentVolumeClaim:
+          claimName: app-logs-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sql-server-service
+  namespace: property-management
+spec:
+  selector:
+    app: sql-server
+  ports:
+  - port: 1433
+    targetPort: 1433
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: property-management-service
+  namespace: property-management
+spec:
+  selector:
+    app: property-management-web
+  ports:
+  - port: 80
+    targetPort: 80
+  type: LoadBalancer
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: property-management-ingress
+  namespace: property-management
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+  - host: property-management.local  # Change this to your domain
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: property-management-service
+            port:
+              number: 80

@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: property-management
+  labels:
+    name: property-management
+    app: property-management-system

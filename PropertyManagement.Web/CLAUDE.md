@@ -13,6 +13,399 @@
 - **Prometheus** for metrics
 - **Bootstrap 5** for UI
 
+## Kubernetes Deployment
+
+### Overview
+The Property Management System can be deployed to Kubernetes using the comprehensive manifest files and configuration provided below. The deployment includes SQL Server database, web application, persistent storage, and monitoring capabilities.
+
+### Quick Kubernetes Deployment Guide
+
+#### 1. Build and Push Docker Image
+```bash
+# Build the Docker image (from solution root)
+docker build -t your-registry/property-management:latest -f PropertyManagement.Web/Dockerfile .
+
+# Push to your container registry
+docker push your-registry/property-management:latest
+```
+
+#### 2. Create Kubernetes Manifest Files
+
+Create the following YAML files in a `k8s/` directory:
+
+**namespace.yaml**
+```yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: property-management
+  labels:
+    app: property-management
+    environment: production
+```
+
+**secrets.yaml**
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sql-server-secret
+  namespace: property-management
+type: Opaque
+data:
+  # Base64 encoded: Your_password123
+  SA_PASSWORD: WW91cl9wYXNzd29yZDEyMw==
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: app-secrets
+  namespace: property-management
+type: Opaque
+data:
+  # Base64 encoded: Production
+  ASPNETCORE_ENVIRONMENT: UHJvZHVjdGlvbg==
+```
+
+**configmap.yaml**
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: property-management
+data:
+  appsettings.Production.json: |
+    {
+        "Logging": {
+            "LogLevel": {
+                "Default": "Information",
+                "Microsoft.AspNetCore": "Warning"
+            }
+        },
+        "EnableDatabaseSeeding": true,
+        "ConnectionStrings": {
+            "DefaultConnection": "Server=sql-server-service,1433;Database=PropertyManagementDb;User=sa;Password=Your_password123;MultipleActiveResultSets=true;TrustServerCertificate=True"
+        },
+        "AllowedHosts": "*",
+        "UtilityRates": {
+            "WaterPerLiter": 0.02,
+            "ElectricityPerKwh": 1.50
+        },
+        "Serilog": {
+            "MinimumLevel": "Information",
+            "WriteTo": [
+                {
+                    "Name": "File",
+                    "Args": {
+                        "path": "/app/logs/propertymanagement.log",
+                        "rollingInterval": "Day"
+                    }
+                },
+                {
+                    "Name": "Console"
+                }
+            ]
+        }
+    }
+```
+
+**storage.yaml**
+```yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: sql-server-pvc
+  namespace: property-management
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: app-logs-pvc
+  namespace: property-management
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+```
+
+**sql-server.yaml**
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sql-server
+  namespace: property-management
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sql-server
+  template:
+    metadata:
+      labels:
+        app: sql-server
+    spec:
+      containers:
+      - name: sql-server
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        ports:
+        - containerPort: 1433
+        env:
+        - name: ACCEPT_EULA
+          value: "Y"
+        - name: SA_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: sql-server-secret
+              key: SA_PASSWORD
+        - name: MSSQL_PID
+          value: "Express"
+        volumeMounts:
+        - name: sql-storage
+          mountPath: /var/opt/mssql
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "500m"
+          limits:
+            memory: "4Gi"
+            cpu: "1"
+        livenessProbe:
+          exec:
+            command:
+            - /opt/mssql-tools/bin/sqlcmd
+            - -S
+            - localhost
+            - -U
+            - sa
+            - -P
+            - Your_password123
+            - -Q
+            - SELECT 1
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        readinessProbe:
+          exec:
+            command:
+            - /opt/mssql-tools/bin/sqlcmd
+            - -S
+            - localhost
+            - -U
+            - sa
+            - -P
+            - Your_password123
+            - -Q
+            - SELECT 1
+          initialDelaySeconds: 30
+          periodSeconds: 10
+      volumes:
+      - name: sql-storage
+        persistentVolumeClaim:
+          claimName: sql-server-pvc
+```
+
+**web-app.yaml**
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: property-management-web
+  namespace: property-management
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: property-management-web
+  template:
+    metadata:
+      labels:
+        app: property-management-web
+    spec:
+      initContainers:
+      - name: wait-for-db
+        image: busybox:1.35
+        command: 
+        - sh
+        - -c
+        - |
+          until nc -z sql-server-service 1433; do
+            echo "Waiting for SQL Server..."
+            sleep 5
+          done
+      containers:
+      - name: web-app
+        image: your-registry/property-management:latest  # UPDATE THIS
+        ports:
+        - containerPort: 80
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Production"
+        - name: ConnectionStrings__DefaultConnection
+          value: "Server=sql-server-service,1433;Database=PropertyManagementDb;User=sa;Password=Your_password123;MultipleActiveResultSets=true;TrustServerCertificate=True"
+        volumeMounts:
+        - name: app-config
+          mountPath: /app/appsettings.Production.json
+          subPath: appsettings.Production.json
+        - name: app-logs
+          mountPath: /app/logs
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 30
+          periodSeconds: 10
+      volumes:
+      - name: app-config
+        configMap:
+          name: app-config
+      - name: app-logs
+        persistentVolumeClaim:
+          claimName: app-logs-pvc
+```
+
+**services.yaml**
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: sql-server-service
+  namespace: property-management
+spec:
+  selector:
+    app: sql-server
+  ports:
+  - port: 1433
+    targetPort: 1433
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: property-management-service
+  namespace: property-management
+spec:
+  selector:
+    app: property-management-web
+  ports:
+  - port: 80
+    targetPort: 80
+  type: LoadBalancer
+```
+
+**ingress.yaml** (Optional)
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: property-management-ingress
+  namespace: property-management
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+  - host: property-management.your-domain.com  # UPDATE THIS
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: property-management-service
+            port:
+              number: 80
+```
+
+#### 3. Deploy to Kubernetes
+```bash
+# Create k8s directory and save the YAML files above
+mkdir k8s
+cd k8s
+
+# Deploy in order
+kubectl apply -f namespace.yaml
+kubectl apply -f secrets.yaml
+kubectl apply -f configmap.yaml
+kubectl apply -f storage.yaml
+kubectl apply -f sql-server.yaml
+
+# Wait for SQL Server to be ready
+kubectl wait --for=condition=available --timeout=300s deployment/sql-server -n property-management
+
+# Deploy web application
+kubectl apply -f web-app.yaml
+kubectl apply -f services.yaml
+kubectl apply -f ingress.yaml  # Optional
+```
+
+#### 4. Verify and Access
+```bash
+# Check deployment status
+kubectl get all -n property-management
+
+# Get external IP (LoadBalancer)
+kubectl get svc property-management-service -n property-management
+
+# Check logs
+kubectl logs -f deployment/property-management-web -n property-management
+
+# Port forward for local testing
+kubectl port-forward svc/property-management-service 8080:80 -n property-management
+```
+
+### Kubernetes Deployment Features
+
+- **High Availability**: 2 replicas of web application with health checks
+- **Persistent Storage**: SQL Server data and application logs are persisted
+- **Auto-scaling Ready**: Can be easily configured with HPA (Horizontal Pod Autoscaler)
+- **Monitoring**: Prometheus metrics endpoint available at `/metrics`
+- **Security**: Secrets management for sensitive data
+- **Health Checks**: Liveness and readiness probes for reliability
+
+### Production Considerations
+
+1. **Update Image Reference**: Replace `your-registry/property-management:latest` with your actual image
+2. **Security**: Change default passwords in secrets for production
+3. **SSL/TLS**: Configure HTTPS and proper certificates
+4. **Resource Scaling**: Adjust CPU/memory limits based on load
+5. **Storage Classes**: Configure appropriate storage classes for your cluster
+6. **Backup Strategy**: Implement database backup for SQL Server persistent data
+7. **Monitoring**: Add Prometheus/Grafana for comprehensive monitoring
+
+### Scaling Operations
+```bash
+# Scale web application
+kubectl scale deployment property-management-web --replicas=5 -n property-management
+
+# Enable horizontal pod autoscaler
+kubectl autoscale deployment property-management-web --cpu-percent=50 --min=2 --max=10 -n property-management
+```
+
+### Default Login (Post-Deployment)
+- **Username**: `Admin`
+- **Password**: `01Pa$$w0rd2025#`
+
 ## Architecture & Project Structure
 
 ### Solution Projects

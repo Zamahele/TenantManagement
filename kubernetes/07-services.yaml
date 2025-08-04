@@ -1,0 +1,58 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: sql-server-service
+  namespace: property-management
+  labels:
+    app: sql-server
+spec:
+  selector:
+    app: sql-server
+  ports:
+  - port: 1433
+    targetPort: 1433
+    protocol: TCP
+    name: sql-server
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: property-management-service
+  namespace: property-management
+  labels:
+    app: property-management-web
+spec:
+  selector:
+    app: property-management-web
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+    name: http
+  - port: 443
+    targetPort: 443
+    protocol: TCP
+    name: https
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: property-management-metrics
+  namespace: property-management
+  labels:
+    app: property-management-web
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "80"
+    prometheus.io/path: "/metrics"
+spec:
+  selector:
+    app: property-management-web
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+    name: metrics
+  type: ClusterIP

@@ -38,4 +38,22 @@ public class TenantViewModel
 
   public List<PaymentViewModel> Payments { get; set; } = new List<PaymentViewModel>();
   public List<LeaseAgreementViewModel> LeaseAgreements { get; set; } = new List<LeaseAgreementViewModel>();
+
+  // Calculated property for outstanding balance
+  public decimal OutstandingBalance 
+  { 
+    get 
+    {
+      // Calculate outstanding balance based on lease agreements and payments
+      var totalRentDue = LeaseAgreements
+        .Where(lease => lease.StartDate <= DateTime.Now && lease.EndDate >= DateTime.Now)
+        .Sum(lease => lease.RentAmount);
+      
+      var totalPayments = Payments
+        .Where(payment => payment.Date.Month == DateTime.Now.Month && payment.Date.Year == DateTime.Now.Year)
+        .Sum(payment => payment.Amount);
+      
+      return Math.Max(0, totalRentDue - totalPayments);
+    } 
+  }
 }

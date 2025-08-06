@@ -2,46 +2,97 @@
 @using Microsoft.AspNetCore.Mvc.Rendering
 @using PropertyManagement.Domain.Entities
 @using PropertyManagement.Web.ViewModels
+@{
+  ViewData["Title"] = "Rooms";
+}
 
-<div class="mb-4">
-  <div class="card shadow-lg" style="font-size: 1.15rem;">
-    <div class="card-header bg-primary text-white d-flex align-items-center justify-content-between">
-      <h2 class="mb-0 display-6"><i class="bi bi-door-closed me-2"></i> Rooms Dashboard</h2>
-      <button class="btn btn-light text-primary fw-bold" onclick="openAddModal()">
-        <i class="bi bi-plus-circle"></i> Add Room
-      </button>
+<!-- Page Header -->
+<div class="page-header mb-4">
+  <div class="d-flex justify-content-between align-items-center">
+    <div class="page-title">
+      <h1 class="page-title-main">
+        <div class="page-icon">
+          <i class="bi bi-door-closed"></i>
+        </div>
+        Rooms Dashboard
+      </h1>
+      <p class="page-title-sub text-secondary mb-0">Manage room availability, maintenance status, and booking requests</p>
+    </div>
+    <div class="page-actions">
+      <div class="d-flex align-items-center gap-3">
+        <div class="page-info text-center">
+          <div class="text-secondary small">Total Rooms</div>
+          <div class="fw-semibold">@Model.AllRooms.Count()</div>
+        </div>
+        <div class="page-info text-center">
+          <div class="text-secondary small">Occupied</div>
+          <div class="fw-semibold text-info">@Model.OccupiedRooms.Count()</div>
+        </div>
+        <div class="page-info text-center">
+          <div class="text-secondary small">Available</div>
+          <div class="fw-semibold text-success">@Model.VacantRooms.Count()</div>
+        </div>
+        <button class="btn btn-primary page-action-btn primary" onclick="openAddModal()">
+          <i class="bi bi-plus-circle"></i>
+          Add Room
+        </button>
+      </div>
     </div>
   </div>
-  <div class="mt-0 mb-4 p-4" style="background-color: #f8f9fa; border-radius: 0 0 .5rem .5rem;">
-    <ul class="nav nav-tabs mb-3" id="roomTabs" role="tablist">
-      <li class="nav-item" role="presentation">
-        <button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-bs-target="#all" type="button" role="tab">All</button>
-      </li>
-      <li class="nav-item" role="presentation">
-        <button class="nav-link" id="occupied-tab" data-bs-toggle="tab" data-bs-target="#occupied" type="button" role="tab">Occupied</button>
-      </li>
-      <li class="nav-item" role="presentation">
-        <button class="nav-link" id="vacant-tab" data-bs-toggle="tab" data-bs-target="#vacant" type="button" role="tab">Vacant</button>
-      </li>
-      <li class="nav-item" role="presentation">
-        <button class="nav-link" id="maintenance-tab" data-bs-toggle="tab" data-bs-target="#maintenance" type="button" role="tab">Under Maintenance</button>
-      </li>
-      <li class="nav-item" role="presentation">
-        <button class="nav-link" id="requests-tab" data-bs-toggle="tab" data-bs-target="#requests" type="button" role="tab">
-          Requests
-          <span class="position-relative">
-            <i class="bi bi-bell"></i>
+</div>
+
+<!-- Room Management Container -->
+<div class="content-section">
+  <div class="card-elevated">
+    <!-- Professional Tab Navigation -->
+    <div class="nav-tabs-container">
+      <ul class="nav nav-tabs nav-tabs-professional" id="roomTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+          <button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-bs-target="#all" type="button" role="tab">
+            <i class="bi bi-grid-3x3-gap me-2"></i>
+            All Rooms
+            <span class="nav-badge">@Model.AllRooms.Count()</span>
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="occupied-tab" data-bs-toggle="tab" data-bs-target="#occupied" type="button" role="tab">
+            <i class="bi bi-house-lock me-2"></i>
+            Occupied
+            <span class="nav-badge bg-info">@Model.OccupiedRooms.Count()</span>
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="vacant-tab" data-bs-toggle="tab" data-bs-target="#vacant" type="button" role="tab">
+            <i class="bi bi-house-check me-2"></i>
+            Available
+            <span class="nav-badge bg-success">@Model.VacantRooms.Count()</span>
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="maintenance-tab" data-bs-toggle="tab" data-bs-target="#maintenance" type="button" role="tab">
+            <i class="bi bi-wrench-adjustable me-2"></i>
+            Maintenance
+            <span class="nav-badge bg-warning">@Model.MaintenanceRooms.Count()</span>
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="requests-tab" data-bs-toggle="tab" data-bs-target="#requests" type="button" role="tab">
+            <i class="bi bi-bell me-2"></i>
+            Requests
             @if (Model.PendingRequestCount > 0)
             {
-              <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+              <span class="nav-badge bg-danger">
                 @Model.PendingRequestCount
-                <span class="visually-hidden">unread requests</span>
               </span>
             }
-          </span>
-        </button>
-      </li>
-    </ul>
+            else
+            {
+              <span class="nav-badge">0</span>
+            }
+          </button>
+        </li>
+      </ul>
+    </div>
     <div class="tab-content" id="roomTabsContent">
       <div class="tab-pane fade show active" id="all" role="tabpanel">
         @{ ViewData["TabId"] = "all"; }

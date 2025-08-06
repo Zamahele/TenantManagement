@@ -2,33 +2,84 @@
 @{
   ViewData["Title"] = "Payments";
   var tenants = ViewBag.Tenants as List<PropertyManagement.Web.ViewModels.TenantViewModel>;
+  var totalPayments = Model.Sum(p => p.Amount);
+  var thisMonthPayments = Model.Where(p => p.Date.Month == DateTime.Now.Month && p.Date.Year == DateTime.Now.Year).Sum(p => p.Amount);
+  var outstandingCount = tenants?.Where(t => t.OutstandingBalance > 0).Count() ?? 0;
 }
 
-<div class="card shadow-lg" style="font-size: 1.15rem;">
-  <div class="card-header bg-primary text-white d-flex align-items-center justify-content-between">
-    <h2 class="mb-0 display-6"><i class="bi bi-cash-coin"></i> Payments</h2>
-    <div class="d-flex gap-2">
-      <button class="btn btn-light text-primary fw-bold" onclick="openAddPaymentModal()">
-        <i class="bi bi-plus-circle"></i> Add Payment
-      </button>
-      <button class="btn btn-outline-light" onclick="generatePaymentReport()">
-        <i class="bi bi-bar-chart"></i> Report
-      </button>
+<!-- Page Header -->
+<div class="page-header mb-4">
+  <div class="d-flex justify-content-between align-items-center">
+    <div class="page-title">
+      <h1 class="page-title-main">
+        <div class="page-icon">
+          <i class="bi bi-cash-coin"></i>
+        </div>
+        Payments
+      </h1>
+      <p class="page-title-sub text-secondary mb-0">Track rent payments, outstanding balances, and generate financial reports</p>
+    </div>
+    <div class="page-actions">
+      <div class="d-flex align-items-center gap-3">
+        <div class="page-info text-center">
+          <div class="text-secondary small">Total Payments</div>
+          <div class="fw-semibold">@Model.Count()</div>
+        </div>
+        <div class="page-info text-center">
+          <div class="text-secondary small">This Month</div>
+          <div class="fw-semibold text-success">@thisMonthPayments.ToString("C")</div>
+        </div>
+        @if (outstandingCount > 0)
+        {
+          <div class="page-info text-center">
+            <div class="text-secondary small">Outstanding</div>
+            <div class="fw-semibold text-warning">@outstandingCount Tenants</div>
+          </div>
+        }
+        <div class="btn-group">
+          <button class="btn btn-primary page-action-btn primary" onclick="openAddPaymentModal()">
+            <i class="bi bi-plus-circle"></i>
+            Add Payment
+          </button>
+          <button class="btn btn-outline-secondary page-action-btn" onclick="generatePaymentReport()">
+            <i class="bi bi-bar-chart"></i>
+            Report
+          </button>
+        </div>
+      </div>
     </div>
   </div>
-  <div class="card-body p-4" style="background-color: #f4f6fb;">
-    <ul class="nav nav-tabs mb-3" id="paymentsTab" role="tablist">
-      <li class="nav-item" role="presentation">
-        <button class="nav-link active" id="payments-tab" data-bs-toggle="tab" data-bs-target="#payments" type="button" role="tab" aria-controls="payments" aria-selected="true">
-          <i class="bi bi-credit-card"></i> Payments
-        </button>
-      </li>
-      <li class="nav-item" role="presentation">
-        <button class="nav-link" id="balances-tab" data-bs-toggle="tab" data-bs-target="#balances" type="button" role="tab" aria-controls="balances" aria-selected="false">
-          <i class="bi bi-exclamation-triangle"></i> Outstanding Balances
-        </button>
-      </li>
-    </ul>
+</div>
+
+<!-- Payments Management Container -->
+<div class="content-section">
+  <div class="card-elevated">
+    <!-- Professional Tab Navigation -->
+    <div class="nav-tabs-container">
+      <ul class="nav nav-tabs nav-tabs-professional" id="paymentsTab" role="tablist">
+        <li class="nav-item" role="presentation">
+          <button class="nav-link active" id="payments-tab" data-bs-toggle="tab" data-bs-target="#payments" type="button" role="tab" aria-controls="payments" aria-selected="true">
+            <i class="bi bi-credit-card me-2"></i>
+            Payment History
+            <span class="nav-badge bg-success">@Model.Count()</span>
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="balances-tab" data-bs-toggle="tab" data-bs-target="#balances" type="button" role="tab" aria-controls="balances" aria-selected="false">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            Outstanding Balances
+            @if (outstandingCount > 0)
+            {
+              <span class="nav-badge bg-warning">@outstandingCount</span>
+            }
+            else
+            {
+              <span class="nav-badge bg-success">0</span>
+            }
+          </button>
+        </li>
+      </ul>
+    </div>
     <div class="tab-content" id="paymentsTabContent">
       <div class="tab-pane fade show active" id="payments" role="tabpanel" aria-labelledby="payments-tab">
         @await Html.PartialAsync("_PaymentsTable", Model)

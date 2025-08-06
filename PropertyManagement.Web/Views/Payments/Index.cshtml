@@ -74,12 +74,21 @@
   <script>
     function openAddPaymentModal() {
       fetch('/Payments/PaymentForm')
-        .then(response => response.text())
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Network response was not ok');
+          }
+          return response.text();
+        })
         .then(html => {
           document.getElementById('paymentModalLabel').innerText = 'Add Payment';
           document.getElementById('paymentModalBody').innerHTML = html;
           var modal = new bootstrap.Modal(document.getElementById('paymentModal'));
           modal.show();
+        })
+        .catch(error => {
+          console.error('Error loading payment form:', error);
+          alert('Error loading payment form. Please try again.');
         });
     }
 
@@ -91,6 +100,10 @@
           document.getElementById('paymentModalBody').innerHTML = html;
           var modal = new bootstrap.Modal(document.getElementById('paymentModal'));
           modal.show();
+        })
+        .catch(error => {
+          console.error('Error loading payment form:', error);
+          alert('Error loading payment form. Please try again.');
         });
     }
 

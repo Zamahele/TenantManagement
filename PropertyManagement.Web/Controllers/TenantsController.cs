@@ -1,4 +1,4 @@
-using AutoMapper;
+﻿using AutoMapper;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
@@ -15,429 +15,556 @@ namespace PropertyManagement.Web.Controllers;
 [Authorize]
 public class TenantsController : BaseController
 {
-    private readonly ITenantApplicationService _tenantApplicationService;
-    private readonly IMapper _mapper;
+  private readonly ITenantApplicationService _tenantApplicationService;
+  private readonly IRoomApplicationService _roomApplicationService;
+  private readonly IMapper _mapper;
 
-    public TenantsController(
-        ITenantApplicationService tenantApplicationService,
-        IMapper mapper)
+  public TenantsController(
+      ITenantApplicationService tenantApplicationService,
+      IRoomApplicationService roomApplicationService,
+      IMapper mapper)
+  {
+    _tenantApplicationService = tenantApplicationService;
+    _roomApplicationService = roomApplicationService;
+    _mapper = mapper;
+  }
+
+  // GET: /Tenants
+  [Authorize(Roles = "Manager")]
+  public async Task<IActionResult> Index()
+  {
+    var result = await _tenantApplicationService.GetAllTenantsAsync();
+    if (!result.IsSuccess)
     {
-        _tenantApplicationService = tenantApplicationService;
-        _mapper = mapper;
+      SetErrorMessage(result.ErrorMessage);
+      return View(new List<TenantViewModel>());
     }
 
-    // GET: /Tenants
-    [Authorize(Roles = "Manager")]
-    public async Task<IActionResult> Index()
-    {
-        var result = await _tenantApplicationService.GetAllTenantsAsync();
-        if (!result.IsSuccess)
-        {
-            SetErrorMessage(result.ErrorMessage);
-            return View(new List<TenantViewModel>());
-        }
+    var tenantVms = _mapper.Map<List<TenantViewModel>>(result.Data);
+    return View(tenantVms);
+  }
 
-        var tenantVms = _mapper.Map<List<TenantViewModel>>(result.Data);
-        return View(tenantVms);
+  // GET: /Tenants/Profile
+  public async Task<IActionResult> Profile(int? id)
+  {
+    var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+    if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+    {
+      SetErrorMessage("Invalid user session.");
+      return RedirectToAction("Login");
     }
 
-    // GET: /Tenants/Profile
-    public async Task<IActionResult> Profile(int? id)
+    var role = User.FindFirstValue(ClaimTypes.Role);
+
+    ServiceResult<TenantDto> result;
+    if (role == "Manager" && id.HasValue)
     {
-        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
-        {
-            SetErrorMessage("Invalid user session.");
-            return RedirectToAction("Login");
-        }
-
-        var role = User.FindFirstValue(ClaimTypes.Role);
-        
-        ServiceResult<TenantDto> result;
-        if (role == "Manager" && id.HasValue)
-        {
-            result = await _tenantApplicationService.GetTenantByIdAsync(id.Value);
-        }
-        else
-        {
-            result = await _tenantApplicationService.GetTenantByUserIdAsync(userId);
-        }
-
-        if (!result.IsSuccess)
-        {
-            SetErrorMessage(result.ErrorMessage);
-            return role == "Manager" ? RedirectToAction("Index") : RedirectToAction("Login");
-        }
-
-        var profileVm = _mapper.Map<TenantViewModel>(result.Data);
-        return View("Profile", profileVm);
+      result = await _tenantApplicationService.GetTenantByIdAsync(id.Value);
+    }
+    else
+    {
+      result = await _tenantApplicationService.GetTenantByUserIdAsync(userId);
     }
 
-    // GET: /Tenants/EditProfile
-    public async Task<IActionResult> EditProfile(int? id)
+    if (!result.IsSuccess)
     {
-        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
-        {
-            SetErrorMessage("Invalid user session.");
-            return RedirectToAction("Login");
-        }
-
-        var role = User.FindFirstValue(ClaimTypes.Role);
-
-        ServiceResult<TenantDto> result;
-        if (role == "Manager" && id.HasValue)
-        {
-            result = await _tenantApplicationService.GetTenantByIdAsync(id.Value);
-        }
-        else
-        {
-            result = await _tenantApplicationService.GetTenantByUserIdAsync(userId);
-        }
-
-        if (!result.IsSuccess)
-        {
-            SetErrorMessage(result.ErrorMessage);
-            return RedirectToAction(nameof(Profile));
-        }
-
-        var tenantVm = _mapper.Map<TenantViewModel>(result.Data);
-        return PartialView("_EditProfileModal", tenantVm);
+      SetErrorMessage(result.ErrorMessage);
+      return role == "Manager" ? RedirectToAction("Index") : RedirectToAction("Login");
     }
 
-    // POST: /Tenants/EditProfile
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> EditProfile(TenantViewModel tenantVm)
+    var profileVm = _mapper.Map<TenantViewModel>(result.Data);
+    return View("Profile", profileVm);
+  }
+
+  // GET: /Tenants/EditProfile
+  public async Task<IActionResult> EditProfile(int? id)
+  {
+    var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+    if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
     {
-        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+      SetErrorMessage("Invalid user session.");
+      return RedirectToAction("Login");
+    }
+
+    var role = User.FindFirstValue(ClaimTypes.Role);
+
+    ServiceResult<TenantDto> result;
+    if (role == "Manager" && id.HasValue)
+    {
+      result = await _tenantApplicationService.GetTenantByIdAsync(id.Value);
+    }
+    else
+    {
+      result = await _tenantApplicationService.GetTenantByUserIdAsync(userId);
+    }
+
+    if (!result.IsSuccess)
+    {
+      SetErrorMessage(result.ErrorMessage);
+      return RedirectToAction(nameof(Profile));
+    }
+
+    var tenantVm = _mapper.Map<TenantViewModel>(result.Data);
+    return PartialView("_EditProfileModal", tenantVm);
+  }
+
+  // POST: /Tenants/EditProfile
+  [HttpPost]
+  [ValidateAntiForgeryToken]
+  public async Task<IActionResult> EditProfile(TenantViewModel tenantVm)
+  {
+    var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+    if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+    {
+      SetErrorMessage("Invalid user session.");
+      return RedirectToAction("Login");
+    }
+
+    var role = User.FindFirstValue(ClaimTypes.Role);
+
+    // Business rule: Non-managers can only edit their own profile
+    if (role != "Manager")
+    {
+      var currentTenantResult = await _tenantApplicationService.GetTenantByUserIdAsync(userId);
+      if (!currentTenantResult.IsSuccess || tenantVm.TenantId != currentTenantResult.Data.TenantId)
+      {
+        SetErrorMessage("Unauthorized update attempt.");
+        return RedirectToAction(nameof(Profile));
+      }
+    }
+
+    // Remove user-related validation for profile updates
+    ModelState.Remove("User.PasswordHash");
+    ModelState.Remove("User.Username");
+    ModelState.Remove("User.Role");
+    ModelState.Remove("User");
+    ModelState.Remove("plainTextPassword");
+
+    if (!ModelState.IsValid)
+    {
+      SetErrorMessage("Please correct the errors in the form.");
+      return PartialView("_EditProfileModal", tenantVm);
+    }
+
+    var updateProfileDto = new UpdateProfileDto
+    {
+      FullName = tenantVm.FullName,
+      Contact = tenantVm.Contact,
+      EmergencyContactName = tenantVm.EmergencyContactName,
+      EmergencyContactNumber = tenantVm.EmergencyContactNumber
+    };
+
+    var result = await _tenantApplicationService.UpdateProfileAsync(tenantVm.TenantId, updateProfileDto);
+    if (!result.IsSuccess)
+    {
+      SetErrorMessage(result.ErrorMessage);
+      return PartialView("_EditProfileModal", tenantVm);
+    }
+
+    SetSuccessMessage("Profile updated successfully.");
+    return RedirectToAction(nameof(Profile), new { id = (role == "Manager" ? tenantVm.TenantId : (int?)null) });
+  }
+
+  [HttpGet]
+  [Authorize(Roles = "Manager")]
+  public async Task<IActionResult> TenantForm(int? id)
+  {
+    // Load available rooms for the dropdown
+    var roomsResult = await _roomApplicationService.GetAvailableRoomsAsync();
+    if (roomsResult.IsSuccess)
+    {
+      ViewBag.Rooms = _mapper.Map<List<RoomViewModel>>(roomsResult.Data);
+    }
+    else
+    {
+      ViewBag.Rooms = new List<RoomViewModel>();
+      SetErrorMessage("Unable to load available rooms.");
+    }
+
+    TenantViewModel tenantVm;
+
+    if (id.HasValue)
+    {
+      var result = await _tenantApplicationService.GetTenantByIdAsync(id.Value);
+      if (!result.IsSuccess)
+      {
+        SetErrorMessage(result.ErrorMessage);
+        return PartialView("_TenantForm", new TenantViewModel());
+      }
+      tenantVm = _mapper.Map<TenantViewModel>(result.Data);
+    }
+    else
+    {
+      tenantVm = new TenantViewModel();
+    }
+
+    return PartialView("_TenantForm", tenantVm);
+  }
+
+  [HttpPost]
+  [ValidateAntiForgeryToken]
+  [Authorize(Roles = "Manager")]
+  public async Task<IActionResult> CreateOrEdit(TenantViewModel tenantVm, string username, string plainTextPassword)
+  {
+    // Add available rooms for dropdown in case of validation error
+    var roomsResult = await _roomApplicationService.GetAvailableRoomsAsync();
+    if (roomsResult.IsSuccess)
+    {
+      ViewBag.Rooms = _mapper.Map<List<RoomViewModel>>(roomsResult.Data);
+    }
+    else
+    {
+      ViewBag.Rooms = new List<RoomViewModel>();
+    }
+
+    // Remove user-related validation for this form
+    ModelState.Remove("User.PasswordHash");
+    ModelState.Remove("User.Username");
+    ModelState.Remove("User.Role");
+    ModelState.Remove("User");
+    ModelState.Remove("plainTextPassword");
+
+    if (!ModelState.IsValid)
+    {
+      SetErrorMessage("Please correct the errors in the form.");
+      return PartialView("_TenantForm", tenantVm);
+    }
+
+    try
+    {
+      if (tenantVm.TenantId == 0)
+      {
+        // Create new tenant
+        var createTenantDto = new CreateTenantDto
         {
-            SetErrorMessage("Invalid user session.");
-            return RedirectToAction("Login");
-        }
-
-        var role = User.FindFirstValue(ClaimTypes.Role);
-
-        // Business rule: Non-managers can only edit their own profile
-        if (role != "Manager")
-        {
-            var currentTenantResult = await _tenantApplicationService.GetTenantByUserIdAsync(userId);
-            if (!currentTenantResult.IsSuccess || tenantVm.TenantId != currentTenantResult.Data.TenantId)
-            {
-                SetErrorMessage("Unauthorized update attempt.");
-                return RedirectToAction(nameof(Profile));
-            }
-        }
-
-        // Remove user-related validation for profile updates
-        ModelState.Remove("User.PasswordHash");
-        ModelState.Remove("User.Username");
-        ModelState.Remove("User.Role");
-        ModelState.Remove("User");
-        ModelState.Remove("plainTextPassword");
-
-        if (!ModelState.IsValid)
-        {
-            SetErrorMessage("Please correct the errors in the form.");
-            return PartialView("_EditProfileModal", tenantVm);
-        }
-
-        var updateProfileDto = new UpdateProfileDto
-        {
-            FullName = tenantVm.FullName,
-            Contact = tenantVm.Contact,
-            EmergencyContactName = tenantVm.EmergencyContactName,
-            EmergencyContactNumber = tenantVm.EmergencyContactNumber
+          FullName = tenantVm.FullName,
+          Contact = tenantVm.Contact,
+          EmergencyContactName = tenantVm.EmergencyContactName,
+          EmergencyContactNumber = tenantVm.EmergencyContactNumber,
+          RoomId = tenantVm.RoomId,
+          Username = username,
+          Password = plainTextPassword
         };
 
-        var result = await _tenantApplicationService.UpdateProfileAsync(tenantVm.TenantId, updateProfileDto);
+        var result = await _tenantApplicationService.CreateTenantAsync(createTenantDto);
         if (!result.IsSuccess)
         {
-            SetErrorMessage(result.ErrorMessage);
-            return PartialView("_EditProfileModal", tenantVm);
+          // Provide specific error messages based on the failure reason
+          if (result.ErrorMessage.Contains("not available") || result.ErrorMessage.Contains("already has a tenant"))
+          {
+            ModelState.AddModelError("RoomId", result.ErrorMessage);
+            SetErrorMessage($"❌ Room Assignment Failed: {result.ErrorMessage}");
+          }
+          else if (result.ErrorMessage.Contains("Username already exists"))
+          {
+            ModelState.AddModelError("Username", result.ErrorMessage);
+            SetErrorMessage($"❌ Username Error: {result.ErrorMessage}");
+          }
+          else if (result.ErrorMessage.Contains("Contact number already exists"))
+          {
+            ModelState.AddModelError("Contact", result.ErrorMessage);
+            SetErrorMessage($"❌ Contact Error: {result.ErrorMessage}");
+          }
+          else if (result.ErrorMessage.Contains("Password"))
+          {
+            ModelState.AddModelError("Password", result.ErrorMessage);
+            SetErrorMessage($"❌ Password Error: {result.ErrorMessage}");
+          }
+          else
+          {
+            SetErrorMessage($"❌ Failed to create tenant: {result.ErrorMessage}");
+          }
+          
+          return PartialView("_TenantForm", tenantVm);
         }
 
-        SetSuccessMessage("Profile updated successfully.");
-        return RedirectToAction(nameof(Profile), new { id = (role == "Manager" ? tenantVm.TenantId : (int?)null) });
-    }
-
-    [HttpGet]
-    [Authorize(Roles = "Manager")]
-    public async Task<IActionResult> TenantForm(int? id)
-    {
-        TenantViewModel tenantVm;
-        
-        if (id.HasValue)
+        SetSuccessMessage($"✅ Tenant '{tenantVm.FullName}' created successfully and assigned to room!");
+      }
+      else
+      {
+        // Update existing tenant
+        var updateTenantDto = new UpdateTenantDto
         {
-            var result = await _tenantApplicationService.GetTenantByIdAsync(id.Value);
-            if (!result.IsSuccess)
-            {
-                SetErrorMessage(result.ErrorMessage);
-                return PartialView("_TenantForm", new TenantViewModel());
-            }
-            tenantVm = _mapper.Map<TenantViewModel>(result.Data);
-        }
-        else
-        {
-            tenantVm = new TenantViewModel();
-        }
+          FullName = tenantVm.FullName,
+          Contact = tenantVm.Contact,
+          EmergencyContactName = tenantVm.EmergencyContactName,
+          EmergencyContactNumber = tenantVm.EmergencyContactNumber,
+          RoomId = tenantVm.RoomId,
+          Username = username,
+          Password = plainTextPassword
+        };
 
-        return PartialView("_TenantForm", tenantVm);
-    }
-
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    [Authorize(Roles = "Manager")]
-    public async Task<IActionResult> CreateOrEdit(TenantViewModel tenantVm, string username, string plainTextPassword)
-    {
-        // Remove user-related validation for this form
-        ModelState.Remove("User.PasswordHash");
-        ModelState.Remove("User.Username");
-        ModelState.Remove("User.Role");
-        ModelState.Remove("User");
-        ModelState.Remove("plainTextPassword");
-
-        if (!ModelState.IsValid)
-        {
-            SetErrorMessage("Please correct the errors in the form.");
-            return PartialView("_TenantForm", tenantVm);
-        }
-
-        if (tenantVm.TenantId == 0)
-        {
-            // Create new tenant
-            var createTenantDto = new CreateTenantDto
-            {
-                FullName = tenantVm.FullName,
-                Contact = tenantVm.Contact,
-                EmergencyContactName = tenantVm.EmergencyContactName,
-                EmergencyContactNumber = tenantVm.EmergencyContactNumber,
-                RoomId = tenantVm.RoomId,
-                Username = username,
-                Password = plainTextPassword
-            };
-
-            var result = await _tenantApplicationService.CreateTenantAsync(createTenantDto);
-            if (!result.IsSuccess)
-            {
-                SetErrorMessage(result.ErrorMessage);
-                return PartialView("_TenantForm", tenantVm);
-            }
-
-            SetSuccessMessage("Tenant created successfully.");
-        }
-        else
-        {
-            // Update existing tenant
-            var updateTenantDto = new UpdateTenantDto
-            {
-                FullName = tenantVm.FullName,
-                Contact = tenantVm.Contact,
-                EmergencyContactName = tenantVm.EmergencyContactName,
-                EmergencyContactNumber = tenantVm.EmergencyContactNumber,
-                RoomId = tenantVm.RoomId,
-                Username = username,
-                Password = plainTextPassword
-            };
-
-            var result = await _tenantApplicationService.UpdateTenantAsync(tenantVm.TenantId, updateTenantDto);
-            if (!result.IsSuccess)
-            {
-                SetErrorMessage(result.ErrorMessage);
-                return PartialView("_TenantForm", tenantVm);
-            }
-
-            SetSuccessMessage("Tenant updated successfully.");
-        }
-
-        return RedirectToAction(nameof(Index));
-    }
-
-    [Authorize(Roles = "Manager")]
-    public async Task<IActionResult> GetTenant(int id)
-    {
-        var result = await _tenantApplicationService.GetTenantByIdAsync(id);
+        var result = await _tenantApplicationService.UpdateTenantAsync(tenantVm.TenantId, updateTenantDto);
         if (!result.IsSuccess)
         {
-            SetErrorMessage(result.ErrorMessage);
-            return NotFound();
+          // Provide specific error messages based on the failure reason
+          if (result.ErrorMessage.Contains("not available") || result.ErrorMessage.Contains("already has a tenant"))
+          {
+            ModelState.AddModelError("RoomId", result.ErrorMessage);
+            SetErrorMessage($"❌ Room Assignment Failed: {result.ErrorMessage}");
+          }
+          else if (result.ErrorMessage.Contains("Username already exists"))
+          {
+            ModelState.AddModelError("Username", result.ErrorMessage);
+            SetErrorMessage($"❌ Username Error: {result.ErrorMessage}");
+          }
+          else if (result.ErrorMessage.Contains("Contact number already exists"))
+          {
+            ModelState.AddModelError("Contact", result.ErrorMessage);
+            SetErrorMessage($"❌ Contact Error: {result.ErrorMessage}");
+          }
+          else if (result.ErrorMessage.Contains("Password"))
+          {
+            ModelState.AddModelError("Password", result.ErrorMessage);
+            SetErrorMessage($"❌ Password Error: {result.ErrorMessage}");
+          }
+          else
+          {
+            SetErrorMessage($"❌ Failed to update tenant: {result.ErrorMessage}");
+          }
+          
+          return PartialView("_TenantForm", tenantVm);
         }
 
-        var tenantVm = _mapper.Map<TenantViewModel>(result.Data);
-        return Json(tenantVm);
+        SetSuccessMessage($"✅ Tenant '{tenantVm.FullName}' updated successfully with room assignment!");
+      }
+    }
+    catch (Exception ex)
+    {
+      SetErrorMessage($"❌ An unexpected error occurred: {ex.Message}");
+      return PartialView("_TenantForm", tenantVm);
     }
 
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    [Authorize(Roles = "Manager")]
-    public async Task<IActionResult> Delete(int id)
-    {
-        var result = await _tenantApplicationService.DeleteTenantAsync(id);
-        if (!result.IsSuccess)
-        {
-            SetErrorMessage(result.ErrorMessage);
-        }
-        else
-        {
-            SetSuccessMessage("Tenant deleted successfully.");
-        }
+    return RedirectToAction(nameof(Index));
+  }
 
-        return RedirectToAction("Index");
+  [Authorize(Roles = "Manager")]
+  public async Task<IActionResult> GetTenant(int id)
+  {
+    var result = await _tenantApplicationService.GetTenantByIdAsync(id);
+    if (!result.IsSuccess)
+    {
+      SetErrorMessage(result.ErrorMessage);
+      return NotFound();
     }
 
-    [AllowAnonymous]
-    [HttpGet]
-    public async Task<IActionResult> Login()
+    var tenantVm = _mapper.Map<TenantViewModel>(result.Data);
+    return Json(tenantVm);
+  }
+
+  [HttpPost]
+  [ValidateAntiForgeryToken]
+  [Authorize(Roles = "Manager")]
+  public async Task<IActionResult> Delete(int id)
+  {
+    // Get tenant details before deletion for better messaging
+    var tenantResult = await _tenantApplicationService.GetTenantByIdAsync(id);
+    string tenantInfo = "Tenant";
+    
+    if (tenantResult.IsSuccess && tenantResult.Data != null)
     {
-        return View();
+      var roomResult = await _roomApplicationService.GetRoomByIdAsync(tenantResult.Data.RoomId);
+      var roomNumber = roomResult.IsSuccess ? roomResult.Data.Number : "Unknown";
+      tenantInfo = $"{tenantResult.Data.FullName} (Room {roomNumber})";
     }
 
-    [HttpPost]
-    [AllowAnonymous]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Login(TenantLoginViewModel model)
+    var result = await _tenantApplicationService.DeleteTenantAsync(id);
+    if (!result.IsSuccess)
     {
-        if (!ModelState.IsValid)
-            return View(model);
+      SetErrorMessage($"❌ Failed to delete tenant: {result.ErrorMessage}");
+    }
+    else
+    {
+      SetSuccessMessage($"✅ {tenantInfo} deleted successfully. Room is now available for new assignments.");
+    }
 
-        var result = await _tenantApplicationService.AuthenticateAsync(model.Username, model.Password);
-        if (!result.IsSuccess)
-        {
-            SetErrorMessage(result.ErrorMessage);
-            return View(model);
-        }
+    return RedirectToAction("Index");
+  }
 
-        var user = result.Data;
-        var claims = new List<Claim>
+  [AllowAnonymous]
+  [HttpGet]
+  public async Task<IActionResult> Login()
+  {
+    return View();
+  }
+
+  [HttpPost]
+  [AllowAnonymous]
+  [ValidateAntiForgeryToken]
+  public async Task<IActionResult> Login(TenantLoginViewModel model)
+  {
+    if (!ModelState.IsValid)
+      return View(model);
+
+    var result = await _tenantApplicationService.AuthenticateAsync(model.Username, model.Password);
+    if (!result.IsSuccess)
+    {
+      SetErrorMessage(result.ErrorMessage);
+      return View(model);
+    }
+
+    var user = result.Data;
+    var claims = new List<Claim>
         {
             new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
             new Claim(ClaimTypes.Name, user.Username),
             new Claim(ClaimTypes.Role, user.Role)
         };
 
-        var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-        var authProperties = new AuthenticationProperties
-        {
-            IsPersistent = true,
-            ExpiresUtc = DateTimeOffset.UtcNow.AddHours(8)
-        };
-
-        await HttpContext.SignInAsync(
-            CookieAuthenticationDefaults.AuthenticationScheme,
-            new ClaimsPrincipal(claimsIdentity),
-            authProperties);
-
-        if (user.Role == "Manager")
-            return RedirectToAction("Index", "Tenants");
-        else
-            return RedirectToAction("Profile", "Tenants");
-    }
-
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Logout()
+    var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+    var authProperties = new AuthenticationProperties
     {
-        await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-        return RedirectToAction("Login");
-    }
+      IsPersistent = true,
+      ExpiresUtc = DateTimeOffset.UtcNow.AddHours(8)
+    };
 
-    [AllowAnonymous]
-    [HttpGet]
-    public async Task<IActionResult> Register()
+    await HttpContext.SignInAsync(
+        CookieAuthenticationDefaults.AuthenticationScheme,
+        new ClaimsPrincipal(claimsIdentity),
+        authProperties);
+
+    if (user.Role == "Manager")
+      return RedirectToAction("Index", "Tenants");
+    else
+      return RedirectToAction("Profile", "Tenants");
+  }
+
+  [HttpPost]
+  [ValidateAntiForgeryToken]
+  public async Task<IActionResult> Logout()
+  {
+    await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+    return RedirectToAction("Login");
+  }
+
+  [AllowAnonymous]
+  [HttpGet]
+  public async Task<IActionResult> Register()
+  {
+    return View();
+  }
+
+  [HttpPost]
+  [AllowAnonymous]
+  [ValidateAntiForgeryToken]
+  public async Task<IActionResult> Register(TenantViewModel tenantVm, string plainTextPassword)
+  {
+    ModelState.Remove("PasswordHash");
+    
+    if (!ModelState.IsValid)
     {
-        return View();
+      // Load available rooms for dropdown
+      var roomsResult = await _roomApplicationService.GetAvailableRoomsAsync();
+      ViewBag.Rooms = roomsResult.IsSuccess ? _mapper.Map<List<RoomViewModel>>(roomsResult.Data) : new List<RoomViewModel>();
+      return View(tenantVm);
     }
 
-    [HttpPost]
-    [AllowAnonymous]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Register(TenantViewModel tenantVm, string plainTextPassword)
+    var registerTenantDto = new RegisterTenantDto
     {
-        ModelState.Remove("PasswordHash");
-        if (!ModelState.IsValid)
-        {
-            return View(tenantVm);
-        }
+      FullName = tenantVm.FullName,
+      Contact = tenantVm.Contact,
+      EmergencyContactName = tenantVm.EmergencyContactName,
+      EmergencyContactNumber = tenantVm.EmergencyContactNumber,
+      RoomId = tenantVm.RoomId,
+      Username = tenantVm.User?.Username ?? "",
+      Password = plainTextPassword
+    };
 
-        var registerTenantDto = new RegisterTenantDto
-        {
-            FullName = tenantVm.FullName,
-            Contact = tenantVm.Contact,
-            EmergencyContactName = tenantVm.EmergencyContactName,
-            EmergencyContactNumber = tenantVm.EmergencyContactNumber,
-            RoomId = tenantVm.RoomId,
-            Username = tenantVm.User?.Username ?? "",
-            Password = plainTextPassword
-        };
-
-        var result = await _tenantApplicationService.RegisterTenantAsync(registerTenantDto);
-        if (!result.IsSuccess)
-        {
-            SetErrorMessage(result.ErrorMessage);
-            return View(tenantVm);
-        }
-
-        SetSuccessMessage("Account created successfully. Please log in.");
-        return RedirectToAction("Login");
-    }
-
-    [AllowAnonymous]
-    public IActionResult AccessDenied()
+    var result = await _tenantApplicationService.RegisterTenantAsync(registerTenantDto);
+    if (!result.IsSuccess)
     {
-        TempData["ErrorMessage"] = "You do not have permission to view this page.";
-        return RedirectToAction("Profile");
+      // Load available rooms for dropdown
+      var roomsResult = await _roomApplicationService.GetAvailableRoomsAsync();
+      ViewBag.Rooms = roomsResult.IsSuccess ? _mapper.Map<List<RoomViewModel>>(roomsResult.Data) : new List<RoomViewModel>();
+      
+      // Provide specific error messages based on the failure reason
+      if (result.ErrorMessage.Contains("not available") || result.ErrorMessage.Contains("already has a tenant"))
+      {
+        ModelState.AddModelError("RoomId", result.ErrorMessage);
+        SetErrorMessage($"❌ Room Selection Error: {result.ErrorMessage}");
+      }
+      else if (result.ErrorMessage.Contains("Username already exists"))
+      {
+        ModelState.AddModelError("User.Username", result.ErrorMessage);
+        SetErrorMessage($"❌ Username Error: {result.ErrorMessage}");
+      }
+      else if (result.ErrorMessage.Contains("Contact number already exists"))
+      {
+        ModelState.AddModelError("Contact", result.ErrorMessage);
+        SetErrorMessage($"❌ Contact Error: {result.ErrorMessage}");
+      }
+      else if (result.ErrorMessage.Contains("Password"))
+      {
+        SetErrorMessage($"❌ Password Error: {result.ErrorMessage}");
+      }
+      else
+      {
+        SetErrorMessage($"❌ Registration failed: {result.ErrorMessage}");
+      }
+      
+      return View(tenantVm);
     }
 
-    // GET: /Tenants/ChangePassword/5
-    [Authorize(Roles = "Manager")]
-    public async Task<IActionResult> ChangePassword(int id)
+    SetSuccessMessage("✅ Account created successfully! Your room has been reserved. Please log in.");
+    return RedirectToAction("Login");
+  }
+
+  [AllowAnonymous]
+  public IActionResult AccessDenied()
+  {
+    TempData["ErrorMessage"] = "You do not have permission to view this page.";
+    return RedirectToAction("Profile");
+  }
+
+  // GET: /Tenants/ChangePassword/5
+  [Authorize(Roles = "Manager")]
+  public async Task<IActionResult> ChangePassword(int id)
+  {
+    var result = await _tenantApplicationService.GetTenantByIdAsync(id);
+    if (!result.IsSuccess)
     {
-        var result = await _tenantApplicationService.GetTenantByIdAsync(id);
-        if (!result.IsSuccess)
-        {
-            SetErrorMessage(result.ErrorMessage);
-            return NotFound();
-        }
-
-        var tenant = result.Data;
-        var model = new ChangePasswordViewModel
-        {
-            TenantId = tenant.TenantId,
-            TenantName = tenant.FullName,
-            Contact = tenant.Contact
-        };
-
-        return PartialView("_ChangePasswordModal", model);
+      SetErrorMessage(result.ErrorMessage);
+      return NotFound();
     }
 
-    // POST: /Tenants/ChangePassword
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    [Authorize(Roles = "Manager")]
-    public async Task<IActionResult> ChangePassword(ChangePasswordViewModel model)
+    var tenant = result.Data;
+    var model = new ChangePasswordViewModel
     {
-        if (!ModelState.IsValid)
-        {
-            SetErrorMessage("Please correct the errors in the form.");
-            return PartialView("_ChangePasswordModal", model);
-        }
+      TenantId = tenant.TenantId,
+      TenantName = tenant.FullName,
+      Contact = tenant.Contact
+    };
 
-        var result = await _tenantApplicationService.ChangePasswordAsync(model.TenantId, model.CurrentPassword, model.NewPassword);
-        if (!result.IsSuccess)
-        {
-            SetErrorMessage(result.ErrorMessage);
-            return PartialView("_ChangePasswordModal", model);
-        }
+    return PartialView("_ChangePasswordModal", model);
+  }
 
-        SetSuccessMessage($"Password updated successfully for {model.TenantName}.");
-        return RedirectToAction(nameof(Index));
-    }
-
-    private int GetCurrentUserId()
+  // POST: /Tenants/ChangePassword
+  [HttpPost]
+  [ValidateAntiForgeryToken]
+  [Authorize(Roles = "Manager")]
+  public async Task<IActionResult> ChangePassword(ChangePasswordViewModel model)
+  {
+    if (!ModelState.IsValid)
     {
-        if (User.Identity?.IsAuthenticated == true)
-            return int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
-        return 0;
+      SetErrorMessage("Please correct the errors in the form.");
+      return PartialView("_ChangePasswordModal", model);
     }
+
+    var result = await _tenantApplicationService.ChangePasswordAsync(model.TenantId, model.CurrentPassword, model.NewPassword);
+    if (!result.IsSuccess)
+    {
+      SetErrorMessage(result.ErrorMessage);
+      return PartialView("_ChangePasswordModal", model);
+    }
+
+    SetSuccessMessage($"Password updated successfully for {model.TenantName}.");
+    return RedirectToAction(nameof(Index));
+  }
+
+  private int GetCurrentUserId()
+  {
+    if (User.Identity?.IsAuthenticated == true)
+      return int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+    return 0;
+  }
 }

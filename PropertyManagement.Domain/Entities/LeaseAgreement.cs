@@ -13,7 +13,7 @@ namespace PropertyManagement.Domain.Entities
     public int TenantId { get; set; }
 
     [Required]
-    public int RoomId { get; set; } // <-- Add this
+    public int RoomId { get; set; }
 
     [Required]
     [DataType(DataType.Date)]
@@ -23,11 +23,11 @@ namespace PropertyManagement.Domain.Entities
     [DataType(DataType.Date)]
     public DateTime EndDate { get; set; }
 
-    // Not mapped, for file upload only
+    // Not mapped, for file upload only (legacy support)
     [NotMapped]
     public IFormFile? File { get; set; }
 
-    // Add this property for the file path
+    // Legacy file path for uploaded documents
     public string? FilePath { get; set; }
 
     [Required]
@@ -36,7 +36,40 @@ namespace PropertyManagement.Domain.Entities
 
     [Required]
     [Range(1, 31, ErrorMessage = "Expected rent day must be between 1 and 28.")]
-    public int ExpectedRentDay { get; set; } // e.g., 1 = 1st of each month
+    public int ExpectedRentDay { get; set; }
+
+    // New fields for automated lease generation and signing
+    public int? LeaseTemplateId { get; set; }
+    public LeaseTemplate? LeaseTemplate { get; set; }
+    
+    public string? GeneratedHtmlContent { get; set; }
+    public string? GeneratedPdfPath { get; set; }
+    
+    public DateTime? GeneratedAt { get; set; }
+    public DateTime? LastModifiedAt { get; set; }
+    
+    // Signing status
+    public enum LeaseStatus
+    {
+        Draft = 0,
+        Generated = 1,
+        Sent = 2,
+        Signed = 3,
+        Completed = 4,
+        Cancelled = 5
+    }
+    
+    public LeaseStatus Status { get; set; } = LeaseStatus.Draft;
+    
+    public DateTime? SentToTenantAt { get; set; }
+    public DateTime? SignedAt { get; set; }
+    
+    // Digital signature tracking
+    public bool RequiresDigitalSignature { get; set; } = true;
+    public bool IsDigitallySigned { get; set; } = false;
+    
+    // Collection of digital signatures (could have multiple signers in future)
+    public ICollection<DigitalSignature> DigitalSignatures { get; set; } = new List<DigitalSignature>();
 
     // Computed property for next rent due date
     [NotMapped]
@@ -81,6 +114,6 @@ namespace PropertyManagement.Domain.Entities
     }
 
     public Tenant? Tenant { get; set; }
-    public Room? Room { get; set; } // <-- Add this
+    public Room? Room { get; set; }
   }
 }

@@ -104,11 +104,26 @@ public class TenantApplicationService : ITenantApplicationService
                 return ServiceResult<TenantDto>.Failure(contactValidation.ErrorMessage);
             }
 
-            // Business rule: Validate room exists
+            // Business rule: Validate room exists and is available
             var room = await _roomRepository.GetByIdAsync(createTenantDto.RoomId);
             if (room == null)
             {
                 return ServiceResult<TenantDto>.Failure("Selected room does not exist");
+            }
+
+            // Check if room is available
+            if (room.Status != "Available")
+            {
+                return ServiceResult<TenantDto>.Failure($"Room {room.Number} is not available. Current status: {room.Status}");
+            }
+
+            // Check if room already has a tenant
+            var existingTenantInRoom = await _tenantRepository.Query()
+                .Where(t => t.RoomId == createTenantDto.RoomId)
+                .FirstOrDefaultAsync();
+            if (existingTenantInRoom != null)
+            {
+                return ServiceResult<TenantDto>.Failure($"Room {room.Number} already has a tenant assigned");
             }
 
             // Create user account
@@ -134,6 +149,10 @@ public class TenantApplicationService : ITenantApplicationService
 
             await _tenantRepository.AddAsync(tenant);
 
+            // UPDATE ROOM STATUS: Available ? Occupied
+            room.Status = "Occupied";
+            await _roomRepository.UpdateAsync(room);
+
             var tenantDto = _mapper.Map<TenantDto>(tenant);
             return ServiceResult<TenantDto>.Success(tenantDto);
         }
@@ -153,6 +172,9 @@ public class TenantApplicationService : ITenantApplicationService
                 return ServiceResult<TenantDto>.Failure("Tenant not found");
             }
 
+            // Store the old room ID for status update
+            var oldRoomId = tenant.RoomId;
+
             // Business rule: Validate password strength if provided
             if (!string.IsNullOrWhiteSpace(updateTenantDto.Password) && updateTenantDto.Password.Length < 8)
             {
@@ -166,11 +188,30 @@ public class TenantApplicationService : ITenantApplicationService
                 return ServiceResult<TenantDto>.Failure(contactValidation.ErrorMessage);
             }
 
-            // Business rule: Validate room exists
-            var room = await _roomRepository.GetByIdAsync(updateTenantDto.RoomId);
-            if (room == null)
+            // Business rule: Validate room exists if room is being changed
+            Room? newRoom = null;
+            if (updateTenantDto.RoomId != oldRoomId)
             {
-                return ServiceResult<TenantDto>.Failure("Selected room does not exist");
+                newRoom = await _roomRepository.GetByIdAsync(updateTenantDto.RoomId);
+                if (newRoom == null)
+                {
+                    return ServiceResult<TenantDto>.Failure("Selected room does not exist");
+                }
+
+                // Check if new room is available
+                if (newRoom.Status != "Available")
+                {
+                    return ServiceResult<TenantDto>.Failure($"Room {newRoom.Number} is not available. Current status: {newRoom.Status}");
+                }
+
+                // Check if new room already has another tenant
+                var existingTenantInNewRoom = await _tenantRepository.Query()
+                    .Where(t => t.RoomId == updateTenantDto.RoomId && t.TenantId != id)
+                    .FirstOrDefaultAsync();
+                if (existingTenantInNewRoom != null)
+                {
+                    return ServiceResult<TenantDto>.Failure($"Room {newRoom.Number} already has a tenant assigned");
+                }
             }
 
             // Update tenant properties
@@ -181,6 +222,25 @@ public class TenantApplicationService : ITenantApplicationService
             tenant.RoomId = updateTenantDto.RoomId;
 
             await _tenantRepository.UpdateAsync(tenant);
+
+            // UPDATE ROOM STATUSES if room changed
+            if (updateTenantDto.RoomId != oldRoomId)
+            {
+                // Set old room to Available
+                var oldRoom = await _roomRepository.GetByIdAsync(oldRoomId);
+                if (oldRoom != null)
+                {
+                    oldRoom.Status = "Available";
+                    await _roomRepository.UpdateAsync(oldRoom);
+                }
+
+                // Set new room to Occupied
+                if (newRoom != null)
+                {
+                    newRoom.Status = "Occupied";
+                    await _roomRepository.UpdateAsync(newRoom);
+                }
+            }
 
             // Update user account if username or password changed
             if (!string.IsNullOrWhiteSpace(updateTenantDto.Username) || !string.IsNullOrWhiteSpace(updateTenantDto.Password))
@@ -227,6 +287,9 @@ public class TenantApplicationService : ITenantApplicationService
                 return ServiceResult<bool>.Failure("Tenant not found");
             }
 
+            // Get the room to update its status
+            var room = await _roomRepository.GetByIdAsync(tenant.RoomId);
+
             // Delete associated user account
             var user = await _userRepository.GetByIdAsync(tenant.UserId);
             if (user != null)
@@ -235,6 +298,14 @@ public class TenantApplicationService : ITenantApplicationService
             }
 
             await _tenantRepository.DeleteAsync(tenant);
+
+            // UPDATE ROOM STATUS: Occupied ? Available
+            if (room != null && room.Status == "Occupied")
+            {
+                room.Status = "Available";
+                await _roomRepository.UpdateAsync(room);
+            }
+
             return ServiceResult<bool>.Success(true);
         }
         catch (Exception ex)
@@ -341,6 +412,28 @@ public class TenantApplicationService : ITenantApplicationService
                 return ServiceResult<TenantDto>.Failure(contactValidation.ErrorMessage);
             }
 
+            // Business rule: Validate room exists and is available
+            var room = await _roomRepository.GetByIdAsync(registerTenantDto.RoomId);
+            if (room == null)
+            {
+                return ServiceResult<TenantDto>.Failure("Selected room does not exist");
+            }
+
+            // Check if room is available
+            if (room.Status != "Available")
+            {
+                return ServiceResult<TenantDto>.Failure($"Room {room.Number} is not available. Current status: {room.Status}");
+            }
+
+            // Check if room already has a tenant
+            var existingTenantInRoom = await _tenantRepository.Query()
+                .Where(t => t.RoomId == registerTenantDto.RoomId)
+                .FirstOrDefaultAsync();
+            if (existingTenantInRoom != null)
+            {
+                return ServiceResult<TenantDto>.Failure($"Room {room.Number} already has a tenant assigned");
+            }
+
             // Create user account
             var user = new User
             {
@@ -363,6 +456,10 @@ public class TenantApplicationService : ITenantApplicationService
             };
 
             await _tenantRepository.AddAsync(tenant);
+
+            // UPDATE ROOM STATUS: Available ? Occupied
+            room.Status = "Occupied";
+            await _roomRepository.UpdateAsync(room);
 
             var tenantDto = _mapper.Map<TenantDto>(tenant);
             return ServiceResult<TenantDto>.Success(tenantDto);

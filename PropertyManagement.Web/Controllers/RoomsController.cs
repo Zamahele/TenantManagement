@@ -61,7 +61,13 @@ public class RoomsController : BaseController
       VacantRooms = _mapper.Map<List<RoomViewModel>>(availableRooms),
       MaintenanceRooms = _mapper.Map<List<RoomViewModel>>(maintenanceRooms),
       PendingBookingRequests = pendingRequestsResult.IsSuccess ? _mapper.Map<List<BookingRequestViewModel>>(pendingRequestsResult.Data) : new List<BookingRequestViewModel>(),
-      PendingRequestCount = pendingRequestsResult.IsSuccess ? pendingRequestsResult.Data.Count() : 0
+      PendingRequestCount = pendingRequestsResult.IsSuccess ? pendingRequestsResult.Data.Count() : 0,
+      StatusOptions = GetStatusOptions().Where(s => s.Value == "Available").ToList(),
+      RoomTypes = new List<SelectListItem>
+      {
+        new SelectListItem { Value = "Single", Text = "Single" },
+        new SelectListItem { Value = "Double", Text = "Double" }
+      }
     };
     return View(model);
   }
@@ -71,7 +77,7 @@ public class RoomsController : BaseController
   {
     var model = new RoomFormViewModel
     {
-      StatusOptions = GetStatusOptions()
+      StatusOptions = GetStatusOptions().Where(s => s.Value == "Available").ToList()
     };
     return View("CreateOrEdit", model);
   }
@@ -97,40 +103,120 @@ public class RoomsController : BaseController
   [Authorize(Roles = "Manager")]
   public async Task<IActionResult> CreateOrEdit(RoomFormViewModel model)
   {
+    // Add RoomTypes options for the dropdown
+    model.RoomTypes = new List<SelectListItem>
+    {
+        new SelectListItem { Value = "Single", Text = "Single" },
+        new SelectListItem { Value = "Double", Text = "Double" },
+        new SelectListItem { Value = "Suite", Text = "Suite" }
+    };
+
     if (!ModelState.IsValid)
     {
       model.StatusOptions = GetStatusOptions();
-      SetErrorMessage("Please correct the errors in the form.");
+      
+      // Create detailed error message based on which fields failed validation
+      var errorMessages = new List<string>();
+      
+      if (ModelState["Number"]?.Errors.Any() == true)
+      {
+        var numberErrors = ModelState["Number"].Errors.Select(e => e.ErrorMessage);
+        errorMessages.AddRange(numberErrors);
+      }
+      
+      if (ModelState["Type"]?.Errors.Any() == true)
+      {
+        var typeErrors = ModelState["Type"].Errors.Select(e => e.ErrorMessage);
+        errorMessages.AddRange(typeErrors);
+      }
+      
+      if (ModelState["Status"]?.Errors.Any() == true)
+      {
+        var statusErrors = ModelState["Status"].Errors.Select(e => e.ErrorMessage);
+        errorMessages.AddRange(statusErrors);
+      }
+      
+      // Set a comprehensive error message
+      if (errorMessages.Any())
+      {
+        SetErrorMessage($"Validation failed: {string.Join(" ", errorMessages)}");
+      }
+      else
+      {
+        SetErrorMessage("Please correct the errors in the form before saving.");
+      }
+      
+      // Log the validation errors for debugging
+      foreach (var modelState in ModelState)
+      {
+        foreach (var error in modelState.Value.Errors)
+        {
+          // This can help with debugging in development
+          System.Diagnostics.Debug.WriteLine($"Validation error for {modelState.Key}: {error.ErrorMessage}");
+        }
+      }
+      
       return View("_RoomModal", model);
     }
 
-    if (model.RoomId == 0)
+    try
     {
-      var createRoomDto = _mapper.Map<CreateRoomDto>(model);
-      var result = await _roomApplicationService.CreateRoomAsync(createRoomDto);
-      
-      if (!result.IsSuccess)
+      if (model.RoomId == 0)
       {
-        model.StatusOptions = GetStatusOptions();
-        SetErrorMessage(result.ErrorMessage);
-        return View("_RoomModal", model);
+        var createRoomDto = _mapper.Map<CreateRoomDto>(model);
+        var result = await _roomApplicationService.CreateRoomAsync(createRoomDto);
+        
+        if (!result.IsSuccess)
+        {
+          model.StatusOptions = GetStatusOptions();
+          
+          // Check if the error is related to duplicate room number
+          if (result.ErrorMessage.Contains("duplicate") || result.ErrorMessage.Contains("already exists"))
+          {
+            ModelState.AddModelError("Number", $"? Room number '{model.Number}' is already taken - please choose a different number");
+            SetErrorMessage($"Cannot create room: Room number '{model.Number}' already exists. Please use a different room number.");
+          }
+          else
+          {
+            SetErrorMessage($"Failed to create room: {result.ErrorMessage}");
+          }
+          
+          return View("_RoomModal", model);
+        }
+        
+        SetSuccessMessage($"? Room '{model.Number}' created successfully!");
       }
-      
-      SetSuccessMessage("Room created successfully.");
+      else
+      {
+        var updateRoomDto = _mapper.Map<UpdateRoomDto>(model);
+        var result = await _roomApplicationService.UpdateRoomAsync(model.RoomId, updateRoomDto);
+        
+        if (!result.IsSuccess)
+        {
+          model.StatusOptions = GetStatusOptions();
+          
+          // Check if the error is related to duplicate room number
+          if (result.ErrorMessage.Contains("duplicate") || result.ErrorMessage.Contains("already exists"))
+          {
+            ModelState.AddModelError("Number", $"? Room number '{model.Number}' is already used by another room - please choose a different number");
+            SetErrorMessage($"Cannot update room: Room number '{model.Number}' is already in use. Please choose a different room number.");
+          }
+          else
+          {
+            SetErrorMessage($"Failed to update room: {result.ErrorMessage}");
+          }
+          
+          return View("_RoomModal", model);
+        }
+        
+        SetSuccessMessage($"? Room '{model.Number}' updated successfully!");
+      }
     }
-    else
+    catch (Exception ex)
     {
-      var updateRoomDto = _mapper.Map<UpdateRoomDto>(model);
-      var result = await _roomApplicationService.UpdateRoomAsync(model.RoomId, updateRoomDto);
-      
-      if (!result.IsSuccess)
-      {
-        model.StatusOptions = GetStatusOptions();
-        SetErrorMessage(result.ErrorMessage);
-        return View("_RoomModal", model);
-      }
-      
-      SetSuccessMessage("Room updated successfully.");
+      model.StatusOptions = GetStatusOptions();
+      SetErrorMessage($"An unexpected error occurred: {ex.Message}");
+      return View("_RoomModal", model);
     }
     
     return RedirectToAction(nameof(Index));

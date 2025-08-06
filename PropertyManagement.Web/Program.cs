@@ -52,9 +52,12 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
         sqlOptions => sqlOptions.EnableRetryOnFailure(0)
     ));
 
+// Configure FluentValidation with manual validation for async rules
 builder.Services.AddFluentValidationAutoValidation(options =>
 {
-  options.DisableDataAnnotationsValidation = true;
+    options.DisableDataAnnotationsValidation = true;
+    // Disable implicit child validation to avoid async issues
+    options.ImplicitlyValidateChildProperties = false;
 }).AddFluentValidationClientsideAdapters();
 
 builder.Services.AddHttpClient();
@@ -82,6 +85,7 @@ builder.Services.AddScoped<IBookingRequestApplicationService, BookingRequestAppl
 builder.Services.AddScoped<IMaintenanceRequestApplicationService, MaintenanceRequestApplicationService>();
 builder.Services.AddScoped<IInspectionApplicationService, InspectionApplicationService>();
 builder.Services.AddScoped<IUtilityBillApplicationService, UtilityBillApplicationService>();
+builder.Services.AddScoped<ILeaseGenerationService, LeaseGenerationService>();
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
@@ -212,6 +216,16 @@ builder.Services.AddAutoMapper(cfg =>
   cfg.CreateMap<InspectionViewModel, UpdateInspectionDto>();
   cfg.CreateMap<MaintenanceRequestViewModel, CreateMaintenanceRequestDto>();
   cfg.CreateMap<MaintenanceRequestViewModel, UpdateMaintenanceRequestDto>();
+
+  // Digital Lease mappings
+  cfg.CreateMap<LeaseTemplate, LeaseTemplateDto>().ReverseMap();
+  cfg.CreateMap<DigitalSignature, DigitalSignatureDto>().ReverseMap();
+  cfg.CreateMap<DigitalSignatureDto, DigitalSignatureViewModel>().ReverseMap();
+  cfg.CreateMap<LeaseTemplateDto, LeaseTemplateViewModel>().ReverseMap();
+  cfg.CreateMap<LeaseTemplateViewModel, CreateLeaseTemplateDto>();
+  cfg.CreateMap<LeaseTemplateViewModel, UpdateLeaseTemplateDto>();
+  cfg.CreateMap<CreateLeaseTemplateDto, LeaseTemplate>();
+  cfg.CreateMap<UpdateLeaseTemplateDto, LeaseTemplate>();
 });
 
 builder.WebHost.ConfigureKestrel(options =>

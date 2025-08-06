@@ -98,7 +98,8 @@ namespace PropertyManagement.Test.Controllers
             mockTenantService.Setup(s => s.UpdateTenantAsync(It.IsAny<int>(), It.IsAny<UpdateTenantDto>()))
                 .ReturnsAsync(ServiceResult<TenantDto>.Success(updatedTenant));
 
-            var controller = new TenantsController(mockTenantService.Object, mapper);
+            var mockRoomService = new Mock<IRoomApplicationService>();
+            var controller = new TenantsController(mockTenantService.Object, mockRoomService.Object, mapper);
             SetupControllerContext(controller, GetUser("Manager"));
 
             var updatedTenantVm = new TenantViewModel

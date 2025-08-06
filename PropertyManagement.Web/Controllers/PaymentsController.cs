@@ -165,6 +165,45 @@ public class PaymentsController : BaseController
     return PartialView("_ReceiptPartial", paymentVm);
   }
 
+  [HttpGet]
+  public async Task<IActionResult> PaymentForm(int? id)
+  {
+    PaymentViewModel paymentVm;
+
+    if (id.HasValue)
+    {
+      // Edit mode
+      var result = await _paymentApplicationService.GetPaymentByIdAsync(id.Value);
+      if (!result.IsSuccess)
+        return NotFound();
+
+      paymentVm = _mapper.Map<PaymentViewModel>(result.Data);
+    }
+    else
+    {
+      // Add mode
+      paymentVm = new PaymentViewModel
+      {
+        PaymentMonth = DateTime.Now.Month,
+        PaymentYear = DateTime.Now.Year,
+        Date = DateTime.Now
+      };
+    }
+
+    // Load tenants for dropdown
+    var tenantsResult = await _tenantApplicationService.GetAllTenantsAsync();
+    if (tenantsResult.IsSuccess)
+    {
+      ViewBag.Tenants = _mapper.Map<List<TenantViewModel>>(tenantsResult.Data);
+    }
+    else
+    {
+      ViewBag.Tenants = new List<TenantViewModel>();
+    }
+
+    return PartialView("_PaymentForm", paymentVm);
+  }
+
   private async Task<IActionResult> GetIndexViewWithData()
   {
     var paymentsResult = await _paymentApplicationService.GetAllPaymentsAsync();

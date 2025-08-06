@@ -3,7 +3,7 @@ using PropertyManagement.Domain.Entities;
 
 namespace PropertyManagement.Web.ViewModels
 {
-  public class RoomFormViewModel
+  public class RoomFormViewModel 
   {
     public int RoomId { get; set; }
     public int? CottageId { get; set; } 
@@ -11,5 +11,6 @@ namespace PropertyManagement.Web.ViewModels
     public string? Type { get; set; }
     public string? Status { get; set; }
     public IEnumerable<SelectListItem> ? StatusOptions { get; set; }
+    public IEnumerable<SelectListItem>? RoomTypes { get; set; }
   }
 }

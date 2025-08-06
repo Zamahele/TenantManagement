@@ -19,6 +19,8 @@ public class ApplicationDbContext : DbContext
     public DbSet<BookingRequest> BookingRequests { get; set; }
     public DbSet<Inspection> Inspections { get; set; }
     public DbSet<UtilityBill> UtilityBills { get; set; }
+    public DbSet<LeaseTemplate> LeaseTemplate { get; set; }
+    public DbSet<DigitalSignature> DigitalSignature { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -51,6 +53,27 @@ public class ApplicationDbContext : DbContext
             .WithMany(t => t.LeaseAgreements)
             .HasForeignKey(l => l.TenantId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        // LeaseTemplate-LeaseAgreement one-to-many relationship (optional)
+        modelBuilder.Entity<LeaseAgreement>()
+            .HasOne(l => l.LeaseTemplate)
+            .WithMany()
+            .HasForeignKey(l => l.LeaseTemplateId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        // LeaseAgreement-DigitalSignature one-to-many relationship
+        modelBuilder.Entity<DigitalSignature>()
+            .HasOne(ds => ds.LeaseAgreement)
+            .WithMany(l => l.DigitalSignatures)
+            .HasForeignKey(ds => ds.LeaseAgreementId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // Tenant-DigitalSignature one-to-many relationship (restricted to avoid cascade path conflicts)
+        modelBuilder.Entity<DigitalSignature>()
+            .HasOne(ds => ds.Tenant)
+            .WithMany()
+            .HasForeignKey(ds => ds.TenantId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         // Tenant-Payment one-to-many relationship
         modelBuilder.Entity<Payment>()

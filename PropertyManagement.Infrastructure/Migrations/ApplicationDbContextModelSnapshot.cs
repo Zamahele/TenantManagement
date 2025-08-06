@@ -64,6 +64,60 @@ namespace PropertyManagement.Infrastructure.Migrations
                     b.ToTable("BookingRequests");
                 });
 
+            modelBuilder.Entity("PropertyManagement.Domain.Entities.DigitalSignature", b =>
+                {
+                    b.Property<int>("DigitalSignatureId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("DigitalSignatureId"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsVerified")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("LeaseAgreementId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SignatureHash")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("SignatureImagePath")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("SignedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("SignerIPAddress")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("SignerUserAgent")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("SigningNotes")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("DigitalSignatureId");
+
+                    b.HasIndex("LeaseAgreementId");
+
+                    b.HasIndex("TenantId");
+
+                    b.ToTable("DigitalSignature");
+                });
+
             modelBuilder.Entity("PropertyManagement.Domain.Entities.Inspection", b =>
                 {
                     b.Property<int>("InspectionId")
@@ -110,25 +164,97 @@ namespace PropertyManagement.Infrastructure.Migrations
                     b.Property<string>("FilePath")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<DateTime?>("GeneratedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("GeneratedHtmlContent")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("GeneratedPdfPath")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsDigitallySigned")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastModifiedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("LeaseTemplateId")
+                        .HasColumnType("int");
+
                     b.Property<decimal>("RentAmount")
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<bool>("RequiresDigitalSignature")
+                        .HasColumnType("bit");
 
                     b.Property<int>("RoomId")
                         .HasColumnType("int");
 
+                    b.Property<DateTime?>("SentToTenantAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("SignedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime>("StartDate")
                         .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
 
                     b.Property<int>("TenantId")
                         .HasColumnType("int");
 
                     b.HasKey("LeaseAgreementId");
 
+                    b.HasIndex("LeaseTemplateId");
+
                     b.HasIndex("RoomId");
 
                     b.HasIndex("TenantId");
 
                     b.ToTable("LeaseAgreements");
+                });
+
+            modelBuilder.Entity("PropertyManagement.Domain.Entities.LeaseTemplate", b =>
+                {
+                    b.Property<int>("LeaseTemplateId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("LeaseTemplateId"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("HtmlContent")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("TemplateVariables")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("LeaseTemplateId");
+
+                    b.ToTable("LeaseTemplate");
                 });
 
             modelBuilder.Entity("PropertyManagement.Domain.Entities.MaintenanceRequest", b =>
@@ -349,6 +475,25 @@ namespace PropertyManagement.Infrastructure.Migrations
                     b.Navigation("Room");
                 });
 
+            modelBuilder.Entity("PropertyManagement.Domain.Entities.DigitalSignature", b =>
+                {
+                    b.HasOne("PropertyManagement.Domain.Entities.LeaseAgreement", "LeaseAgreement")
+                        .WithMany("DigitalSignatures")
+                        .HasForeignKey("LeaseAgreementId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("PropertyManagement.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("LeaseAgreement");
+
+                    b.Navigation("Tenant");
+                });
+
             modelBuilder.Entity("PropertyManagement.Domain.Entities.Inspection", b =>
                 {
                     b.HasOne("PropertyManagement.Domain.Entities.Room", "Room")
@@ -362,6 +507,11 @@ namespace PropertyManagement.Infrastructure.Migrations
 
             modelBuilder.Entity("PropertyManagement.Domain.Entities.LeaseAgreement", b =>
                 {
+                    b.HasOne("PropertyManagement.Domain.Entities.LeaseTemplate", "LeaseTemplate")
+                        .WithMany()
+                        .HasForeignKey("LeaseTemplateId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("PropertyManagement.Domain.Entities.Room", "Room")
                         .WithMany()
                         .HasForeignKey("RoomId")
@@ -373,6 +523,8 @@ namespace PropertyManagement.Infrastructure.Migrations
                         .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("LeaseTemplate");
 
                     b.Navigation("Room");
 
@@ -436,6 +588,11 @@ namespace PropertyManagement.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Room");
+                });
+
+            modelBuilder.Entity("PropertyManagement.Domain.Entities.LeaseAgreement", b =>
+                {
+                    b.Navigation("DigitalSignatures");
                 });
 
             modelBuilder.Entity("PropertyManagement.Domain.Entities.Room", b =>

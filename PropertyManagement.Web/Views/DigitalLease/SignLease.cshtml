@@ -1,0 +1,422 @@
+@model LeaseSigningViewModel
+@using PropertyManagement.Domain.Entities
+
+@{
+    ViewData["Title"] = "Sign Lease Agreement";
+    var lease = Model.LeaseAgreement;
+}
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0"><i class="bi bi-pen-fill me-2"></i>Digital Lease Signing</h3>
+                    <p class="mb-0">Room @lease.RoomNumber - @lease.TenantName</p>
+                </div>
+                <div class="card-body">
+                    
+                    <!-- Lease Information Summary -->
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="text-center p-3 bg-light rounded">
+                                <i class="bi bi-calendar-event text-primary fs-2"></i>
+                                <div class="mt-2">
+                                    <small class="text-muted">Lease Period</small>
+                                    <div class="fw-bold">@lease.StartDate.ToString("dd MMM yyyy")</div>
+                                    <div class="text-muted">to</div>
+                                    <div class="fw-bold">@lease.EndDate.ToString("dd MMM yyyy")</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center p-3 bg-light rounded">
+                                <i class="bi bi-cash-coin text-success fs-2"></i>
+                                <div class="mt-2">
+                                    <small class="text-muted">Monthly Rent</small>
+                                    <div class="fw-bold text-success fs-4">@lease.RentAmount.ToString("C")</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center p-3 bg-light rounded">
+                                <i class="bi bi-house-door text-info fs-2"></i>
+                                <div class="mt-2">
+                                    <small class="text-muted">Room</small>
+                                    <div class="fw-bold">@lease.RoomNumber</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center p-3 bg-light rounded">
+                                <i class="bi bi-calendar-check text-warning fs-2"></i>
+                                <div class="mt-2">
+                                    <small class="text-muted">Rent Due</small>
+                                    <div class="fw-bold">@GetOrdinalNumber(lease.ExpectedRentDay) of month</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Lease Document Preview -->
+                    <div class="mb-4">
+                        <h4><i class="bi bi-file-text me-2"></i>Lease Agreement Document</h4>
+                        <div class="border rounded p-3" style="height: 400px; overflow-y: auto;">
+                            @if (!string.IsNullOrEmpty(lease.GeneratedHtmlContent))
+                            {
+                                @Html.Raw(lease.GeneratedHtmlContent)
+                            }
+                            else
+                            {
+                                <div class="text-center text-muted">
+                                    <i class="bi bi-file-x fs-1"></i>
+                                    <p>Lease document content not available.</p>
+                                </div>
+                            }
+                        </div>
+                        
+                        @if (!string.IsNullOrEmpty(lease.GeneratedPdfPath))
+                        {
+                            <div class="mt-2">
+                                <a asp-action="PreviewLease" asp-route-leaseAgreementId="@lease.LeaseAgreementId" 
+                                   class="btn btn-outline-primary" target="_blank">
+                                    <i class="bi bi-file-pdf me-1"></i>Open Full Document
+                                </a>
+                            </div>
+                        }
+                    </div>
+
+                    <!-- Digital Signature Section -->
+                    @if (!lease.IsDigitallySigned)
+                    {
+                        <div class="row">
+                            <div class="col-md-8">
+                                <h4><i class="bi bi-pen me-2"></i>Your Digital Signature</h4>
+                                <p class="text-muted">Please sign below to agree to the terms and conditions of this lease agreement.</p>
+                                
+                                <!-- Signature Pad -->
+                                <div class="border rounded p-3 mb-3" style="background-color: #f8f9fa;">
+                                    <canvas id="signaturePad" width="600" height="200" style="border: 2px dashed #dee2e6; width: 100%; height: 200px; background-color: white; cursor: crosshair;"></canvas>
+                                </div>
+                                
+                                <div class="d-flex gap-2 mb-3">
+                                    <button type="button" id="clearSignature" class="btn btn-outline-secondary">
+                                        <i class="bi bi-eraser me-1"></i>Clear
+                                    </button>
+                                    <button type="button" id="undoSignature" class="btn btn-outline-secondary">
+                                        <i class="bi bi-arrow-counterclockwise me-1"></i>Undo
+                                    </button>
+                                </div>
+
+                                <!-- Signing Notes -->
+                                <div class="mb-3">
+                                    <label for="signingNotes" class="form-label">Additional Notes (Optional)</label>
+                                    <textarea id="signingNotes" class="form-control" rows="3" 
+                                              placeholder="Any additional comments or notes about signing this lease..."></textarea>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <h5><i class="bi bi-info-circle text-info me-1"></i>Signing Information</h5>
+                                        <ul class="list-unstyled">
+                                            <li><strong>Tenant:</strong> @lease.TenantName</li>
+                                            <li><strong>Date:</strong> @DateTime.Now.ToString("dd MMMM yyyy")</li>
+                                            <li><strong>Time:</strong> @DateTime.Now.ToString("HH:mm:ss")</li>
+                                            <li><strong>IP Address:</strong> <span id="ipAddress">Loading...</span></li>
+                                        </ul>
+                                        
+                                        <div class="alert alert-warning mt-3">
+                                            <i class="bi bi-exclamation-triangle me-1"></i>
+                                            <small>
+                                                <strong>Legal Notice:</strong> By signing this document digitally, 
+                                                you acknowledge that your electronic signature has the same legal 
+                                                effect as a handwritten signature.
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Agreement Checkbox -->
+                        <div class="form-check my-4">
+                            <input class="form-check-input" type="checkbox" id="agreeToTerms" required>
+                            <label class="form-check-label fw-bold" for="agreeToTerms">
+                                I have read, understood, and agree to all terms and conditions in this lease agreement. 
+                                I acknowledge that my digital signature will be legally binding.
+                            </label>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="d-flex justify-content-between">
+                            <a asp-action="MyLeases" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left me-1"></i>Back to My Leases
+                            </a>
+                            <button type="button" id="submitSignature" class="btn btn-success btn-lg" disabled>
+                                <i class="bi bi-check-circle me-1"></i>Sign Lease Agreement
+                            </button>
+                        </div>
+                    }
+                    else
+                    {
+                        <!-- Already Signed -->
+                        <div class="alert alert-success text-center">
+                            <i class="bi bi-check-circle-fill fs-1 text-success"></i>
+                            <h4 class="mt-3">Lease Agreement Signed Successfully!</h4>
+                            <p>You signed this lease agreement on @lease.SignedAt?.ToString("dd MMMM yyyy 'at' HH:mm:ss")</p>
+                            
+                            <div class="mt-3">
+                                <a asp-action="DownloadSignedLease" asp-route-leaseAgreementId="@lease.LeaseAgreementId" 
+                                   class="btn btn-success me-2">
+                                    <i class="bi bi-download me-1"></i>Download Signed Lease
+                                </a>
+                                <a asp-action="MyLeases" class="btn btn-outline-primary">
+                                    <i class="bi bi-arrow-left me-1"></i>Back to My Leases
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Digital Signatures Display -->
+                        @if (lease.DigitalSignatures.Any())
+                        {
+                            <div class="mt-4">
+                                <h5><i class="bi bi-shield-check me-2"></i>Digital Signature Details</h5>
+                                @foreach (var signature in lease.DigitalSignatures)
+                                {
+                                    <div class="card mt-2">
+                                        <div class="card-body">
+                                            <div class="row">
+                                                <div class="col-md-8">
+                                                    <p><strong>Signed Date:</strong> @signature.SignedDate.ToString("dd MMMM yyyy HH:mm:ss")</p>
+                                                    <p><strong>IP Address:</strong> @signature.SignerIPAddress</p>
+                                                    <p><strong>Verification Hash:</strong> <code>@signature.SignatureHash.Substring(0, Math.Min(40, signature.SignatureHash.Length))...</code></p>
+                                                    @if (!string.IsNullOrEmpty(signature.SigningNotes))
+                                                    {
+                                                        <p><strong>Notes:</strong> @signature.SigningNotes</p>
+                                                    }
+                                                </div>
+                                                <div class="col-md-4">
+                                                    @if (!string.IsNullOrEmpty(signature.SignatureImagePath))
+                                                    {
+                                                        <img src="@signature.SignatureImagePath" alt="Digital Signature" 
+                                                             class="img-fluid border rounded" style="max-height: 100px;">
+                                                    }
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Modal -->
+<div class="modal fade" id="loadingModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center py-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-3 mb-0">Processing your signature...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Container -->
+<div class="position-fixed top-0 end-0 p-3" style="z-index: 9999;">
+    <div id="successToast" class="toast align-items-center text-bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+            <div class="toast-body">
+                <div class="d-flex">
+                    <i class="bi bi-check-circle-fill me-2 fs-5"></i>
+                    <div>
+                        <div class="fw-bold" id="successToastTitle"></div>
+                        <div class="small" id="successToastMessage"></div>
+                    </div>
+                </div>
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    </div>
+
+    <div id="errorToast" class="toast align-items-center text-bg-danger border-0" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+            <div class="toast-body">
+                <div class="d-flex">
+                    <i class="bi bi-exclamation-circle-fill me-2 fs-5"></i>
+                    <div>
+                        <div class="fw-bold" id="errorToastTitle"></div>
+                        <div class="small" id="errorToastMessage"></div>
+                    </div>
+                </div>
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
+    <script>
+        // Toast functions
+        function showSuccessToast(title, message) {
+            document.getElementById('successToastTitle').textContent = title;
+            document.getElementById('successToastMessage').textContent = message;
+            const toast = new bootstrap.Toast(document.getElementById('successToast'), {
+                autohide: false // Don't auto-hide so user can read the message
+            });
+            toast.show();
+        }
+
+        function showErrorToast(title, message) {
+            document.getElementById('errorToastTitle').textContent = title;
+            document.getElementById('errorToastMessage').textContent = message;
+            const toast = new bootstrap.Toast(document.getElementById('errorToast'));
+            toast.show();
+        }
+
+        $(document).ready(function() {
+            // Initialize signature pad
+            const canvas = document.getElementById('signaturePad');
+            const signaturePad = new SignaturePad(canvas);
+            let undoData = [];
+
+            // Get client IP address
+            fetch('https://api.ipify.org?format=json')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('ipAddress').textContent = data.ip;
+                })
+                .catch(() => {
+                    document.getElementById('ipAddress').textContent = 'Unable to detect';
+                });
+
+            // Resize canvas to match display size
+            function resizeCanvas() {
+                const ratio = Math.max(window.devicePixelRatio || 1, 1);
+                canvas.width = canvas.offsetWidth * ratio;
+                canvas.height = canvas.offsetHeight * ratio;
+                canvas.getContext('2d').scale(ratio, ratio);
+                signaturePad.clear();
+            }
+
+            window.addEventListener('resize', resizeCanvas);
+            resizeCanvas();
+
+            // Save state for undo functionality
+            signaturePad.addEventListener('beginStroke', () => {
+                undoData.push(signaturePad.toData());
+            });
+
+            // Clear signature
+            document.getElementById('clearSignature').addEventListener('click', () => {
+                signaturePad.clear();
+                undoData = [];
+                updateSubmitButton();
+            });
+
+            // Undo last stroke
+            document.getElementById('undoSignature').addEventListener('click', () => {
+                if (undoData.length > 0) {
+                    const data = undoData.pop();
+                    signaturePad.clear();
+                    signaturePad.fromData(data);
+                }
+                updateSubmitButton();
+            });
+
+            // Enable/disable submit button based on signature and agreement
+            function updateSubmitButton() {
+                const hasSignature = !signaturePad.isEmpty();
+                const hasAgreed = document.getElementById('agreeToTerms').checked;
+                document.getElementById('submitSignature').disabled = !(hasSignature && hasAgreed);
+            }
+
+            // Monitor signature pad and agreement checkbox
+            signaturePad.addEventListener('endStroke', updateSubmitButton);
+            document.getElementById('agreeToTerms').addEventListener('change', updateSubmitButton);
+
+            // Submit signature
+            document.getElementById('submitSignature').addEventListener('click', function() {
+                if (signaturePad.isEmpty()) {
+                    alert('Please provide your signature before submitting.');
+                    return;
+                }
+
+                if (!document.getElementById('agreeToTerms').checked) {
+                    alert('Please check the agreement box before submitting.');
+                    return;
+                }
+
+                const signatureData = signaturePad.toDataURL();
+                const signingNotes = document.getElementById('signingNotes').value;
+
+                // Show loading modal
+                const loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'));
+                loadingModal.show();
+
+                // Submit to server
+                fetch('@Url.Action("SubmitSignature", "DigitalLease")', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                    },
+                    body: new URLSearchParams({
+                        'leaseAgreementId': '@lease.LeaseAgreementId',
+                        'signatureData': signatureData,
+                        'signingNotes': signingNotes
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    loadingModal.hide();
+                    if (data.success) {
+                        // Show success message using Bootstrap toast
+                        showSuccessToast('Lease Signed Successfully!', 
+                            'Your digital signature has been applied and the lease is now legally binding. ' +
+                            'You will be redirected to your leases page.');
+                        
+                        // Redirect after a short delay to show the toast
+                        setTimeout(() => {
+                            window.location.href = '@Url.Action("MyLeases", "DigitalLease")';
+                        }, 3000);
+                    } else {
+                        showErrorToast('Signature Failed', data.message);
+                    }
+                })
+                .catch(error => {
+                    loadingModal.hide();
+                    console.error('Error:', error);
+                    showErrorToast('Network Error', 'An error occurred while submitting your signature. Please try again.');
+                });
+            });
+        });
+    </script>
+    @Html.AntiForgeryToken()
+}
+
+@functions {
+    public string GetOrdinalNumber(int number)
+    {
+        var suffix = "th";
+        if (number % 100 < 11 || number % 100 > 13)
+        {
+            switch (number % 10)
+            {
+                case 1: suffix = "st"; break;
+                case 2: suffix = "nd"; break;
+                case 3: suffix = "rd"; break;
+            }
+        }
+        return $"{number}{suffix}";
+    }
+}

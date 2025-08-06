@@ -466,7 +466,7 @@ document.addEventListener('themeChanged', (e) => {
    ============================================================================= */
 
 // Development helper for testing themes
-if (process?.env?.NODE_ENV === 'development') {
+if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
     window.debugTheme = {
         setLight: () => darkModeManager?.setTheme('light'),
         setDark: () => darkModeManager?.setTheme('dark'),

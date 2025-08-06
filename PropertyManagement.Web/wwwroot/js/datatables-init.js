@@ -41,13 +41,36 @@ function initializeDataTable($table) {
         pageLength: parseInt($table.data('page-length')) || 10,
         lengthMenu: [[5, 10, 15, 25, 50], [5, 10, 15, 25, 50]],
         responsive: true,
+        paging: true,
+        pagingType: "full_numbers",
         order: getDefaultOrder($table),
         columnDefs: getColumnDefs($table),
         language: {
             search: $table.data('search-label') || "Search:",
             lengthMenu: "Show _MENU_ entries per page",
             info: "Showing _START_ to _END_ of _TOTAL_ entries",
-            emptyTable: $table.data('empty-message') || "No data available"
+            emptyTable: $table.data('empty-message') || "No data available",
+            paginate: {
+                first: "First",
+                last: "Last", 
+                next: "Next",
+                previous: "Previous"
+            }
+        },
+        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>' +
+             '<"row"<"col-sm-12"tr>>' +
+             '<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+        drawCallback: function(settings) {
+            // Force pagination button styling after each draw
+            setTimeout(function() {
+                $('.dataTables_paginate .paginate_button').each(function() {
+                    if (!$(this).hasClass('current') && !$(this).hasClass('disabled')) {
+                        $(this).addClass('btn btn-outline-primary btn-sm');
+                    } else if ($(this).hasClass('current')) {
+                        $(this).addClass('btn btn-primary btn-sm');
+                    }
+                });
+            }, 50);
         }
     };
     

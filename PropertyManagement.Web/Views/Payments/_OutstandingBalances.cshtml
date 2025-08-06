@@ -13,7 +13,8 @@
            data-datatable
            data-page-length="8"
            data-search-label="Search balances:"
-           data-empty-message="No outstanding balances found">
+           data-empty-message="No outstanding balances found"
+>
       <thead class="table-light">
         <tr>
           <th>Tenant</th>
@@ -77,7 +78,7 @@
                 </button>
                 <ul class="dropdown-menu" aria-labelledby="historyDropdown-@tenant.TenantId">
                   <li>
-                    <a class="dropdown-item" href="#" data-bs-toggle="collapse" data-bs-target="#history-@tenant.TenantId" aria-expanded="false" aria-controls="history-@tenant.TenantId">
+                    <a class="dropdown-item" href="#" onclick="showPaymentHistory(@tenant.TenantId, '@tenant.FullName'); return false;">
                       <i class="bi bi-clock-history"></i> View History
                     </a>
                   </li>
@@ -85,34 +86,72 @@
               </div>
             </td>
           </tr>
-          <tr class="collapse" id="history-@tenant.TenantId">
-            <td colspan="5">
-              <strong>Payment History:</strong>
-              <ul class="list-group list-group-flush">
-                @{
-                  foreach (var m in months)
-                  {
-                    var key = (m.Year, m.Month);
-                    if (paymentLookup.ContainsKey(key))
-                    {
-                      var p = paymentLookup[key];
-                      <li class="list-group-item">
-                        @p.Date.ToShortDateString() - @p.Type - @p.Amount.ToString("C") (@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(p.PaymentMonth) @p.PaymentYear)
-                      </li>
-                    }
-                    else
-                    {
-                      <li class="list-group-item text-danger fw-bold">
-                        @System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(m.Month) @m.Year - No payment recorded
-                      </li>
-                    }
-                  }
-                }
-              </ul>
-            </td>
-          </tr>
+          <!-- Store payment history data in hidden div for modal display -->
+          <div id="history-data-@tenant.TenantId" style="display: none;">
+            @foreach (var m in months)
+            {
+              var key = (m.Year, m.Month);
+              if (paymentLookup.ContainsKey(key))
+              {
+                var p = paymentLookup[key];
+                <div class="payment-record" data-date="@p.Date.ToShortDateString()" data-type="@p.Type" data-amount="@p.Amount.ToString("C")" data-month="@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(p.PaymentMonth) @p.PaymentYear"></div>
+              }
+              else
+              {
+                <div class="payment-record missing" data-month="@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(m.Month) @m.Year" data-status="No payment recorded"></div>
+              }
+            }
+          </div>
         }
       </tbody>
     </table>
   </div>
 </div>
+
+<!-- Payment History Modal -->
+<div class="modal fade" id="paymentHistoryModal" tabindex="-1" aria-labelledby="paymentHistoryModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="paymentHistoryModalLabel">
+          <i class="bi bi-clock-history"></i> Payment History
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="paymentHistoryContent">
+        <!-- Payment history will be loaded here -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function showPaymentHistory(tenantId, tenantName) {
+    // Get payment history data from hidden div
+    var historyData = document.getElementById('history-data-' + tenantId);
+    var content = '<h6>Payment History for ' + tenantName + '</h6><ul class="list-group list-group-flush">';
+    
+    if (historyData) {
+        var records = historyData.querySelectorAll('.payment-record');
+        records.forEach(function(record) {
+            if (record.classList.contains('missing')) {
+                content += '<li class="list-group-item text-danger fw-bold">' + 
+                          record.getAttribute('data-month') + ' - ' + record.getAttribute('data-status') + '</li>';
+            } else {
+                content += '<li class="list-group-item">' + 
+                          record.getAttribute('data-date') + ' - ' + 
+                          record.getAttribute('data-type') + ' - ' + 
+                          record.getAttribute('data-amount') + ' (' + 
+                          record.getAttribute('data-month') + ')</li>';
+            }
+        });
+    }
+    
+    content += '</ul>';
+    
+    // Show modal with content
+    document.getElementById('paymentHistoryContent').innerHTML = content;
+    var modal = new bootstrap.Modal(document.getElementById('paymentHistoryModal'));
+    modal.show();
+}
+</script>

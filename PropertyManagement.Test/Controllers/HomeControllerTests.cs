@@ -81,6 +81,16 @@ public class HomeControllerTests
                 return query.ToList();
             });
 
+        // Add mock repositories for new dependencies
+        var paymentRepo = new Mock<IGenericRepository<Payment>>();
+        paymentRepo.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<Payment>());
+
+        var inspectionRepo = new Mock<IGenericRepository<Inspection>>();
+        inspectionRepo.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<Inspection>());
+
+        var bookingRequestRepo = new Mock<IGenericRepository<BookingRequest>>();
+        bookingRequestRepo.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<BookingRequest>());
+
         var logger = GetLogger();
         var mapper = GetMapper();
 
@@ -89,6 +99,9 @@ public class HomeControllerTests
             tenantRepo.Object,
             leaseRepo.Object,
             maintenanceRepo.Object,
+            paymentRepo.Object,
+            inspectionRepo.Object,
+            bookingRequestRepo.Object,
             logger,
             mapper
         );

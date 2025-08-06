@@ -4,10 +4,13 @@
  */
 
 $(document).ready(function() {
-    // Initialize visible tables immediately
-    initializeVisibleTables();
+    // Initialize visible tables first
+    $('table[data-datatable]:visible').each(function() {
+        var $table = $(this);
+        initializeDataTable($table);
+    });
     
-    // Handle Bootstrap tab events to initialize DataTables when tabs are shown
+    // Handle Bootstrap tab events to initialize tables when tabs are shown
     $('button[data-bs-toggle="tab"]').on('shown.bs.tab', function (e) {
         // Find tables in the newly shown tab
         var targetTab = $(e.target.getAttribute('data-bs-target'));
@@ -15,24 +18,20 @@ $(document).ready(function() {
             var $table = $(this);
             var tableId = $table.attr('id');
             
-            // Only initialize if not already initialized
             if (!$.fn.DataTable.isDataTable('#' + tableId)) {
+                // Initialize DataTable for tables that haven't been initialized yet
                 initializeDataTable($table);
             } else {
-                // Recalculate column sizing after tab is shown
-                $table.DataTable().columns.adjust().responsive.recalc();
+                // Just recalculate columns for already initialized tables
+                var dataTable = $table.DataTable();
+                setTimeout(function() {
+                    dataTable.columns.adjust().responsive.recalc();
+                }, 10);
             }
         });
     });
 });
 
-function initializeVisibleTables() {
-    // Find all visible tables with data-datatable attribute
-    $('table[data-datatable]:visible').each(function() {
-        var $table = $(this);
-        initializeDataTable($table);
-    });
-}
 
 function initializeDataTable($table) {
     var tableId = $table.attr('id');

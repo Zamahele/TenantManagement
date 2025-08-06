@@ -1,0 +1,663 @@
+/* =============================================================================
+   DARK MODE THEME SYSTEM
+   =============================================================================
+   
+   Professional dark theme implementation with comprehensive color overrides
+   and smooth theme transitions for the entire Property Management application
+   
+   ============================================================================= */
+
+/* =============================================================================
+   DARK MODE ROOT VARIABLES
+   ============================================================================= */
+
+[data-theme="dark"] {
+  /* Background Colors - Dark Theme */
+  --bg-primary: #0f1419;
+  --bg-secondary: #1a1f29;
+  --bg-tertiary: #242b38;
+  --bg-surface: #1e2328;
+  --bg-elevated: #252d38;
+  
+  /* Text Colors - Dark Theme */
+  --text-primary: #ffffff;
+  --text-secondary: #b8bcc8;
+  --text-tertiary: #8a909c;
+  --text-on-primary: #ffffff;
+  --text-on-surface: #e2e4e9;
+  --text-muted: #6c7293;
+  
+  /* Border Colors - Dark Theme */
+  --border-primary: #2d3748;
+  --border-secondary: #4a5568;
+  --border-elevated: #3d4852;
+  
+  /* Primary Brand Colors - Adjusted for Dark Mode */
+  --color-primary-50: #1e3a8a;
+  --color-primary-100: #1e40af;
+  --color-primary-200: #2563eb;
+  --color-primary-300: #3b82f6;
+  --color-primary-400: #60a5fa;
+  --color-primary-500: #3b82f6;
+  --color-primary-600: #2563eb;
+  --color-primary-700: #1d4ed8;
+  --color-primary-800: #1e40af;
+  --color-primary-900: #1e3a8a;
+  
+  /* Status Colors - Dark Mode Optimized */
+  --color-success-100: #065f46;
+  --color-success-500: #10b981;
+  --color-success-800: #34d399;
+  
+  --color-warning-100: #92400e;
+  --color-warning-500: #f59e0b;
+  --color-warning-800: #fbbf24;
+  
+  --color-error-100: #991b1b;
+  --color-error-500: #ef4444;
+  --color-error-800: #f87171;
+  
+  --color-info-100: #1e40af;
+  --color-info-500: #3b82f6;
+  --color-info-800: #60a5fa;
+  
+  /* Card and Component Shadows - Dark Mode */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.6), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+  --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+  
+  /* Form and Input Colors - Dark Mode */
+  --input-bg: #2d3748;
+  --input-border: #4a5568;
+  --input-focus-border: var(--color-primary-500);
+  --input-placeholder: var(--text-tertiary);
+  --input-text: var(--text-primary);
+}
+
+/* =============================================================================
+   BODY AND HTML TRANSITIONS
+   ============================================================================= */
+
+html {
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* =============================================================================
+   BOOTSTRAP COMPONENT OVERRIDES - DARK MODE
+   ============================================================================= */
+
+[data-theme="dark"] .bg-light {
+  background-color: var(--bg-secondary) !important;
+}
+
+[data-theme="dark"] .bg-white {
+  background-color: var(--bg-surface) !important;
+}
+
+[data-theme="dark"] .text-dark {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .text-muted {
+  color: var(--text-secondary) !important;
+}
+
+[data-theme="dark"] .text-secondary {
+  color: var(--text-secondary) !important;
+}
+
+[data-theme="dark"] .border {
+  border-color: var(--border-primary) !important;
+}
+
+[data-theme="dark"] .border-bottom {
+  border-bottom-color: var(--border-primary) !important;
+}
+
+[data-theme="dark"] .border-top {
+  border-top-color: var(--border-primary) !important;
+}
+
+[data-theme="dark"] .border-end {
+  border-right-color: var(--border-primary) !important;
+}
+
+/* =============================================================================
+   CARD AND SURFACE COMPONENTS - DARK MODE
+   ============================================================================= */
+
+[data-theme="dark"] .card {
+  background-color: var(--bg-surface);
+  border-color: var(--border-primary);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .card-header {
+  background-color: var(--bg-elevated);
+  border-bottom-color: var(--border-primary);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .card-body {
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .card-elevated {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-elevated);
+  box-shadow: var(--shadow-lg);
+}
+
+/* =============================================================================
+   TABLE COMPONENTS - DARK MODE
+   ============================================================================= */
+
+[data-theme="dark"] .table {
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .table th {
+  background-color: var(--bg-secondary);
+  border-bottom-color: var(--border-primary);
+  color: var(--text-secondary);
+}
+
+[data-theme="dark"] .table td {
+  border-top-color: var(--border-primary);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .table-striped > tbody > tr:nth-of-type(odd) > td,
+[data-theme="dark"] .table-striped > tbody > tr:nth-of-type(odd) > th {
+  background-color: var(--bg-tertiary);
+}
+
+[data-theme="dark"] .table-hover > tbody > tr:hover > td,
+[data-theme="dark"] .table-hover > tbody > tr:hover > th {
+  background-color: var(--bg-elevated);
+}
+
+/* =============================================================================
+   FORM COMPONENTS - DARK MODE
+   ============================================================================= */
+
+[data-theme="dark"] .form-control {
+  background-color: var(--input-bg);
+  border-color: var(--input-border);
+  color: var(--input-text);
+}
+
+[data-theme="dark"] .form-control:focus {
+  background-color: var(--input-bg);
+  border-color: var(--input-focus-border);
+  color: var(--input-text);
+  box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.25);
+}
+
+[data-theme="dark"] .form-control::placeholder {
+  color: var(--input-placeholder);
+}
+
+[data-theme="dark"] .form-select {
+  background-color: var(--input-bg);
+  border-color: var(--input-border);
+  color: var(--input-text);
+}
+
+[data-theme="dark"] .form-select:focus {
+  background-color: var(--input-bg);
+  border-color: var(--input-focus-border);
+  box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.25);
+}
+
+[data-theme="dark"] .form-label {
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .form-text {
+  color: var(--text-secondary);
+}
+
+/* =============================================================================
+   MODAL COMPONENTS - DARK MODE
+   ============================================================================= */
+
+[data-theme="dark"] .modal-content {
+  background-color: var(--bg-surface);
+  border-color: var(--border-primary);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .modal-header {
+  background-color: var(--bg-elevated);
+  border-bottom-color: var(--border-primary);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .modal-body {
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .modal-footer {
+  background-color: var(--bg-elevated);
+  border-top-color: var(--border-primary);
+}
+
+[data-theme="dark"] .btn-close {
+  filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+/* =============================================================================
+   NAVIGATION COMPONENTS - DARK MODE
+   ============================================================================= */
+
+[data-theme="dark"] .navbar {
+  background-color: var(--bg-surface) !important;
+  border-color: var(--border-primary);
+}
+
+[data-theme="dark"] .navbar-brand {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .navbar-nav .nav-link {
+  color: var(--text-secondary) !important;
+}
+
+[data-theme="dark"] .navbar-nav .nav-link:hover {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .sidebar {
+  background-color: var(--bg-surface);
+  border-color: var(--border-primary);
+}
+
+[data-theme="dark"] .sidebar-nav .nav-link {
+  color: var(--text-secondary);
+}
+
+[data-theme="dark"] .sidebar-nav .nav-link:hover {
+  background-color: var(--bg-elevated);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .sidebar-nav .nav-link.active {
+  background: linear-gradient(135deg, var(--color-primary-600) 0%, var(--color-primary-700) 100%);
+  color: var(--text-on-primary);
+}
+
+[data-theme="dark"] .nav-section-title {
+  color: var(--text-tertiary);
+}
+
+[data-theme="dark"] .sidebar-footer {
+  background-color: var(--bg-secondary);
+  border-top-color: var(--border-primary);
+  color: var(--text-secondary);
+}
+
+/* =============================================================================
+   TAB NAVIGATION - DARK MODE
+   ============================================================================= */
+
+[data-theme="dark"] .nav-tabs {
+  border-bottom-color: var(--border-primary);
+}
+
+[data-theme="dark"] .nav-tabs .nav-link {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-primary);
+  color: var(--text-secondary);
+}
+
+[data-theme="dark"] .nav-tabs .nav-link:hover {
+  background-color: var(--bg-elevated);
+  border-color: var(--border-elevated);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .nav-tabs .nav-link.active {
+  background: linear-gradient(135deg, var(--color-primary-600) 0%, var(--color-primary-700) 100%);
+  border-color: var(--color-primary-700);
+  color: var(--text-on-primary);
+}
+
+[data-theme="dark"] .nav-tabs-professional .nav-badge {
+  background-color: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border-color: var(--border-secondary);
+}
+
+[data-theme="dark"] .nav-tabs-professional .nav-link.active .nav-badge {
+  background: rgba(255, 255, 255, 0.2) !important;
+  color: var(--text-on-primary) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+/* =============================================================================
+   DROPDOWN COMPONENTS - DARK MODE
+   ============================================================================= */
+
+[data-theme="dark"] .dropdown-menu {
+  background-color: var(--bg-elevated);
+  border-color: var(--border-primary);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .dropdown-item {
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .dropdown-item:hover,
+[data-theme="dark"] .dropdown-item:focus {
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .dropdown-divider {
+  border-top-color: var(--border-primary);
+}
+
+[data-theme="dark"] .dropdown-header {
+  color: var(--text-secondary);
+}
+
+/* =============================================================================
+   BUTTON COMPONENTS - DARK MODE
+   ============================================================================= */
+
+[data-theme="dark"] .btn-outline-primary {
+  color: var(--color-primary-400);
+  border-color: var(--color-primary-400);
+}
+
+[data-theme="dark"] .btn-outline-primary:hover {
+  background-color: var(--color-primary-600);
+  border-color: var(--color-primary-600);
+  color: var(--text-on-primary);
+}
+
+[data-theme="dark"] .btn-outline-secondary {
+  color: var(--text-secondary);
+  border-color: var(--border-secondary);
+}
+
+[data-theme="dark"] .btn-outline-secondary:hover {
+  background-color: var(--bg-elevated);
+  border-color: var(--border-elevated);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .btn-light {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-primary);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .btn-light:hover {
+  background-color: var(--bg-elevated);
+  border-color: var(--border-elevated);
+  color: var(--text-primary);
+}
+
+/* =============================================================================
+   BADGE COMPONENTS - DARK MODE
+   ============================================================================= */
+
+[data-theme="dark"] .badge {
+  color: var(--text-on-primary);
+}
+
+[data-theme="dark"] .bg-primary-subtle {
+  background-color: var(--color-primary-800) !important;
+}
+
+[data-theme="dark"] .text-primary-emphasis {
+  color: var(--color-primary-200) !important;
+}
+
+[data-theme="dark"] .bg-success-subtle {
+  background-color: var(--color-success-800) !important;
+}
+
+[data-theme="dark"] .text-success-emphasis {
+  color: var(--color-success-200) !important;
+}
+
+[data-theme="dark"] .bg-warning-subtle {
+  background-color: var(--color-warning-800) !important;
+}
+
+[data-theme="dark"] .text-warning-emphasis {
+  color: var(--color-warning-200) !important;
+}
+
+/* =============================================================================
+   ALERT COMPONENTS - DARK MODE
+   ============================================================================= */
+
+[data-theme="dark"] .alert-primary {
+  background-color: rgba(59, 130, 246, 0.1);
+  border-color: var(--color-primary-600);
+  color: var(--color-primary-200);
+}
+
+[data-theme="dark"] .alert-success {
+  background-color: rgba(16, 185, 129, 0.1);
+  border-color: var(--color-success-600);
+  color: var(--color-success-200);
+}
+
+[data-theme="dark"] .alert-warning {
+  background-color: rgba(245, 158, 11, 0.1);
+  border-color: var(--color-warning-600);
+  color: var(--color-warning-200);
+}
+
+[data-theme="dark"] .alert-danger {
+  background-color: rgba(239, 68, 68, 0.1);
+  border-color: var(--color-error-600);
+  color: var(--color-error-200);
+}
+
+/* =============================================================================
+   SEARCH AND INPUT COMPONENTS - DARK MODE
+   ============================================================================= */
+
+[data-theme="dark"] .search-input {
+  background-color: var(--input-bg);
+  border-color: var(--input-border);
+  color: var(--input-text);
+}
+
+[data-theme="dark"] .search-input:focus {
+  background-color: var(--input-bg);
+  border-color: var(--input-focus-border);
+  color: var(--input-text);
+}
+
+[data-theme="dark"] .search-input::placeholder {
+  color: var(--input-placeholder);
+}
+
+[data-theme="dark"] .search-dropdown {
+  background-color: var(--bg-elevated);
+  border-color: var(--border-primary);
+}
+
+/* =============================================================================
+   FOOTER COMPONENTS - DARK MODE
+   ============================================================================= */
+
+[data-theme="dark"] .footer {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-primary);
+  color: var(--text-secondary);
+}
+
+[data-theme="dark"] .footer a {
+  color: var(--color-primary-400);
+}
+
+[data-theme="dark"] .footer a:hover {
+  color: var(--color-primary-300);
+}
+
+/* =============================================================================
+   EMPTY STATES - DARK MODE
+   ============================================================================= */
+
+[data-theme="dark"] .empty-state {
+  background-color: var(--bg-surface);
+  border-color: var(--border-primary);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .empty-state-icon {
+  color: var(--text-tertiary);
+}
+
+[data-theme="dark"] .empty-state-title {
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .empty-state-description {
+  color: var(--text-secondary);
+}
+
+/* =============================================================================
+   LOADING STATES - DARK MODE
+   ============================================================================= */
+
+[data-theme="dark"] .loading-spinner {
+  border-color: var(--bg-elevated);
+  border-top-color: var(--color-primary-500);
+}
+
+[data-theme="dark"] .loading-text {
+  color: var(--text-secondary);
+}
+
+/* =============================================================================
+   TOASTR NOTIFICATIONS - DARK MODE
+   ============================================================================= */
+
+[data-theme="dark"] .toast-success {
+  background-color: var(--color-success-800) !important;
+  color: var(--text-on-primary) !important;
+}
+
+[data-theme="dark"] .toast-error {
+  background-color: var(--color-error-800) !important;
+  color: var(--text-on-primary) !important;
+}
+
+[data-theme="dark"] .toast-info {
+  background-color: var(--color-info-800) !important;
+  color: var(--text-on-primary) !important;
+}
+
+[data-theme="dark"] .toast-warning {
+  background-color: var(--color-warning-800) !important;
+  color: var(--text-on-primary) !important;
+}
+
+/* =============================================================================
+   DATATABLES - DARK MODE
+   ============================================================================= */
+
+[data-theme="dark"] .dataTables_wrapper {
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .dataTables_length,
+[data-theme="dark"] .dataTables_filter,
+[data-theme="dark"] .dataTables_info,
+[data-theme="dark"] .dataTables_paginate {
+  color: var(--text-secondary);
+}
+
+[data-theme="dark"] .dataTables_length select,
+[data-theme="dark"] .dataTables_filter input {
+  background-color: var(--input-bg);
+  border-color: var(--input-border);
+  color: var(--input-text);
+}
+
+[data-theme="dark"] .page-link {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-primary);
+  color: var(--color-primary-400);
+}
+
+[data-theme="dark"] .page-link:hover {
+  background-color: var(--bg-elevated);
+  border-color: var(--border-elevated);
+  color: var(--color-primary-300);
+}
+
+[data-theme="dark"] .page-item.active .page-link {
+  background-color: var(--color-primary-600);
+  border-color: var(--color-primary-600);
+  color: var(--text-on-primary);
+}
+
+/* =============================================================================
+   SCROLLBAR - DARK MODE
+   ============================================================================= */
+
+[data-theme="dark"] ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: var(--border-secondary);
+  border-radius: 4px;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
+}
+
+/* =============================================================================
+   THEME TRANSITION ANIMATIONS
+   ============================================================================= */
+
+* {
+  transition: background-color 0.3s ease, 
+              color 0.3s ease, 
+              border-color 0.3s ease,
+              box-shadow 0.3s ease;
+}
+
+/* =============================================================================
+   PRINT STYLES - DARK MODE
+   ============================================================================= */
+
+@media print {
+  [data-theme="dark"] {
+    /* Reset colors for printing */
+    --bg-primary: #ffffff;
+    --bg-secondary: #ffffff;
+    --bg-surface: #ffffff;
+    --text-primary: #000000;
+    --text-secondary: #666666;
+    --border-primary: #cccccc;
+  }
+}

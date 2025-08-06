@@ -1,0 +1,680 @@
+/* =============================================================================
+   MOBILE-FIRST RESPONSIVE DESIGN AND TOUCH INTERACTIONS
+   =============================================================================
+   
+   Comprehensive mobile optimization with touch-friendly interactions,
+   responsive layouts, and enhanced mobile user experience
+   
+   ============================================================================= */
+
+/* =============================================================================
+   TOUCH-FRIENDLY INTERACTIONS
+   ============================================================================= */
+
+/* Minimum touch target size of 44px (iOS) / 48px (Android) */
+.btn,
+.nav-link,
+.dropdown-item,
+.page-link,
+.badge,
+input[type="checkbox"],
+input[type="radio"] {
+  min-height: 44px;
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Touch feedback for mobile interactions */
+@media (hover: none) and (pointer: coarse) {
+  .btn:active,
+  .nav-link:active,
+  .dropdown-item:active {
+    background-color: rgba(59, 130, 246, 0.1);
+    transform: scale(0.98);
+    transition: all 0.1s ease;
+  }
+}
+
+/* Increase tap area for small interactive elements */
+.btn-sm {
+  min-height: 36px;
+  min-width: 36px;
+  padding: 8px 12px;
+}
+
+.btn-lg {
+  min-height: 52px;
+  padding: 12px 24px;
+}
+
+/* =============================================================================
+   RESPONSIVE HEADER AND NAVIGATION
+   ============================================================================= */
+
+@media (max-width: 991.98px) {
+  /* Header adjustments for tablet and mobile */
+  .navbar-brand {
+    font-size: 1.1rem;
+  }
+  
+  .brand-subtitle {
+    font-size: 0.75rem;
+  }
+  
+  .navbar-search {
+    display: none !important;
+  }
+  
+  .navbar-actions {
+    gap: 0.5rem !important;
+  }
+  
+  /* User profile dropdown adjustments */
+  .user-info {
+    display: none !important;
+  }
+  
+  .notification-bell .notification-badge {
+    top: -2px;
+    right: -2px;
+    font-size: 0.6rem;
+    min-width: 16px;
+    height: 16px;
+  }
+}
+
+@media (max-width: 767.98px) {
+  /* Mobile header optimizations */
+  .navbar {
+    padding: 0.5rem 1rem;
+  }
+  
+  .navbar-brand {
+    font-size: 1rem;
+  }
+  
+  .brand-icon {
+    font-size: 1.2rem !important;
+    margin-right: 0.5rem !important;
+  }
+  
+  /* Hide complex elements on mobile */
+  .brand-subtitle {
+    display: none;
+  }
+  
+  /* Mobile-optimized user actions */
+  .btn-theme-toggle {
+    width: 36px !important;
+    height: 36px !important;
+  }
+  
+  .theme-icon {
+    font-size: 14px !important;
+  }
+}
+
+/* =============================================================================
+   MOBILE SIDEBAR BEHAVIOR
+   ============================================================================= */
+
+@media (max-width: 991.98px) {
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: -280px;
+    height: 100vh;
+    z-index: 1040;
+    transition: left 0.3s ease;
+    box-shadow: var(--shadow-xl);
+  }
+  
+  .sidebar.show {
+    left: 0;
+  }
+  
+  .sidebar-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1039;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+  }
+  
+  .sidebar-overlay.show {
+    opacity: 1;
+    visibility: visible;
+  }
+  
+  .main-content {
+    width: 100%;
+    margin-left: 0;
+  }
+  
+  /* Add hamburger menu button */
+  .navbar::before {
+    content: '';
+    position: fixed;
+    top: 1rem;
+    left: 1rem;
+    width: 24px;
+    height: 18px;
+    background: linear-gradient(
+      to bottom,
+      var(--text-primary) 0%,
+      var(--text-primary) 20%,
+      transparent 20%,
+      transparent 40%,
+      var(--text-primary) 40%,
+      var(--text-primary) 60%,
+      transparent 60%,
+      transparent 80%,
+      var(--text-primary) 80%,
+      var(--text-primary) 100%
+    );
+    cursor: pointer;
+    z-index: 1041;
+    border-radius: 2px;
+    transition: transform 0.3s ease;
+  }
+  
+  .navbar::before:hover {
+    transform: scale(1.1);
+  }
+}
+
+/* =============================================================================
+   RESPONSIVE PAGE HEADERS
+   ============================================================================= */
+
+@media (max-width: 767.98px) {
+  .page-header {
+    padding: 1rem 0;
+    margin-bottom: 1rem;
+  }
+  
+  .page-header .d-flex {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 1rem;
+  }
+  
+  .page-title-main {
+    font-size: 1.5rem !important;
+    flex-direction: column;
+    text-align: center;
+    gap: 0.5rem;
+  }
+  
+  .page-title-main .page-icon {
+    width: 36px !important;
+    height: 36px !important;
+    font-size: 1.2rem !important;
+  }
+  
+  .page-title-sub {
+    font-size: 0.875rem;
+    text-align: center;
+    margin-top: 0.5rem;
+  }
+  
+  .page-actions {
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.5rem !important;
+  }
+  
+  .page-info {
+    flex: 1;
+    min-width: 100px;
+    text-align: center !important;
+    padding: 0.75rem;
+    font-size: 0.8rem;
+  }
+  
+  .page-action-btn {
+    width: 100%;
+    justify-content: center;
+    margin-top: 0.5rem;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .page-actions .d-flex {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .page-info {
+    margin-bottom: 0.5rem;
+  }
+  
+  .btn-group {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .btn-group .btn {
+    width: 100%;
+    margin-bottom: 0.5rem;
+    border-radius: var(--radius-lg) !important;
+  }
+}
+
+/* =============================================================================
+   RESPONSIVE TABLES
+   ============================================================================= */
+
+@media (max-width: 991.98px) {
+  /* Card-style table layout for mobile */
+  .table-responsive {
+    border: none;
+    margin-bottom: 0;
+  }
+  
+  .mobile-card-table {
+    display: block;
+  }
+  
+  .mobile-card-table thead {
+    display: none;
+  }
+  
+  .mobile-card-table tbody {
+    display: block;
+  }
+  
+  .mobile-card-table tr {
+    display: block;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-lg);
+    margin-bottom: 1rem;
+    padding: 1rem;
+    box-shadow: var(--shadow-sm);
+  }
+  
+  .mobile-card-table td {
+    display: block;
+    border: none;
+    text-align: left !important;
+    padding: 0.5rem 0;
+    position: relative;
+  }
+  
+  .mobile-card-table td::before {
+    content: attr(data-label);
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-secondary);
+    display: block;
+    margin-bottom: 0.25rem;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+  }
+  
+  .mobile-card-table td:last-child {
+    border-top: 1px solid var(--border-primary);
+    margin-top: 0.5rem;
+    padding-top: 1rem;
+  }
+}
+
+/* =============================================================================
+   RESPONSIVE FORMS
+   ============================================================================= */
+
+@media (max-width: 767.98px) {
+  .modal-dialog {
+    margin: 0.5rem;
+    max-width: calc(100% - 1rem);
+  }
+  
+  .modal-lg {
+    max-width: calc(100% - 1rem);
+  }
+  
+  .form-row {
+    flex-direction: column;
+  }
+  
+  .form-row .col-md-6,
+  .form-row .col-lg-6 {
+    width: 100%;
+    margin-bottom: 1rem;
+  }
+  
+  /* Touch-friendly form controls */
+  .form-control,
+  .form-select {
+    font-size: 16px; /* Prevents zoom on iOS */
+    padding: 0.75rem 1rem;
+    min-height: 48px;
+  }
+  
+  .btn {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+  }
+  
+  /* Form floating labels adjustments */
+  .form-floating .form-control {
+    height: 56px;
+    padding: 1.625rem 1rem 0.625rem;
+  }
+  
+  .form-floating label {
+    padding: 1rem;
+  }
+}
+
+/* =============================================================================
+   RESPONSIVE TAB NAVIGATION
+   ============================================================================= */
+
+@media (max-width: 767.98px) {
+  .nav-tabs-professional {
+    flex-direction: column;
+    border: none;
+  }
+  
+  .nav-tabs-professional .nav-item {
+    width: 100%;
+    margin-bottom: 0.5rem;
+  }
+  
+  .nav-tabs-professional .nav-link {
+    width: 100%;
+    text-align: left;
+    padding: 1rem;
+    border-radius: var(--radius-lg) !important;
+    border: 1px solid var(--border-primary) !important;
+  }
+  
+  .nav-tabs-professional .nav-link.active {
+    margin-bottom: 0.5rem;
+  }
+  
+  /* Mobile dropdown for tabs */
+  .mobile-tab-selector {
+    display: block;
+    width: 100%;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-lg);
+    padding: 1rem;
+    margin-bottom: 1rem;
+    font-size: 1rem;
+    color: var(--text-primary);
+  }
+}
+
+@media (min-width: 768px) {
+  .mobile-tab-selector {
+    display: none;
+  }
+}
+
+/* =============================================================================
+   RESPONSIVE CARDS AND CONTENT
+   ============================================================================= */
+
+@media (max-width: 767.98px) {
+  .content-section {
+    margin-bottom: 1.5rem;
+  }
+  
+  .card-elevated {
+    margin-bottom: 1rem;
+    border-radius: var(--radius-lg);
+  }
+  
+  .section-header {
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+  }
+  
+  .section-title {
+    font-size: 1.25rem;
+    flex-direction: column;
+    text-align: center;
+    gap: 0.5rem;
+  }
+  
+  .section-description {
+    text-align: center;
+    font-size: 0.875rem;
+  }
+}
+
+/* =============================================================================
+   MOBILE-SPECIFIC INTERACTIONS
+   ============================================================================= */
+
+/* Touch-friendly dropdowns */
+@media (max-width: 767.98px) {
+  .dropdown-menu {
+    position: fixed !important;
+    top: auto !important;
+    left: 1rem !important;
+    right: 1rem !important;
+    width: calc(100% - 2rem) !important;
+    max-width: none !important;
+    transform: none !important;
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-2xl);
+    z-index: 1050;
+  }
+  
+  .dropdown-item {
+    padding: 1rem 1.5rem;
+    font-size: 1rem;
+    border-bottom: 1px solid var(--border-primary);
+  }
+  
+  .dropdown-item:last-child {
+    border-bottom: none;
+  }
+}
+
+/* Swipe gestures for mobile */
+.swipe-container {
+  touch-action: pan-x;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.swipe-container::-webkit-scrollbar {
+  display: none;
+}
+
+/* Pull-to-refresh indicator */
+.pull-to-refresh {
+  position: relative;
+  overflow: hidden;
+}
+
+.pull-to-refresh::before {
+  content: '';
+  position: absolute;
+  top: -50px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 30px;
+  height: 30px;
+  border: 2px solid var(--color-primary-300);
+  border-top: 2px solid var(--color-primary-500);
+  border-radius: 50%;
+  opacity: 0;
+  transition: all 0.3s ease;
+}
+
+.pull-to-refresh.pulling::before {
+  opacity: 1;
+  top: 10px;
+  animation: spin 1s linear infinite;
+}
+
+/* =============================================================================
+   RESPONSIVE UTILITIES
+   ============================================================================= */
+
+/* Hide elements on mobile */
+.mobile-hidden {
+  display: none !important;
+}
+
+@media (min-width: 768px) {
+  .mobile-hidden {
+    display: block !important;
+  }
+}
+
+/* Show only on mobile */
+.mobile-only {
+  display: block !important;
+}
+
+@media (min-width: 768px) {
+  .mobile-only {
+    display: none !important;
+  }
+}
+
+/* Touch-friendly spacing */
+@media (max-width: 767.98px) {
+  .container,
+  .container-fluid {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  .main-content-inner {
+    padding: 1rem;
+  }
+  
+  /* Increased spacing for touch */
+  .mb-2 { margin-bottom: 0.75rem !important; }
+  .mb-3 { margin-bottom: 1rem !important; }
+  .mb-4 { margin-bottom: 1.5rem !important; }
+  
+  .mt-2 { margin-top: 0.75rem !important; }
+  .mt-3 { margin-top: 1rem !important; }
+  .mt-4 { margin-top: 1.5rem !important; }
+  
+  .p-2 { padding: 0.75rem !important; }
+  .p-3 { padding: 1rem !important; }
+  .p-4 { padding: 1.5rem !important; }
+}
+
+/* =============================================================================
+   PERFORMANCE OPTIMIZATIONS FOR MOBILE
+   ============================================================================= */
+
+/* Reduce animations on slower devices */
+@media (max-width: 767.98px) and (prefers-reduced-motion: no-preference) {
+  * {
+    animation-duration: 0.2s !important;
+    transition-duration: 0.2s !important;
+  }
+}
+
+/* Optimize repaints and reflows */
+@media (max-width: 767.98px) {
+  .card,
+  .table tr,
+  .btn {
+    will-change: transform;
+  }
+  
+  .scrollable-content {
+    -webkit-overflow-scrolling: touch;
+    overflow-scrolling: touch;
+  }
+}
+
+/* =============================================================================
+   ACCESSIBILITY FOR MOBILE
+   ============================================================================= */
+
+/* Ensure focus indicators are visible on mobile */
+@media (max-width: 767.98px) {
+  :focus-visible {
+    outline: 3px solid var(--color-primary-500);
+    outline-offset: 2px;
+  }
+  
+  /* Skip link for mobile */
+  .skip-link {
+    position: absolute;
+    top: -40px;
+    left: 6px;
+    background: var(--color-primary-600);
+    color: white;
+    padding: 8px;
+    z-index: 1000;
+    text-decoration: none;
+    border-radius: var(--radius-md);
+  }
+  
+  .skip-link:focus {
+    top: 6px;
+  }
+}
+
+/* =============================================================================
+   MOBILE FOOTER
+   ============================================================================= */
+
+@media (max-width: 767.98px) {
+  .footer {
+    text-align: center;
+    padding: 1rem;
+    font-size: 0.875rem;
+  }
+  
+  .footer .container {
+    padding: 0;
+  }
+}
+
+/* =============================================================================
+   MOBILE EMPTY STATES
+   ============================================================================= */
+
+@media (max-width: 767.98px) {
+  .empty-state {
+    padding: 2rem 1rem;
+    text-align: center;
+  }
+  
+  .empty-state-icon {
+    font-size: 3rem !important;
+    margin-bottom: 1rem;
+  }
+  
+  .empty-state-title {
+    font-size: 1.25rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .empty-state-description {
+    font-size: 0.875rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .empty-state-action {
+    width: 100%;
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+  }
+}

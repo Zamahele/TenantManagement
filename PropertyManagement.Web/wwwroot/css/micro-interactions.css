@@ -1,0 +1,631 @@
+/* =============================================================================
+   MICRO-INTERACTIONS AND ANIMATIONS
+   =============================================================================
+   
+   Professional micro-interactions, hover effects, and smooth animations
+   to enhance user experience and provide visual feedback
+   
+   ============================================================================= */
+
+/* =============================================================================
+   ANIMATION FOUNDATIONS
+   ============================================================================= */
+
+:root {
+  /* Animation Timing Functions */
+  --ease-in-out-quart: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-out-quart: cubic-bezier(0.165, 0.84, 0.44, 1);
+  --ease-in-quart: cubic-bezier(0.895, 0.03, 0.685, 0.22);
+  --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  --ease-elastic: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  
+  /* Animation Durations */
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --duration-slow: 350ms;
+  --duration-slower: 500ms;
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* =============================================================================
+   BUTTON INTERACTIONS
+   ============================================================================= */
+
+.btn {
+  position: relative;
+  overflow: hidden;
+  transform: translateY(0);
+  transition: all var(--duration-normal) var(--ease-out-quart);
+}
+
+.btn::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  transform: translate(-50%, -50%);
+  transition: width var(--duration-slower) var(--ease-out-quart), 
+              height var(--duration-slower) var(--ease-out-quart);
+  z-index: 0;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn:hover::before {
+  width: 120%;
+  height: 120%;
+}
+
+.btn:active {
+  transform: translateY(-1px) scale(0.98);
+  transition-duration: var(--duration-fast);
+}
+
+.btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+}
+
+/* Primary Button Ripple Effect */
+.btn-primary {
+  background: linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-primary-600) 100%);
+  position: relative;
+}
+
+.btn-primary::before {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, var(--color-primary-600) 0%, var(--color-primary-700) 100%);
+  box-shadow: 0 8px 16px rgba(59, 130, 246, 0.4);
+}
+
+/* Success Button Animation */
+.btn-success:hover {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  box-shadow: 0 8px 16px rgba(16, 185, 129, 0.4);
+}
+
+/* Warning Button Animation */
+.btn-warning:hover {
+  background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+  box-shadow: 0 8px 16px rgba(245, 158, 11, 0.4);
+}
+
+/* Danger Button Animation */
+.btn-danger:hover {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  box-shadow: 0 8px 16px rgba(239, 68, 68, 0.4);
+}
+
+/* =============================================================================
+   CARD INTERACTIONS
+   ============================================================================= */
+
+.card,
+.card-elevated {
+  transition: all var(--duration-normal) var(--ease-out-quart);
+  transform: translateY(0);
+}
+
+.card:hover,
+.card-elevated:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-xl);
+}
+
+.card-elevated {
+  position: relative;
+}
+
+.card-elevated::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(59, 130, 246, 0.02) 100%);
+  opacity: 0;
+  transition: opacity var(--duration-normal) var(--ease-out-quart);
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+.card-elevated:hover::after {
+  opacity: 1;
+}
+
+/* =============================================================================
+   TABLE ROW INTERACTIONS
+   ============================================================================= */
+
+.table tbody tr {
+  transition: background-color var(--duration-fast) var(--ease-out-quart);
+}
+
+.table tbody tr:hover {
+  background-color: var(--bg-elevated) !important;
+}
+
+/* =============================================================================
+   FORM INTERACTIONS
+   ============================================================================= */
+
+.form-control,
+.form-select {
+  transition: all var(--duration-normal) var(--ease-out-quart);
+  position: relative;
+}
+
+.form-control:focus,
+.form-select:focus {
+  transform: scale(1.02);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1), 
+              0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+/* Floating Label Effect */
+.form-floating .form-control:focus ~ label,
+.form-floating .form-control:not(:placeholder-shown) ~ label {
+  transform: scale(0.85) translateY(-0.5rem) translateX(0.15rem);
+  color: var(--color-primary-600);
+  font-weight: var(--font-weight-semibold);
+}
+
+.form-floating label {
+  transition: all var(--duration-normal) var(--ease-out-quart);
+}
+
+/* =============================================================================
+   NAVIGATION INTERACTIONS
+   ============================================================================= */
+
+.nav-link {
+  position: relative;
+  transition: all var(--duration-normal) var(--ease-out-quart);
+}
+
+.nav-link::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 0;
+  height: 2px;
+  background: var(--color-primary-500);
+  transition: all var(--duration-normal) var(--ease-out-quart);
+  transform: translateX(-50%);
+}
+
+.nav-link:hover::after,
+.nav-link.active::after {
+  width: 100%;
+}
+
+/* Sidebar Navigation */
+.sidebar-nav .nav-link {
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-1);
+  transition: all var(--duration-normal) var(--ease-out-quart);
+  position: relative;
+}
+
+.sidebar-nav .nav-link::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 0;
+  height: 60%;
+  background: var(--color-primary-500);
+  border-radius: 0 2px 2px 0;
+  transition: all var(--duration-normal) var(--ease-out-quart);
+  transform: translateY(-50%);
+}
+
+.sidebar-nav .nav-link:hover::before,
+.sidebar-nav .nav-link.active::before {
+  width: 4px;
+}
+
+.sidebar-nav .nav-link:hover {
+  transform: translateX(8px);
+  background-color: var(--bg-elevated);
+}
+
+/* =============================================================================
+   MODAL ANIMATIONS
+   ============================================================================= */
+
+.modal.fade .modal-dialog {
+  transform: scale(0.9) translateY(-50px);
+  transition: transform var(--duration-normal) var(--ease-out-quart),
+              opacity var(--duration-normal) var(--ease-out-quart);
+}
+
+.modal.show .modal-dialog {
+  transform: scale(1) translateY(0);
+}
+
+.modal-backdrop.fade {
+  opacity: 0;
+  transition: opacity var(--duration-normal) var(--ease-out-quart);
+}
+
+.modal-backdrop.show {
+  opacity: 0.5;
+}
+
+/* =============================================================================
+   BADGE INTERACTIONS
+   ============================================================================= */
+
+.badge {
+  transition: all var(--duration-fast) var(--ease-out-quart);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.badge:hover {
+  transform: scale(1.05);
+  box-shadow: var(--shadow-sm);
+}
+
+.nav-badge {
+  animation: badgePulse 2s infinite;
+}
+
+@keyframes badgePulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+/* =============================================================================
+   LOADING ANIMATIONS
+   ============================================================================= */
+
+.loading-spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-dots::after {
+  content: '';
+  animation: loadingDots 1.5s infinite;
+}
+
+@keyframes loadingDots {
+  0%, 20% { content: ''; }
+  40% { content: '.'; }
+  60% { content: '..'; }
+  80%, 100% { content: '...'; }
+}
+
+/* =============================================================================
+   PAGE TRANSITION EFFECTS
+   ============================================================================= */
+
+.page-content {
+  animation: pageSlideIn var(--duration-slower) var(--ease-out-quart);
+}
+
+@keyframes pageSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* =============================================================================
+   DROPDOWN INTERACTIONS
+   ============================================================================= */
+
+.dropdown-menu {
+  opacity: 0;
+  transform: translateY(-10px) scale(0.95);
+  transition: all var(--duration-fast) var(--ease-out-quart);
+  pointer-events: none;
+}
+
+.dropdown-menu.show {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+.dropdown-item {
+  transition: all var(--duration-fast) var(--ease-out-quart);
+  position: relative;
+}
+
+.dropdown-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 100%;
+  background: var(--color-primary-500);
+  transition: width var(--duration-fast) var(--ease-out-quart);
+  opacity: 0.1;
+}
+
+.dropdown-item:hover::before {
+  width: 100%;
+}
+
+/* =============================================================================
+   TAB INTERACTIONS
+   ============================================================================= */
+
+.nav-tabs .nav-link {
+  transition: all var(--duration-normal) var(--ease-out-quart);
+  transform: translateY(0);
+}
+
+.nav-tabs .nav-link:hover {
+  transform: translateY(-2px);
+}
+
+.nav-tabs .nav-link.active {
+  animation: tabSlideIn var(--duration-normal) var(--ease-out-quart);
+}
+
+@keyframes tabSlideIn {
+  0% {
+    transform: translateY(4px);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(-2px);
+    opacity: 1;
+  }
+}
+
+/* Tab Content Fade */
+.tab-content .tab-pane {
+  transition: all var(--duration-normal) var(--ease-out-quart);
+}
+
+.tab-content .tab-pane:not(.active) {
+  opacity: 0;
+  transform: translateX(20px);
+}
+
+.tab-content .tab-pane.active {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* =============================================================================
+   SEARCH INTERACTIONS
+   ============================================================================= */
+
+.search-input-group {
+  transition: all var(--duration-normal) var(--ease-out-quart);
+}
+
+.search-input-group:focus-within {
+  transform: scale(1.02);
+  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.15);
+}
+
+.search-input:focus + .search-icon {
+  color: var(--color-primary-500);
+  transform: scale(1.2);
+}
+
+.search-icon {
+  transition: all var(--duration-normal) var(--ease-out-quart);
+}
+
+/* =============================================================================
+   NOTIFICATION ANIMATIONS
+   ============================================================================= */
+
+.notification-item {
+  transition: all var(--duration-normal) var(--ease-out-quart);
+  transform: translateX(0);
+}
+
+.notification-item:hover {
+  transform: translateX(4px);
+  background-color: var(--bg-elevated);
+}
+
+.notification-badge {
+  animation: notificationPulse 2s infinite;
+}
+
+@keyframes notificationPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.8;
+  }
+}
+
+/* =============================================================================
+   ICON ANIMATIONS
+   ============================================================================= */
+
+.bi {
+  transition: all var(--duration-fast) var(--ease-out-quart);
+}
+
+.btn:hover .bi,
+.nav-link:hover .bi {
+  transform: scale(1.1);
+}
+
+/* Specific icon animations */
+.bi-trash:hover {
+  color: var(--color-error-500);
+  animation: shake var(--duration-normal) var(--ease-out-quart);
+}
+
+.bi-pencil:hover {
+  color: var(--color-primary-600);
+  animation: wiggle var(--duration-normal) var(--ease-out-quart);
+}
+
+.bi-eye:hover {
+  color: var(--color-info-500);
+  animation: blink var(--duration-slower) var(--ease-out-quart);
+}
+
+@keyframes shake {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-5deg); }
+  75% { transform: rotate(5deg); }
+}
+
+@keyframes wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-3deg); }
+  75% { transform: rotate(3deg); }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* =============================================================================
+   PROGRESSIVE ENHANCEMENT
+   ============================================================================= */
+
+/* Stagger animations for lists */
+.table tbody tr {
+  animation: fadeInUp var(--duration-normal) var(--ease-out-quart);
+  animation-fill-mode: both;
+}
+
+.table tbody tr:nth-child(1) { animation-delay: 0ms; }
+.table tbody tr:nth-child(2) { animation-delay: 50ms; }
+.table tbody tr:nth-child(3) { animation-delay: 100ms; }
+.table tbody tr:nth-child(4) { animation-delay: 150ms; }
+.table tbody tr:nth-child(5) { animation-delay: 200ms; }
+
+@keyframes fadeInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* =============================================================================
+   HOVER STATES FOR INTERACTIVE ELEMENTS
+   ============================================================================= */
+
+/* Page Action Buttons */
+.page-action-btn {
+  transition: all var(--duration-normal) var(--ease-out-quart);
+}
+
+.page-action-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Page Info Cards */
+.page-info {
+  transition: all var(--duration-normal) var(--ease-out-quart);
+  cursor: default;
+}
+
+.page-info:hover {
+  transform: scale(1.05);
+  box-shadow: var(--shadow-md);
+}
+
+/* Empty State Actions */
+.empty-state-action {
+  transition: all var(--duration-normal) var(--ease-out-quart);
+}
+
+.empty-state-action:hover {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: var(--shadow-xl);
+}
+
+/* =============================================================================
+   ACCESSIBILITY ENHANCEMENTS
+   ============================================================================= */
+
+/* Focus indicators with smooth transitions */
+:focus-visible {
+  outline: 2px solid var(--color-primary-500);
+  outline-offset: 2px;
+  transition: outline var(--duration-fast) var(--ease-out-quart);
+}
+
+/* Skip links animation */
+.skip-link {
+  transform: translateY(-100%);
+  transition: transform var(--duration-normal) var(--ease-out-quart);
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+/* =============================================================================
+   PERFORMANCE OPTIMIZATIONS
+   ============================================================================= */
+
+/* Use will-change for elements that will be animated */
+.btn,
+.card,
+.nav-link,
+.table tbody tr {
+  will-change: transform;
+}
+
+/* Remove will-change after animation completes */
+.btn:not(:hover),
+.card:not(:hover),
+.nav-link:not(:hover),
+.table tbody tr:not(:hover) {
+  will-change: auto;
+}

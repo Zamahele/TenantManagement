@@ -12,18 +12,12 @@
     </button>
   </div>
   <div class="card-body p-4" style="background-color: #f8f9fa;">
-    @{
-      ViewData["SearchId"] = "tenants-search";
-      ViewData["SearchPlaceholder"] = "Search tenants by name, contact, or room...";
-      ViewData["SearchLabel"] = "Search Tenants";
-    }
-    @await Html.PartialAsync("_TableSearch")
-
     <table class="table table-striped table-bordered align-middle mb-0"
            id="tenantsTable"
-           data-pagination
-           data-items-per-page="10"
-           data-search-input="#tenants-search">
+           data-datatable
+           data-page-length="10"
+           data-search-label="Search tenants:"
+           data-empty-message="No tenants found">
       <thead class="table-light">
         <tr>
           <th>Name</th>

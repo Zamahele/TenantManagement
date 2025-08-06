@@ -18,6 +18,12 @@ class TablePagination {
         this.filteredRows = [];
         this.originalRows = [];
         
+        // Generate unique IDs for this table
+        this.uniqueId = Math.random().toString(36).substr(2, 9);
+        this.itemsPerPageId = `items-per-page-${this.uniqueId}`;
+        this.paginationInfoId = `pagination-info-${this.uniqueId}`;
+        this.paginationNavId = `pagination-nav-${this.uniqueId}`;
+        
         this.init();
     }
 
@@ -55,24 +61,25 @@ class TablePagination {
         container.innerHTML = `
             <div class="row align-items-center">
                 <div class="col-md-6">
-                    ${this.showInfo ? '<div id="pagination-info" class="text-muted"></div>' : ''}
+                    ${this.showInfo ? `<div id="${this.paginationInfoId}" class="text-muted"></div>` : ''}
                 </div>
                 <div class="col-md-6">
                     <div class="d-flex justify-content-end align-items-center gap-3">
                         ${this.showItemsPerPageSelector ? `
                             <div class="d-flex align-items-center">
-                                <label for="items-per-page" class="form-label me-2 mb-0">Show:</label>
-                                <select id="items-per-page" class="form-select form-select-sm" style="width: auto;">
-                                    <option value="5">5</option>
-                                    <option value="10" selected>10</option>
-                                    <option value="25">25</option>
-                                    <option value="50">50</option>
-                                    <option value="100">100</option>
+                                <label for="${this.itemsPerPageId}" class="form-label me-2 mb-0">Show:</label>
+                                <select id="${this.itemsPerPageId}" class="form-select form-select-sm" style="width: auto;">
+                                    <option value="5" ${this.itemsPerPage === 5 ? 'selected' : ''}>5</option>
+                                    <option value="10" ${this.itemsPerPage === 10 ? 'selected' : ''}>10</option>
+                                    <option value="15" ${this.itemsPerPage === 15 ? 'selected' : ''}>15</option>
+                                    <option value="25" ${this.itemsPerPage === 25 ? 'selected' : ''}>25</option>
+                                    <option value="50" ${this.itemsPerPage === 50 ? 'selected' : ''}>50</option>
+                                    <option value="100" ${this.itemsPerPage === 100 ? 'selected' : ''}>100</option>
                                 </select>
                             </div>
                         ` : ''}
                         <nav aria-label="Table pagination">
-                            <ul id="pagination-nav" class="pagination pagination-sm mb-0"></ul>
+                            <ul id="${this.paginationNavId}" class="pagination pagination-sm mb-0 pagination-primary"></ul>
                         </nav>
                     </div>
                 </div>
@@ -81,11 +88,15 @@ class TablePagination {
 
         // Setup event listeners
         if (this.showItemsPerPageSelector) {
-            document.getElementById('items-per-page').addEventListener('change', (e) => {
-                this.itemsPerPage = parseInt(e.target.value);
-                this.currentPage = 1;
-                this.render();
-            });
+            const selector = document.getElementById(this.itemsPerPageId);
+            if (selector) {
+                selector.addEventListener('change', (e) => {
+                    const newItemsPerPage = parseInt(e.target.value);
+                    this.itemsPerPage = newItemsPerPage;
+                    this.currentPage = 1;
+                    this.render();
+                });
+            }
         }
     }
 
@@ -166,7 +177,7 @@ class TablePagination {
 
     updatePaginationNav() {
         const totalPages = Math.ceil(this.filteredRows.length / this.itemsPerPage);
-        const nav = document.getElementById('pagination-nav');
+        const nav = document.getElementById(this.paginationNavId);
         
         if (totalPages <= 1) {
             nav.innerHTML = '';
@@ -240,7 +251,7 @@ class TablePagination {
     updateInfo() {
         if (!this.showInfo) return;
 
-        const info = document.getElementById('pagination-info');
+        const info = document.getElementById(this.paginationInfoId);
         if (!info) return;
 
         const totalItems = this.filteredRows.length;
@@ -293,16 +304,22 @@ window.initTablePagination = function(options = {}) {
 // Auto-initialize tables with data-pagination attribute
 document.addEventListener('DOMContentLoaded', function() {
     const tables = document.querySelectorAll('table[data-pagination]');
+    
     tables.forEach(table => {
+        const itemsPerPage = parseInt(table.dataset.itemsPerPage) || 10;
+        
         const options = {
-            tableSelector: `#${table.id}` || table,
-            itemsPerPage: parseInt(table.dataset.itemsPerPage) || 10,
+            tableSelector: table.id ? `#${table.id}` : table,
+            itemsPerPage: itemsPerPage,
             maxVisiblePages: parseInt(table.dataset.maxVisiblePages) || 5,
             showItemsPerPageSelector: table.dataset.showItemsSelector !== 'false',
             showInfo: table.dataset.showInfo !== 'false',
             searchInputSelector: table.dataset.searchInput || null
         };
         
-        new TablePagination(options);
+        // Add a small delay to ensure the table is fully rendered
+        setTimeout(() => {
+            new TablePagination(options);
+        }, 100);
     });
 });

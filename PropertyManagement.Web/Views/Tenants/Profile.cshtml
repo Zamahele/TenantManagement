@@ -21,45 +21,127 @@
   </div>
 </div>
 
+<!-- Quick Actions -->
+<div class="row mb-4">
+  <div class="col-md-4">
+    <div class="card h-100 border-primary">
+      <div class="card-body text-center">
+        <i class="bi bi-file-text-fill text-primary display-4"></i>
+        <h5 class="card-title mt-3">Lease Agreements</h5>
+        <p class="card-text text-muted">View and sign your digital lease agreements</p>
+        <a asp-controller="DigitalLease" asp-action="MyLeases" class="btn btn-primary">
+          <i class="bi bi-file-earmark-text me-1"></i>View My Leases
+        </a>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card h-100 border-success">
+      <div class="card-body text-center">
+        <i class="bi bi-credit-card-fill text-success display-4"></i>
+        <h5 class="card-title mt-3">Payment History</h5>
+        <p class="card-text text-muted">Track your rental payment history</p>
+        <button class="btn btn-success" onclick="document.getElementById('history-tab').click();">
+          <i class="bi bi-list-check me-1"></i>View Payments
+        </button>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card h-100 border-info">
+      <div class="card-body text-center">
+        <i class="bi bi-person-gear text-info display-4"></i>
+        <h5 class="card-title mt-3">Profile Settings</h5>
+        <p class="card-text text-muted">Update your personal information</p>
+        <button class="btn btn-info" onclick="showEditProfileModal(); return false;">
+          <i class="bi bi-pencil me-1"></i>Edit Profile
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <ul class="nav nav-tabs mb-3" id="profileTab" role="tablist">
   <li class="nav-item" role="presentation">
     <button class="nav-link active" id="profile-tab" data-bs-toggle="tab" data-bs-target="#profile" type="button" role="tab" aria-controls="profile" aria-selected="true">
-      Profile
+      <i class="bi bi-person me-1"></i>Profile Details
     </button>
   </li>
   <li class="nav-item" role="presentation">
     <button class="nav-link" id="history-tab" data-bs-toggle="tab" data-bs-target="#history" type="button" role="tab" aria-controls="history" aria-selected="false">
-      Rental History
+      <i class="bi bi-clock-history me-1"></i>Rental History
+    </button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="leases-tab" data-bs-toggle="tab" data-bs-target="#leases" type="button" role="tab" aria-controls="leases" aria-selected="false">
+      <i class="bi bi-file-earmark-text me-1"></i>My Leases
     </button>
   </li>
 </ul>
 <div class="tab-content" id="profileTabContent">
   <div class="tab-pane fade show active" id="profile" role="tabpanel" aria-labelledby="profile-tab">
-    <div class="mb-3 d-flex justify-content-end">
-      <button class="btn btn-outline-primary btn-sm" onclick="showEditProfileModal(); return false;">
-        <i class="bi bi-pencil"></i> Edit
-      </button>
+    <div class="row">
+      <div class="col-md-8">
+        <div class="card">
+          <div class="card-body">
+            <div class="mb-3 d-flex justify-content-between align-items-center">
+              <h5 class="card-title mb-0"><i class="bi bi-info-circle me-2"></i>Personal Information</h5>
+              <button class="btn btn-outline-primary btn-sm" onclick="showEditProfileModal(); return false;">
+                <i class="bi bi-pencil"></i> Edit
+              </button>
+            </div>
+            <dl class="row mb-0">
+              <dt class="col-sm-4">Username</dt>
+              <dd class="col-sm-8">
+                <span class="badge bg-secondary">@Model.User.Username</span>
+              </dd>
+
+              <dt class="col-sm-4">Full Name</dt>
+              <dd class="col-sm-8">@Model.FullName</dd>
+
+              <dt class="col-sm-4">Contact</dt>
+              <dd class="col-sm-8">
+                <i class="bi bi-telephone text-primary me-1"></i>@Model.Contact
+              </dd>
+
+              <dt class="col-sm-4">Room</dt>
+              <dd class="col-sm-8">
+                <span class="badge bg-info">Room @Model.Room?.Number</span>
+              </dd>
+
+              <dt class="col-sm-4">Emergency Contact</dt>
+              <dd class="col-sm-8">
+                @Model.EmergencyContactName<br>
+                <small class="text-muted">
+                  <i class="bi bi-telephone text-success me-1"></i>@Model.EmergencyContactNumber
+                </small>
+              </dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card bg-light">
+          <div class="card-body">
+            <h5 class="card-title"><i class="bi bi-shield-check me-2"></i>Account Status</h5>
+            <div class="d-flex align-items-center mb-2">
+              <span class="badge bg-success me-2">Active</span>
+              <small class="text-muted">Account is active</small>
+            </div>
+            <div class="d-flex align-items-center mb-2">
+              <i class="bi bi-calendar-check text-info me-2"></i>
+              <small class="text-muted">Member since registration</small>
+            </div>
+            <hr>
+            <h6><i class="bi bi-house-door me-1"></i>Room Information</h6>
+            <p class="mb-1"><strong>Room:</strong> @Model.Room?.Number</p>
+            <p class="mb-0"><strong>Type:</strong> @Model.Room?.Type</p>
+          </div>
+        </div>
+      </div>
     </div>
-    <dl class="row mb-0">
-      <dt class="col-sm-3">Username</dt>
-      <dd class="col-sm-9">@Model.User.Username</dd>
-
-      <dt class="col-sm-3">Full Name</dt>
-      <dd class="col-sm-9">@Model.FullName</dd>
-
-      <dt class="col-sm-3">Contact</dt>
-      <dd class="col-sm-9">@Model.Contact</dd>
-
-      <dt class="col-sm-3">Room</dt>
-      <dd class="col-sm-9">@Model.Room?.Number</dd>
-
-      <dt class="col-sm-3">EM Contact Name</dt>
-      <dd class="col-sm-9">@Model.EmergencyContactName</dd>
-
-      <dt class="col-sm-3">EM Contact#</dt>
-      <dd class="col-sm-9">@Model.EmergencyContactNumber</dd>
-    </dl>
   </div>
+  
   <div class="tab-pane fade" id="history" role="tabpanel" aria-labelledby="history-tab">
     @{
       ViewData["SearchId"] = "history-search";
@@ -69,9 +151,10 @@
 
     <table class="table table-striped mb-0 align-middle mt-3"
            id="historyTable"
-           data-pagination
-           data-items-per-page="6"
-           data-search-input="#history-search">
+           data-datatable
+           data-page-length="6"
+           data-search-label="Search history:"
+           data-empty-message="No payment history found">
       <thead class="table-light">
         <tr>
           <th>Month</th>
@@ -79,6 +162,7 @@
           <th>Room #</th>
           <th>Date</th>
           <th>Rent (R)</th>
+          <th>Status</th>
         </tr>
       </thead>
       <tbody>
@@ -91,20 +175,83 @@
               <td>@month.ToString("MMMM")</td>
               <td>@payment.Tenant?.FullName</td>
               <td>@payment.Tenant?.Room?.Number</td>
-              <td>@payment.Date.ToShortDateString()</td>
-              <td>@payment.Amount.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-ZA"))</td>
+              <td>@payment.Date.ToString("dd MMM yyyy")</td>
+              <td class="fw-bold text-success">@payment.Amount.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-ZA"))</td>
+              <td><span class="badge bg-success">Paid</span></td>
             </tr>
           }
           else
           {
             <tr class="table-danger">
               <td>@month.ToString("MMMM")</td>
-              <td colspan="4" class="text-danger fw-bold">No payment recorded</td>
+              <td>@Model.FullName</td>
+              <td>@Model.Room?.Number</td>
+              <td class="text-muted">No payment</td>
+              <td class="text-muted">-</td>
+              <td><span class="badge bg-danger">Outstanding</span></td>
             </tr>
           }
         }
       </tbody>
     </table>
+  </div>
+
+  <div class="tab-pane fade" id="leases" role="tabpanel" aria-labelledby="leases-tab">
+    <div class="text-center py-5">
+      <i class="bi bi-file-earmark-text display-1 text-primary"></i>
+      <h4 class="mt-3">Your Lease Agreements</h4>
+      <p class="text-muted">Access and manage all your digital lease agreements in one place.</p>
+      <div class="mt-4">
+        <a asp-controller="DigitalLease" asp-action="MyLeases" class="btn btn-primary btn-lg">
+          <i class="bi bi-file-earmark-text me-2"></i>View All My Leases
+        </a>
+      </div>
+      
+      <div class="row mt-5">
+        <div class="col-md-4">
+          <a asp-controller="DigitalLease" asp-action="QuickPreview" class="text-decoration-none">
+            <div class="card border-0 bg-light h-100 shadow-sm card-hover">
+              <div class="card-body text-center">
+                <i class="bi bi-eye text-info display-6"></i>
+                <h6 class="mt-2">Preview Documents</h6>
+                <small class="text-muted">Review lease terms before signing</small>
+                <div class="mt-2">
+                  <span class="badge bg-info">Click to preview latest</span>
+                </div>
+              </div>
+            </div>
+          </a>
+        </div>
+        <div class="col-md-4">
+          <a asp-controller="DigitalLease" asp-action="QuickSign" class="text-decoration-none">
+            <div class="card border-0 bg-light h-100 shadow-sm card-hover">
+              <div class="card-body text-center">
+                <i class="bi bi-pen text-warning display-6"></i>
+                <h6 class="mt-2">Digital Signing</h6>
+                <small class="text-muted">Secure electronic signature system</small>
+                <div class="mt-2">
+                  <span class="badge bg-warning text-dark">Click to sign pending</span>
+                </div>
+              </div>
+            </div>
+          </a>
+        </div>
+        <div class="col-md-4">
+          <a asp-controller="DigitalLease" asp-action="QuickDownload" class="text-decoration-none">
+            <div class="card border-0 bg-light h-100 shadow-sm card-hover">
+              <div class="card-body text-center">
+                <i class="bi bi-download text-success display-6"></i>
+                <h6 class="mt-2">Download Copies</h6>
+                <small class="text-muted">Get signed documents anytime</small>
+                <div class="mt-2">
+                  <span class="badge bg-success">Click to download latest</span>
+                </div>
+              </div>
+            </div>
+          </a>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -121,6 +268,27 @@
 
 @section Scripts {
   <partial name="_ValidationScriptsPartial" />
+  <style>
+    .card-hover {
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+    
+    .card-hover:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+      border-color: rgba(0,0,0,0.1) !important;
+    }
+    
+    .card-hover:hover .card-body {
+      background-color: #f8f9fa;
+    }
+    
+    .card-hover:hover i {
+      transform: scale(1.1);
+      transition: transform 0.3s ease;
+    }
+  </style>
   <script>
     function showEditProfileModal() {
         fetch('@Url.Action("EditProfile", "Tenants")')

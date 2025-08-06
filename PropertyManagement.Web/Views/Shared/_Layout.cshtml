@@ -14,8 +14,11 @@
   <link href="~/css/receipt.css" rel="stylesheet" />
   <link rel="stylesheet" href="~/css/rooms-dashboard.css" asp-append-version="true" />
   <link rel="stylesheet" href="~/css/layout-custom.css" asp-append-version="true" />
-  <!-- Table Pagination CSS -->
-  <link rel="stylesheet" href="~/css/table-pagination.css" asp-append-version="true" />
+  <!-- DataTables CSS -->
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap5.min.css" />
+  <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css" />
+  <!-- DataTables Custom Styling -->
+  <link rel="stylesheet" href="~/css/datatables-custom.css" asp-append-version="true" />
   <!-- Toastr CSS -->
   <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet" />
   @await RenderSectionAsync("Styles", required: false)
@@ -123,8 +126,13 @@
   <script src="~/lib/jquery/dist/jquery.min.js"></script>
   <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
   <script src="~/js/site.js" asp-append-version="true"></script>
-  <!-- Table Pagination Script -->
-  <script src="~/js/table-pagination.js" asp-append-version="true"></script>
+  <!-- DataTables JavaScript -->
+  <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap5.min.js"></script>
+  <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+  <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
+  <!-- DataTables Global Initialization -->
+  <script src="~/js/datatables-init.js" asp-append-version="true"></script>
   <!-- Toastr JS -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
   <!-- Before the closing </body> tag -->

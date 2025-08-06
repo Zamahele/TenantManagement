@@ -44,16 +44,20 @@
     </ul>
     <div class="tab-content" id="roomTabsContent">
       <div class="tab-pane fade show active" id="all" role="tabpanel">
-        @Html.Partial("_RoomTable", Model.AllRooms)
+        @{ ViewData["TabId"] = "all"; }
+        @Html.Partial("_RoomTable", Model.AllRooms, ViewData)
       </div>
       <div class="tab-pane fade" id="occupied" role="tabpanel">
-        @Html.Partial("_RoomTable", Model.OccupiedRooms)
+        @{ ViewData["TabId"] = "occupied"; }
+        @Html.Partial("_RoomTable", Model.OccupiedRooms, ViewData)
       </div>
       <div class="tab-pane fade" id="vacant" role="tabpanel">
-        @Html.Partial("_RoomTable", Model.VacantRooms)
+        @{ ViewData["TabId"] = "vacant"; }
+        @Html.Partial("_RoomTable", Model.VacantRooms, ViewData)
       </div>
       <div class="tab-pane fade" id="maintenance" role="tabpanel">
-        @Html.Partial("_RoomTable", Model.MaintenanceRooms)
+        @{ ViewData["TabId"] = "maintenance"; }
+        @Html.Partial("_RoomTable", Model.MaintenanceRooms, ViewData)
       </div>
       <div class="tab-pane fade" id="requests" role="tabpanel">
         @Html.Partial("_BookingRequestsTable", Model.PendingBookingRequests)
@@ -62,15 +66,7 @@
   </div>
 </div>
 
-@{
-  var statusOptions = new List<SelectListItem>
-    {
-        new SelectListItem { Value = "Occupied", Text = "Occupied" },
-        new SelectListItem { Value = "Available", Text = "Available" },
-        new SelectListItem { Value = "Under Maintenance", Text = "Under Maintenance" }
-    };
-}
-@Html.Partial("_RoomModal", new RoomFormViewModel { StatusOptions = statusOptions })
+@Html.Partial("_RoomModal", new RoomFormViewModel { StatusOptions = Model.StatusOptions.Where(s => s.Value == "Available"), RoomTypes = Model.RoomTypes })
 <div id="bookingModalContainer"></div>
 
 @section Scripts {
@@ -143,6 +139,19 @@
         tabEls.forEach(function (tabEl) {
             tabEl.addEventListener('shown.bs.tab', function (event) {
                 localStorage.setItem('activeRoomTab', event.target.id);
+                
+                // After tab is shown, recalculate DataTable columns
+                setTimeout(function() {
+                    var targetTab = document.querySelector(event.target.getAttribute('data-bs-target'));
+                    if (targetTab) {
+                        var tables = targetTab.querySelectorAll('table[data-datatable]');
+                        tables.forEach(function(table) {
+                            if ($.fn.DataTable.isDataTable('#' + table.id)) {
+                                $('#' + table.id).DataTable().columns.adjust().responsive.recalc();
+                            }
+                        });
+                    }
+                }, 100);
             });
         });
 

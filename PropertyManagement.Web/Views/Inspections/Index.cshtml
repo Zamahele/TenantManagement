@@ -22,12 +22,12 @@
         @await Html.PartialAsync("_TableSearch")
 
         <!-- Inspections Table with Pagination -->
-        <table class="table table-striped table-bordered align-middle mb-0 paginated-table" 
+        <table class="table table-striped table-bordered align-middle mb-0" 
                id="inspectionsTable"
-               data-pagination
-               data-items-per-page="10"
-               data-search-input="#inspections-search"
-               data-max-visible-pages="5">
+               data-datatable
+               data-page-length="10"
+               data-search-label="Search inspections:"
+               data-empty-message="No inspections found">
             <thead class="table-light">
                 <tr>
                     <th>Room</th>

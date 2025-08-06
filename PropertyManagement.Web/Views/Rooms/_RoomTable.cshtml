@@ -1,21 +1,27 @@
 @model IEnumerable<PropertyManagement.Web.ViewModels.RoomViewModel>
+@{
+    // Generate unique IDs based on ViewContext or provide default
+    var tabId = ViewData["TabId"]?.ToString() ?? "default";
+    var tableId = $"roomsTable-{tabId}";
+    var searchId = $"rooms-search-{tabId}";
+}
 
 <!-- Search Component for Rooms -->
 @{
-  ViewData["SearchId"] = "rooms-search";
+  ViewData["SearchId"] = searchId;
   ViewData["SearchPlaceholder"] = "Search by room number, type, or status...";
   ViewData["SearchLabel"] = "Search Rooms";
   ViewData["ShowExtraActions"] = true;
-  ViewData["ExtraActionsContent"] = "<button class='btn btn-outline-secondary btn-sm' onclick='exportRooms()'><i class='bi bi-download'></i> Export</button><button class='btn btn-outline-success btn-sm' onclick='filterAvailable()'><i class='bi bi-check-circle'></i> Available Only</button>";
+  ViewData["ExtraActionsContent"] = $"<button class='btn btn-outline-secondary btn-sm' onclick='exportRooms(\"{tableId}\")'><i class='bi bi-download'></i> Export</button><button class='btn btn-outline-success btn-sm' onclick='filterAvailable(\"{searchId}\")'><i class='bi bi-check-circle'></i> Available Only</button>";
 }
 @await Html.PartialAsync("_TableSearch")
 
-<table class="table table-bordered paginated-table"
-       id="roomsTable"
-       data-pagination
-       data-items-per-page="8"
-       data-search-input="#rooms-search"
-       data-max-visible-pages="5">
+<table class="table table-bordered"
+       id="@tableId"
+       data-datatable
+       data-page-length="8"
+       data-search-label="Search rooms:"
+       data-empty-message="No rooms found">
   <thead>
     <tr>
       <th>Number</th>
@@ -82,14 +88,20 @@
 
 <script>
   // Pagination helper functions for rooms
-  function exportRooms() {
-      PaginationHelpers.exportVisibleToCSV('roomsTable', 'rooms-export.csv');
+  function exportRooms(tableId) {
+      if (typeof PaginationHelpers !== 'undefined') {
+          PaginationHelpers.exportVisibleToCSV(tableId, 'rooms-export.csv');
+      }
   }
 
-  function filterAvailable() {
-      const searchInput = document.getElementById('rooms-search');
-      searchInput.value = 'Available';
-      searchInput.dispatchEvent(new Event('input'));
-      toastr.info('Filtered to show available rooms only');
+  function filterAvailable(searchId) {
+      const searchInput = document.getElementById(searchId);
+      if (searchInput) {
+          searchInput.value = 'Available';
+          searchInput.dispatchEvent(new Event('input'));
+          if (typeof toastr !== 'undefined') {
+              toastr.info('Filtered to show available rooms only');
+          }
+      }
   }
 </script>

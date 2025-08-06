@@ -1,7 +1,12 @@
 @model PropertyManagement.Web.ViewModels.TenantViewModel
 
 <h5>Rental History</h5>
-<table class="table">
+<table class="table table-striped"
+       id="tenantDetailsTable"
+       data-datatable
+       data-page-length="5"
+       data-search-label="Search lease history:"
+       data-empty-message="No lease agreements found">
     <thead>
         <tr>
             <th>Room</th>

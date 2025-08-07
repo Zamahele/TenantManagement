@@ -240,7 +240,7 @@
 
   /* Tables */
   --table-cell-padding-x: var(--space-3);
-  --table-cell-padding-y: var(--space-4);
+  --table-cell-padding-y: var(--space-2);
   --table-border-radius: var(--radius-lg);
   --table-shadow: var(--shadow-sm);
 

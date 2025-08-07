@@ -1,10 +1,6 @@
 @using PropertyManagement.Web.ViewModels
 @model DeleteModalViewModel
 
-<form asp-action="@Model.Action" asp-controller="@Model.Controller" method="post" class="d-inline" onsubmit="return confirm('@Html.Raw(@Model.Body.Replace("'", "\\'")) This action cannot be undone. Are you sure?')">
-  @Html.AntiForgeryToken()
-  <input type="hidden" name="id" value="@Model.EntityId" />
-  <button type="submit" class="btn btn-outline-danger btn-sm" title="@Model.Title">
-    <i class="bi bi-trash"></i>
-  </button>
-</form>
+<button type="button" class="btn btn-outline-danger btn-sm" title="@Model.Title" onclick="openDeleteModal(@Model.EntityId, '@Model.Action', '@Model.Controller', '@Html.Raw(Model.Body.Replace("'", "\\'"))', '@Model.Title')">
+  <i class="bi bi-trash"></i>
+</button>

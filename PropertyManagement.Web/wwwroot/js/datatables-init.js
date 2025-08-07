@@ -4,11 +4,17 @@
  */
 
 $(document).ready(function() {
-    // Initialize visible tables first
-    $('table[data-datatable]:visible').each(function() {
-        var $table = $(this);
-        initializeDataTable($table);
-    });
+    // Small delay to ensure DOM is fully ready
+    setTimeout(function() {
+        // Initialize visible tables first
+        $('table[data-datatable]:visible').each(function() {
+            var $table = $(this);
+            // Ensure table is fully rendered before initializing
+            if ($table.is(':visible') && $table.find('thead').length > 0) {
+                initializeDataTable($table);
+            }
+        });
+    }, 100);
     
     // Handle Bootstrap tab events to initialize tables when tabs are shown
     $('button[data-bs-toggle="tab"]').on('shown.bs.tab', function (e) {
@@ -45,6 +51,10 @@ function initializeDataTable($table) {
         pagingType: "full_numbers",
         order: getDefaultOrder($table),
         columnDefs: getColumnDefs($table),
+        // Additional configuration for better error handling
+        processing: false,
+        deferRender: false,
+        autoWidth: false,
         language: {
             search: $table.data('search-label') || "Search:",
             lengthMenu: "Show _MENU_ entries per page",
@@ -81,12 +91,64 @@ function initializeDataTable($table) {
         }
     };
     
-    // Initialize DataTable
-    if ($.fn.DataTable.isDataTable('#' + tableId)) {
-        $('#' + tableId).DataTable().destroy();
+    // Initialize DataTable with error handling
+    try {
+        if ($.fn.DataTable.isDataTable('#' + tableId)) {
+            $('#' + tableId).DataTable().destroy();
+        }
+        
+        // Validate table structure before initialization
+        if (validateTableStructure($table)) {
+            $table.DataTable(config);
+        } else {
+            console.warn('Table ' + tableId + ' has invalid structure, skipping DataTable initialization');
+        }
+    } catch (error) {
+        console.error('DataTables initialization failed for table ' + tableId + ':', error);
+        // Fallback: Remove data-datatable attribute to prevent further attempts
+        $table.removeAttr('data-datatable');
+    }
+}
+
+/**
+ * Validate table structure before DataTables initialization
+ */
+function validateTableStructure($table) {
+    // Check if table has thead and tbody
+    if ($table.find('thead').length === 0) {
+        console.warn('Table missing thead element');
+        return false;
     }
     
-    $table.DataTable(config);
+    if ($table.find('tbody').length === 0) {
+        console.warn('Table missing tbody element');
+        return false;
+    }
+    
+    var headerCells = $table.find('thead tr').first().find('th, td').length;
+    var hasValidRows = true;
+    
+    // Check if all body rows have the correct number of cells
+    $table.find('tbody tr').each(function() {
+        var $row = $(this);
+        var bodyCells = $row.find('td, th').length;
+        var colspan = 0;
+        
+        // Calculate total cells including colspan
+        $row.find('td, th').each(function() {
+            var cellColspan = parseInt($(this).attr('colspan') || '1');
+            colspan += cellColspan;
+        });
+        
+        // Allow rows with colspan to match header count
+        if (bodyCells !== headerCells && colspan !== headerCells) {
+            console.warn('Row has ' + bodyCells + ' cells (colspan: ' + colspan + ') but header has ' + headerCells + ' cells');
+            hasValidRows = false;
+            return false; // break
+        }
+    });
+    
+    return hasValidRows;
 }
 
 /**

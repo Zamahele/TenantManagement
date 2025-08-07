@@ -156,6 +156,12 @@ public class RoomsController : BaseController
         SetErrorMessage("Please correct the errors in the form before saving.");
       }
       
+      // Handle AJAX requests for validation errors
+      if (Request.Headers.ContainsKey("X-Requested-With") && Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+      {
+        return Json(new { success = false, errors = errorMessages.Any() ? errorMessages : new List<string> { "Please correct the errors in the form before saving." } });
+      }
+      
       // Log the validation errors for debugging
       foreach (var modelState in ModelState)
       {
@@ -183,7 +189,7 @@ public class RoomsController : BaseController
           // Check if the error is related to duplicate room number
           if (result.ErrorMessage.Contains("duplicate") || result.ErrorMessage.Contains("already exists"))
           {
-            ModelState.AddModelError("Number", $"? Room number '{model.Number}' is already taken - please choose a different number");
+            ModelState.AddModelError("Number", $"Room number '{model.Number}' is already taken - please choose a different number");
             SetErrorMessage($"Cannot create room: Room number '{model.Number}' already exists. Please use a different room number.");
           }
           else
@@ -191,10 +197,25 @@ public class RoomsController : BaseController
             SetErrorMessage($"Failed to create room: {result.ErrorMessage}");
           }
           
+          // Handle AJAX requests
+          if (Request.Headers.ContainsKey("X-Requested-With") && Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+          {
+            var errors = ModelState
+              .Where(x => x.Value.Errors.Count > 0)
+              .SelectMany(x => x.Value.Errors)
+              .Select(x => x.ErrorMessage)
+              .ToList();
+            
+            if (!errors.Any())
+              errors.Add(result.ErrorMessage);
+              
+            return Json(new { success = false, errors = errors });
+          }
+          
           return View("_RoomModal", model);
         }
         
-        SetSuccessMessage($"? Room '{model.Number}' created successfully!");
+        SetSuccessMessage($"Room '{model.Number}' created successfully!");
       }
       else
       {
@@ -208,7 +229,7 @@ public class RoomsController : BaseController
           // Check if the error is related to duplicate room number
           if (result.ErrorMessage.Contains("duplicate") || result.ErrorMessage.Contains("already exists"))
           {
-            ModelState.AddModelError("Number", $"? Room number '{model.Number}' is already used by another room - please choose a different number");
+            ModelState.AddModelError("Number", $"Room number '{model.Number}' is already used by another room - please choose a different number");
             SetErrorMessage($"Cannot update room: Room number '{model.Number}' is already in use. Please choose a different room number.");
           }
           else
@@ -216,16 +237,44 @@ public class RoomsController : BaseController
             SetErrorMessage($"Failed to update room: {result.ErrorMessage}");
           }
           
+          // Handle AJAX requests for update errors
+          if (Request.Headers.ContainsKey("X-Requested-With") && Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+          {
+            var errors = ModelState
+              .Where(x => x.Value.Errors.Count > 0)
+              .SelectMany(x => x.Value.Errors)
+              .Select(x => x.ErrorMessage)
+              .ToList();
+            
+            if (!errors.Any())
+              errors.Add(result.ErrorMessage);
+              
+            return Json(new { success = false, errors = errors });
+          }
+          
           return View("_RoomModal", model);
         }
         
-        SetSuccessMessage($"? Room '{model.Number}' updated successfully!");
+        SetSuccessMessage($"Room '{model.Number}' updated successfully!");
+      }
+      
+      // Handle AJAX requests for success
+      if (Request.Headers.ContainsKey("X-Requested-With") && Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+      {
+        return Json(new { success = true, message = TempData["SuccessMessage"]?.ToString() ?? "Operation completed successfully." });
       }
     }
     catch (Exception ex)
     {
       model.StatusOptions = GetStatusOptions();
       SetErrorMessage($"An unexpected error occurred: {ex.Message}");
+      
+      // Handle AJAX requests for exceptions
+      if (Request.Headers.ContainsKey("X-Requested-With") && Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+      {
+        return Json(new { success = false, errors = new List<string> { ex.Message } });
+      }
+      
       return View("_RoomModal", model);
     }
     

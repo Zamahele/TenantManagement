@@ -1,0 +1,166 @@
+@model PropertyManagement.Web.ViewModels.MaintenanceRequestFormViewModel
+@{
+  bool isEdit = Model.MaintenanceRequestId != 0;
+}
+
+<!-- Form Error Display -->
+<div id="formErrors" class="alert alert-danger" style="display: none;"></div>
+<div id="formSuccess" class="alert alert-success" style="display: none;"></div>
+
+<form id="maintenanceRequestForm" asp-action="CreateOrEdit" method="post" autocomplete="off" class="needs-validation" novalidate>
+  @Html.AntiForgeryToken()
+  <input type="hidden" asp-for="MaintenanceRequestId" />
+  <input type="hidden" asp-for="TenantId" />
+  
+  <div class="row g-4">
+    <!-- Left Column -->
+    <div class="col-lg-6">
+      <div class="mb-3">
+        <label asp-for="RoomId" class="form-label fw-semibold">Room <span class="text-danger">*</span></label>
+        <div class="input-group">
+          <span class="input-group-text">
+            <i class="bi bi-door-closed"></i>
+          </span>
+          <select asp-for="RoomId" asp-items="Model.RoomOptions" class="form-select" required>
+            <option value="">-- Select Room --</option>
+          </select>
+        </div>
+        <div class="invalid-feedback">Please select a room.</div>
+      </div>
+      
+      <div class="mb-3">
+        <label asp-for="Status" class="form-label fw-semibold">Status <span class="text-danger">*</span></label>
+        <div class="input-group">
+          <span class="input-group-text">
+            <i class="bi bi-flag"></i>
+          </span>
+          <select asp-for="Status" asp-items="Model.StatusOptions" class="form-select" required></select>
+        </div>
+        <div class="invalid-feedback">Please select a status.</div>
+      </div>
+      
+      <div class="mb-3">
+        <label asp-for="AssignedTo" class="form-label fw-semibold">Assigned To</label>
+        <div class="input-group">
+          <span class="input-group-text">
+            <i class="bi bi-person"></i>
+          </span>
+          <input asp-for="AssignedTo" class="form-control" placeholder="Manager" />
+        </div>
+        <small class="text-muted">Person responsible for this maintenance request</small>
+      </div>
+    </div>
+
+    <!-- Right Column -->
+    <div class="col-lg-6">
+      <div class="mb-3">
+        <label asp-for="RequestDate" class="form-label fw-semibold">Request Date</label>
+        <div class="input-group">
+          <span class="input-group-text">
+            <i class="bi bi-calendar3"></i>
+          </span>
+          <input asp-for="RequestDate" class="form-control" type="date" readonly />
+        </div>
+        <small class="text-muted">Date when the request was created</small>
+      </div>
+      
+      @if (isEdit && Model.Status == "Completed")
+      {
+        <div class="mb-3">
+          <label asp-for="CompletedDate" class="form-label fw-semibold">Completed Date</label>
+          <div class="input-group">
+            <span class="input-group-text">
+              <i class="bi bi-check-circle"></i>
+            </span>
+            <input asp-for="CompletedDate" class="form-control" type="date" readonly />
+          </div>
+          <small class="text-muted">Date when the request was completed</small>
+        </div>
+      }
+    </div>
+    
+    <!-- Full Width Description -->
+    <div class="col-12">
+      <div class="mb-3">
+        <label asp-for="Description" class="form-label fw-semibold">Description <span class="text-danger">*</span></label>
+        <div class="input-group">
+          <span class="input-group-text">
+            <i class="bi bi-chat-text"></i>
+          </span>
+          <textarea asp-for="Description" class="form-control" rows="4" placeholder="Describe the maintenance issue in detail..." required></textarea>
+        </div>
+        <div class="invalid-feedback">Please provide a description of the maintenance request.</div>
+        <small class="text-muted">Provide detailed information about what needs to be maintained or repaired</small>
+      </div>
+    </div>
+  </div>
+</form>
+
+<div class="row mt-4">
+  <div class="col-12">
+    <div class="d-flex justify-content-end gap-2">
+      <button type="button" class="btn btn-secondary" onclick="closeMaintenanceModal()">
+        <i class="bi bi-x-circle"></i> Cancel
+      </button>
+      <button type="submit" class="btn btn-primary" form="maintenanceRequestForm">
+        <i class="bi bi-tools"></i> 
+        <span class="submit-text">@(isEdit ? "Update Request" : "Save Request")</span>
+        <div class="spinner-border spinner-border-sm ms-2" style="display: none;" role="status" aria-hidden="true"></div>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script type="text/javascript">
+  // Form initialization will be handled by parent page JavaScript
+  document.addEventListener('DOMContentLoaded', function() {
+    if (document.getElementById('maintenanceRequestForm') && typeof initializeMaintenanceForm === 'function') {
+      initializeMaintenanceForm();
+    }
+    setupRoomChangeHandler();
+  });
+  
+  // Initialize immediately for dynamic content
+  setTimeout(function() {
+    if (document.getElementById('maintenanceRequestForm') && typeof initializeMaintenanceForm === 'function') {
+      initializeMaintenanceForm();
+    }
+    setupRoomChangeHandler();
+  }, 100);
+  
+  function setupRoomChangeHandler() {
+    var roomSelect = document.getElementById('RoomId');
+    var tenantIdField = document.getElementById('TenantId');
+    
+    if (roomSelect && tenantIdField) {
+      roomSelect.addEventListener('change', function() {
+        var roomId = this.value;
+        if (roomId && roomId !== '') {
+          // Fetch tenant information for the selected room
+          fetch('/Maintenance/GetTenantForRoom?roomId=' + roomId)
+            .then(response => response.json())
+            .then(data => {
+              if (data.success) {
+                tenantIdField.value = data.tenantId || '0';
+                console.log('Set TenantId to:', data.tenantId, 'for tenant:', data.tenantName);
+              } else {
+                console.error('Failed to get tenant for room:', data.message);
+                tenantIdField.value = '0'; // Default fallback
+              }
+            })
+            .catch(error => {
+              console.error('Error fetching tenant for room:', error);
+              tenantIdField.value = '0'; // Default fallback
+            });
+        } else {
+          tenantIdField.value = '0'; // Default when no room selected
+        }
+      });
+      
+      // Trigger change event if room is already selected (for edit scenarios)
+      if (roomSelect.value) {
+        roomSelect.dispatchEvent(new Event('change'));
+      }
+    }
+  }
+</script>

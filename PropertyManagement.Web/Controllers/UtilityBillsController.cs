@@ -1,121 +1,307 @@
+using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using PropertyManagement.Domain.Entities;
-using PropertyManagement.Infrastructure.Data;
-using System.Linq;
-using System.Threading.Tasks;
+using PropertyManagement.Application.DTOs;
+using PropertyManagement.Application.Services;
+using PropertyManagement.Web.Controllers;
+using PropertyManagement.Web.ViewModels;
 
-namespace PropertyManagement.Web.Controllers
+namespace PropertyManagement.Web.Controllers;
+
+[Authorize]
+[Authorize(Roles = "Manager")]
+public class UtilityBillsController : BaseController
 {
-    [Authorize]
-    public class UtilityBillsController : BaseController
+    private readonly IUtilityBillApplicationService _utilityBillApplicationService;
+    private readonly IRoomApplicationService _roomApplicationService;
+    private readonly ITenantApplicationService _tenantApplicationService;
+    private readonly IMaintenanceRequestApplicationService _maintenanceApplicationService;
+    private readonly IMapper _mapper;
+    private readonly IConfiguration _configuration;
+
+    public UtilityBillsController(
+        IUtilityBillApplicationService utilityBillApplicationService,
+        IRoomApplicationService roomApplicationService,
+        ITenantApplicationService tenantApplicationService,
+        IMaintenanceRequestApplicationService maintenanceApplicationService,
+        IMapper mapper,
+        IConfiguration configuration)
     {
-        private readonly ApplicationDbContext _context;
-        private readonly decimal _waterRate;
-        private readonly decimal _electricityRate;
+        _utilityBillApplicationService = utilityBillApplicationService;
+        _roomApplicationService = roomApplicationService;
+        _tenantApplicationService = tenantApplicationService;
+        _maintenanceApplicationService = maintenanceApplicationService;
+        _mapper = mapper;
+        _configuration = configuration;
+    }
 
-        public UtilityBillsController(ApplicationDbContext context, IConfiguration config)
+    // GET: /UtilityBills
+    public async Task<IActionResult> Index()
+    {
+        var result = await _utilityBillApplicationService.GetAllUtilityBillsAsync();
+        if (!result.IsSuccess)
         {
-            _context = context;
-            _waterRate = config.GetSection("UtilityRates").GetValue<decimal>("WaterPerLiter");
-            _electricityRate = config.GetSection("UtilityRates").GetValue<decimal>("ElectricityPerKwh");
+            SetErrorMessage(result.ErrorMessage);
+            return View(new List<UtilityBillViewModel>());
         }
 
-        public async Task<IActionResult> Index()
-        {
-            var bills = await _context.UtilityBills.Include(u => u.Room).OrderByDescending(u => u.BillingDate).ToListAsync();
-            ViewBag.WaterRate = _waterRate;
-            ViewBag.ElectricityRate = _electricityRate;
-            return View(bills);
-        }
+        var utilityBillVms = _mapper.Map<List<UtilityBillViewModel>>(result.Data);
+        
+        // Set utility rates for JavaScript calculations
+        ViewBag.WaterRate = GetWaterRate();
+        ViewBag.ElectricityRate = GetElectricityRate();
+        
+        // Set sidebar counts
+        await SetSidebarCountsAsync();
+        
+        return View(utilityBillVms);
+    }
 
-        [HttpGet]
-        public async Task<IActionResult> UtilityBillModal(int? id = null)
+    [HttpGet]
+    public async Task<IActionResult> UtilityBillForm(int? id)
+    {
+        // Load available rooms for the dropdown
+        var roomsResult = await _roomApplicationService.GetAllRoomsAsync();
+        var roomList = new List<SelectListItem>();
+        
+        if (roomsResult.IsSuccess)
         {
-            UtilityBill model;
-            if (id.HasValue)
+            roomList = roomsResult.Data.Select(r => new SelectListItem
             {
-                model = await _context.UtilityBills.FindAsync(id.Value);
-                if (model == null)
+                Value = r.RoomId.ToString(),
+                Text = $"Room {r.Number} ({r.Type})"
+            }).ToList();
+        }
+
+        UtilityBillFormViewModel utilityBillVm;
+
+        if (id.HasValue)
+        {
+            // Editing existing utility bill
+            var result = await _utilityBillApplicationService.GetUtilityBillByIdAsync(id.Value);
+            if (!result.IsSuccess)
+            {
+                SetErrorMessage(result.ErrorMessage);
+                return PartialView("_UtilityBillForm", new UtilityBillFormViewModel 
+                { 
+                    RoomOptions = roomList,
+                    WaterRate = GetWaterRate(),
+                    ElectricityRate = GetElectricityRate()
+                });
+            }
+            
+            utilityBillVm = _mapper.Map<UtilityBillFormViewModel>(result.Data);
+        }
+        else
+        {
+            // Creating new utility bill
+            utilityBillVm = new UtilityBillFormViewModel
+            {
+                BillingDate = DateTime.Today
+            };
+        }
+        
+        utilityBillVm.RoomOptions = roomList;
+        utilityBillVm.WaterRate = GetWaterRate();
+        utilityBillVm.ElectricityRate = GetElectricityRate();
+
+        return PartialView("_UtilityBillForm", utilityBillVm);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CreateOrEdit(UtilityBillFormViewModel utilityBillVm)
+    {
+        bool isAjax = Request.Headers["X-Requested-With"] == "XMLHttpRequest";
+        
+        // Calculate total amount based on usage and rates
+        utilityBillVm.TotalAmount = (utilityBillVm.WaterUsage * GetWaterRate()) + 
+                                    (utilityBillVm.ElectricityUsage * GetElectricityRate());
+        
+        // Add available rooms for dropdown in case of validation error
+        var roomsResult = await _roomApplicationService.GetAllRoomsAsync();
+        var roomList = new List<SelectListItem>();
+        
+        if (roomsResult.IsSuccess)
+        {
+            roomList = roomsResult.Data.Select(r => new SelectListItem
+            {
+                Value = r.RoomId.ToString(),
+                Text = $"Room {r.Number} ({r.Type})"
+            }).ToList();
+        }
+        
+        utilityBillVm.RoomOptions = roomList;
+        utilityBillVm.WaterRate = GetWaterRate();
+        utilityBillVm.ElectricityRate = GetElectricityRate();
+
+        if (!ModelState.IsValid)
+        {
+            if (isAjax)
+            {
+                var errors = ModelState.Values
+                    .SelectMany(v => v.Errors)
+                    .Select(e => e.ErrorMessage)
+                    .ToList();
+                return Json(new { success = false, message = "Please correct the form errors.", errors = errors });
+            }
+            
+            SetErrorMessage("Please correct the errors in the form.");
+            return PartialView("_UtilityBillForm", utilityBillVm);
+        }
+
+        try
+        {
+            if (utilityBillVm.UtilityBillId == 0)
+            {
+                // Create new utility bill
+                var createUtilityBillDto = new CreateUtilityBillDto
                 {
-                    SetErrorMessage("Utility bill not found.");
-                    return PartialView("_UtilityBillModal", new UtilityBill());
+                    RoomId = utilityBillVm.RoomId,
+                    BillingDate = utilityBillVm.BillingDate,
+                    WaterUsage = utilityBillVm.WaterUsage,
+                    ElectricityUsage = utilityBillVm.ElectricityUsage,
+                    TotalAmount = utilityBillVm.TotalAmount,
+                    Notes = utilityBillVm.Notes
+                };
+
+                var result = await _utilityBillApplicationService.CreateUtilityBillAsync(createUtilityBillDto);
+                if (!result.IsSuccess)
+                {
+                    if (isAjax)
+                    {
+                        return Json(new { success = false, message = result.ErrorMessage });
+                    }
+                    
+                    SetErrorMessage($"Failed to create utility bill: {result.ErrorMessage}");
+                    return PartialView("_UtilityBillForm", utilityBillVm);
                 }
+
+                if (isAjax)
+                {
+                    return Json(new { success = true, message = "Utility bill created successfully!" });
+                }
+
+                SetSuccessMessage("Utility bill created successfully!");
             }
             else
             {
-                model = new UtilityBill { BillingDate = DateTime.Today };
-            }
-
-            ViewBag.Rooms = new SelectList(_context.Rooms.ToList(), "RoomId", "Number", model.RoomId);
-            ViewBag.WaterRate = _waterRate;
-            ViewBag.ElectricityRate = _electricityRate;
-            return PartialView("_UtilityBillModal", model);
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> SaveUtilityBill(UtilityBill model)
-        {
-            // Calculate total using rates from appsettings
-            model.TotalAmount = (model.WaterUsage * _waterRate) + (model.ElectricityUsage * _electricityRate);
-
-            if (!ModelState.IsValid)
-            {
-                ViewBag.Rooms = new SelectList(_context.Rooms.ToList(), "RoomId", "Number", model.RoomId);
-                return PartialView("_UtilityBillModal", model);
-            }
-
-            if (model.UtilityBillId == 0)
-            {
-                _context.UtilityBills.Add(model);
-                SetSuccessMessage("Utility bill added successfully.");
-            }
-            else
-            {
-                var existing = await _context.UtilityBills.FindAsync(model.UtilityBillId);
-                if (existing == null)
+                // Update existing utility bill
+                var updateUtilityBillDto = new UpdateUtilityBillDto
                 {
-                    SetErrorMessage("Utility bill not found.");
-                    ViewBag.Rooms = new SelectList(_context.Rooms.ToList(), "RoomId", "Number", model.RoomId);
-                    return PartialView("_UtilityBillModal", model);
+                    BillingDate = utilityBillVm.BillingDate,
+                    WaterUsage = utilityBillVm.WaterUsage,
+                    ElectricityUsage = utilityBillVm.ElectricityUsage,
+                    TotalAmount = utilityBillVm.TotalAmount,
+                    Notes = utilityBillVm.Notes
+                };
+
+                var result = await _utilityBillApplicationService.UpdateUtilityBillAsync(utilityBillVm.UtilityBillId, updateUtilityBillDto);
+                if (!result.IsSuccess)
+                {
+                    if (isAjax)
+                    {
+                        return Json(new { success = false, message = result.ErrorMessage });
+                    }
+                    
+                    SetErrorMessage($"Failed to update utility bill: {result.ErrorMessage}");
+                    return PartialView("_UtilityBillForm", utilityBillVm);
                 }
 
-                existing.RoomId = model.RoomId;
-                existing.BillingDate = model.BillingDate;
-                existing.WaterUsage = model.WaterUsage;
-                existing.ElectricityUsage = model.ElectricityUsage;
-                existing.TotalAmount = model.TotalAmount;
-                existing.Notes = model.Notes;
-                SetSuccessMessage("Utility bill updated successfully.");
-            }
-            await _context.SaveChangesAsync();
+                if (isAjax)
+                {
+                    return Json(new { success = true, message = "Utility bill updated successfully!" });
+                }
 
-            var bills = await _context.UtilityBills.Include(u => u.Room).OrderByDescending(u => u.BillingDate).ToListAsync();
-            return View("Index", bills);
+                SetSuccessMessage("Utility bill updated successfully!");
+            }
+        }
+        catch (Exception ex)
+        {
+            if (isAjax)
+            {
+                return Json(new { success = false, message = $"An unexpected error occurred: {ex.Message}" });
+            }
+            
+            SetErrorMessage($"An unexpected error occurred: {ex.Message}");
+            return PartialView("_UtilityBillForm", utilityBillVm);
         }
 
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Delete(int id)
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Delete(int id)
+    {
+        // Get utility bill details before deletion for better messaging
+        var utilityBillResult = await _utilityBillApplicationService.GetUtilityBillByIdAsync(id);
+        string utilityBillInfo = "Utility bill";
+        
+        if (utilityBillResult.IsSuccess && utilityBillResult.Data != null)
         {
-            var bill = await _context.UtilityBills.FindAsync(id);
-            if (bill == null)
+            var roomNumber = utilityBillResult.Data.Room?.Number ?? "Unknown";
+            var billingDate = utilityBillResult.Data.BillingDate.ToShortDateString();
+            utilityBillInfo = $"Utility bill for Room {roomNumber} ({billingDate})";
+        }
+
+        var result = await _utilityBillApplicationService.DeleteUtilityBillAsync(id);
+        if (!result.IsSuccess)
+        {
+            SetErrorMessage($"Failed to delete utility bill: {result.ErrorMessage}");
+        }
+        else
+        {
+            SetSuccessMessage($"{utilityBillInfo} deleted successfully.");
+        }
+
+        return RedirectToAction("Index");
+    }
+
+    private decimal GetWaterRate()
+    {
+        return _configuration.GetSection("UtilityRates").GetValue<decimal>("WaterPerLiter", 0.02m);
+    }
+
+    private decimal GetElectricityRate()
+    {
+        return _configuration.GetSection("UtilityRates").GetValue<decimal>("ElectricityPerKwh", 1.50m);
+    }
+
+    private async Task SetSidebarCountsAsync()
+    {
+        try
+        {
+            // Get tenant count
+            var tenantsResult = await _tenantApplicationService.GetAllTenantsAsync();
+            var tenantCount = tenantsResult.IsSuccess && tenantsResult.Data != null ? 
+                tenantsResult.Data.Count() : 0;
+
+            // Get room count
+            var roomsResult = await _roomApplicationService.GetAllRoomsAsync();
+            var roomCount = roomsResult.IsSuccess && roomsResult.Data != null ? 
+                roomsResult.Data.Count() : 0;
+
+            // Get pending maintenance count
+            var maintenanceResult = await _maintenanceApplicationService.GetAllMaintenanceRequestsAsync();
+            var pendingCount = 0;
+            if (maintenanceResult.IsSuccess && maintenanceResult.Data != null)
             {
-                SetErrorMessage("Utility bill not found.");
-                var bills = await _context.UtilityBills.Include(u => u.Room).OrderByDescending(u => u.BillingDate).ToListAsync();
-                return View("Index", bills);
+                pendingCount = maintenanceResult.Data.Count(m => 
+                    m.Status == "Pending" || m.Status == "In Progress");
             }
 
-            _context.UtilityBills.Remove(bill);
-            await _context.SaveChangesAsync();
-            SetSuccessMessage("Utility bill deleted successfully.");
-
-            var updatedBills = await _context.UtilityBills.Include(u => u.Room).OrderByDescending(u => u.BillingDate).ToListAsync();
-            return View("Index", updatedBills);
+            // Set the ViewBag values
+            ViewBag.TenantCount = tenantCount;
+            ViewBag.RoomCount = roomCount;
+            ViewBag.PendingMaintenanceCount = pendingCount;
+        }
+        catch
+        {
+            ViewBag.TenantCount = 0;
+            ViewBag.RoomCount = 0;
+            ViewBag.PendingMaintenanceCount = 0;
         }
     }
 }

@@ -1,0 +1,130 @@
+@using System.Globalization
+@model PropertyManagement.Web.ViewModels.UtilityBillFormViewModel
+@{
+  bool isEdit = Model.UtilityBillId != 0;
+}
+
+<!-- Form Error Display -->
+<div id="formErrors" class="alert alert-danger" style="display: none;"></div>
+<div id="formSuccess" class="alert alert-success" style="display: none;"></div>
+
+<form id="utilityBillForm" asp-action="CreateOrEdit" method="post" autocomplete="off" class="needs-validation" novalidate>
+  @Html.AntiForgeryToken()
+  <input type="hidden" asp-for="UtilityBillId" />
+  
+  <div class="row g-4">
+    <!-- Left Column -->
+    <div class="col-lg-6">
+      <div class="mb-3">
+        <label asp-for="RoomId" class="form-label fw-semibold">Room <span class="text-danger">*</span></label>
+        <div class="input-group">
+          <span class="input-group-text">
+            <i class="bi bi-door-closed"></i>
+          </span>
+          <select asp-for="RoomId" asp-items="Model.RoomOptions" class="form-select" required>
+            <option value="">-- Select Room --</option>
+          </select>
+        </div>
+        <div class="invalid-feedback">Please select a room.</div>
+      </div>
+      
+      <div class="mb-3">
+        <label asp-for="BillingDate" class="form-label fw-semibold">Billing Date <span class="text-danger">*</span></label>
+        <div class="input-group">
+          <span class="input-group-text">
+            <i class="bi bi-calendar3"></i>
+          </span>
+          <input asp-for="BillingDate" class="form-control" type="date" required />
+        </div>
+        <div class="invalid-feedback">Please select a billing date.</div>
+      </div>
+      
+      <div class="mb-3">
+        <label asp-for="Notes" class="form-label fw-semibold">Notes</label>
+        <div class="input-group">
+          <span class="input-group-text">
+            <i class="bi bi-chat-text"></i>
+          </span>
+          <textarea asp-for="Notes" class="form-control" rows="3" placeholder="Additional notes or remarks..."></textarea>
+        </div>
+        <small class="text-muted">Optional notes about this billing period</small>
+      </div>
+    </div>
+
+    <!-- Right Column -->
+    <div class="col-lg-6">
+      <div class="mb-3">
+        <label asp-for="WaterUsage" class="form-label fw-semibold">
+          Water Usage (Liters) <span class="text-danger">*</span>
+        </label>
+        <div class="input-group">
+          <span class="input-group-text">
+            <i class="bi bi-droplet"></i>
+          </span>
+          <input asp-for="WaterUsage" class="form-control" type="number" step="0.01" min="0" placeholder="0.00" required />
+          <span class="input-group-text text-muted">L</span>
+        </div>
+        <div class="invalid-feedback">Please enter water usage amount.</div>
+        <small class="text-muted">Rate: @Model.WaterRate.ToString("C", CultureInfo.CurrentCulture) per liter</small>
+      </div>
+      
+      <div class="mb-3">
+        <label asp-for="ElectricityUsage" class="form-label fw-semibold">
+          Electricity Usage (kWh) <span class="text-danger">*</span>
+        </label>
+        <div class="input-group">
+          <span class="input-group-text">
+            <i class="bi bi-lightning"></i>
+          </span>
+          <input asp-for="ElectricityUsage" class="form-control" type="number" step="0.01" min="0" placeholder="0.00" required />
+          <span class="input-group-text text-muted">kWh</span>
+        </div>
+        <div class="invalid-feedback">Please enter electricity usage amount.</div>
+        <small class="text-muted">Rate: @Model.ElectricityRate.ToString("C", CultureInfo.CurrentCulture) per kWh</small>
+      </div>
+      
+      <div class="mb-3">
+        <label asp-for="TotalAmount" class="form-label fw-semibold">Total Amount Due</label>
+        <div class="input-group">
+          <span class="input-group-text">
+            <i class="bi bi-currency-dollar"></i>
+          </span>
+          <input asp-for="TotalAmount" class="form-control" type="number" step="0.01" disabled id="TotalAmountDisplay" />
+          <input type="hidden" asp-for="TotalAmount" id="TotalAmount" />
+        </div>
+        <small class="text-muted">Automatically calculated based on usage and rates</small>
+      </div>
+    </div>
+  </div>
+</form>
+
+<div class="row mt-4">
+  <div class="col-12">
+    <div class="d-flex justify-content-end gap-2">
+      <button type="button" class="btn btn-secondary" onclick="closeUtilityBillModal()">
+        <i class="bi bi-x-circle"></i> Cancel
+      </button>
+      <button type="submit" class="btn btn-primary" form="utilityBillForm">
+        <i class="bi bi-droplet-half"></i> 
+        <span class="submit-text">@(isEdit ? "Update Bill" : "Save Bill")</span>
+        <div class="spinner-border spinner-border-sm ms-2" style="display: none;" role="status" aria-hidden="true"></div>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script type="text/javascript">
+  // Form initialization will be handled by parent page JavaScript
+  document.addEventListener('DOMContentLoaded', function() {
+    if (document.getElementById('utilityBillForm') && typeof initializeUtilityBillForm === 'function') {
+      initializeUtilityBillForm();
+    }
+  });
+  
+  // Initialize immediately for dynamic content
+  setTimeout(function() {
+    if (document.getElementById('utilityBillForm') && typeof initializeUtilityBillForm === 'function') {
+      initializeUtilityBillForm();
+    }
+  }, 100);
+</script>

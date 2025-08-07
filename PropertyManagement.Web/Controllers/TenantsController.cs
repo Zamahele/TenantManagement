@@ -178,31 +178,52 @@ public class TenantsController : BaseController
   {
     // Load available rooms for the dropdown
     var roomsResult = await _roomApplicationService.GetAvailableRoomsAsync();
+    var roomList = new List<RoomViewModel>();
+    
     if (roomsResult.IsSuccess)
     {
-      ViewBag.Rooms = _mapper.Map<List<RoomViewModel>>(roomsResult.Data);
-    }
-    else
-    {
-      ViewBag.Rooms = new List<RoomViewModel>();
-      SetErrorMessage("Unable to load available rooms.");
+      roomList = _mapper.Map<List<RoomViewModel>>(roomsResult.Data);
     }
 
     TenantViewModel tenantVm;
 
     if (id.HasValue)
     {
+      // Editing existing tenant
       var result = await _tenantApplicationService.GetTenantByIdAsync(id.Value);
       if (!result.IsSuccess)
       {
         SetErrorMessage(result.ErrorMessage);
+        ViewBag.Rooms = roomList;
         return PartialView("_TenantForm", new TenantViewModel());
       }
+      
       tenantVm = _mapper.Map<TenantViewModel>(result.Data);
+      
+      // If tenant has a room assigned, make sure it's included in the dropdown
+      if (tenantVm.RoomId > 0 && roomList.All(r => r.RoomId != tenantVm.RoomId))
+      {
+        // Get the currently assigned room and add it to the list
+        var currentRoomResult = await _roomApplicationService.GetRoomByIdAsync(tenantVm.RoomId);
+        if (currentRoomResult.IsSuccess)
+        {
+          var currentRoom = _mapper.Map<RoomViewModel>(currentRoomResult.Data);
+          roomList.Add(currentRoom);
+          // Sort the list by room number for better UX
+          roomList = roomList.OrderBy(r => r.Number).ToList();
+        }
+      }
     }
     else
     {
+      // Creating new tenant
       tenantVm = new TenantViewModel();
+    }
+
+    ViewBag.Rooms = roomList;
+    if (!roomsResult.IsSuccess && roomList.Count == 0)
+    {
+      SetErrorMessage("Unable to load available rooms.");
     }
 
     return PartialView("_TenantForm", tenantVm);
@@ -217,14 +238,26 @@ public class TenantsController : BaseController
     
     // Add available rooms for dropdown in case of validation error
     var roomsResult = await _roomApplicationService.GetAvailableRoomsAsync();
+    var roomList = new List<RoomViewModel>();
+    
     if (roomsResult.IsSuccess)
     {
-      ViewBag.Rooms = _mapper.Map<List<RoomViewModel>>(roomsResult.Data);
+      roomList = _mapper.Map<List<RoomViewModel>>(roomsResult.Data);
     }
-    else
+    
+    // If editing and tenant has a room assigned, make sure it's included in the dropdown
+    if (tenantVm.TenantId > 0 && tenantVm.RoomId > 0 && roomList.All(r => r.RoomId != tenantVm.RoomId))
     {
-      ViewBag.Rooms = new List<RoomViewModel>();
+      var currentRoomResult = await _roomApplicationService.GetRoomByIdAsync(tenantVm.RoomId);
+      if (currentRoomResult.IsSuccess)
+      {
+        var currentRoom = _mapper.Map<RoomViewModel>(currentRoomResult.Data);
+        roomList.Add(currentRoom);
+        roomList = roomList.OrderBy(r => r.Number).ToList();
+      }
     }
+    
+    ViewBag.Rooms = roomList;
 
     // Remove user-related validation for this form
     ModelState.Remove("User.PasswordHash");

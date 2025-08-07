@@ -200,7 +200,20 @@ builder.Services.AddAutoMapper(cfg =>
   cfg.CreateMap<BookingRequestDto, BookingRequestViewModel>();
   cfg.CreateMap<InspectionDto, InspectionViewModel>();
   cfg.CreateMap<MaintenanceRequestDto, MaintenanceRequestViewModel>();
-  cfg.CreateMap<UtilityBillDto, UtilityBillDto>().ReverseMap(); // Note: This looks like a typo, should be UtilityBillViewModel
+  
+  // FIXED: UtilityBillDto to UtilityBillViewModel mappings
+  cfg.CreateMap<UtilityBillDto, UtilityBillViewModel>()
+      .ForMember(dest => dest.Room, opt => opt.MapFrom(src => src.Room))
+      .ForMember(dest => dest.RoomOptions, opt => opt.Ignore());
+  cfg.CreateMap<UtilityBillDto, UtilityBillFormViewModel>()
+      .ForMember(dest => dest.RoomOptions, opt => opt.Ignore())
+      .ForMember(dest => dest.WaterRate, opt => opt.Ignore())
+      .ForMember(dest => dest.ElectricityRate, opt => opt.Ignore());
+  
+  // MaintenanceRequest DTO to ViewModel mappings
+  cfg.CreateMap<MaintenanceRequestDto, MaintenanceRequestFormViewModel>()
+      .ForMember(dest => dest.RoomOptions, opt => opt.Ignore())
+      .ForMember(dest => dest.StatusOptions, opt => opt.Ignore());
   
   // ViewModel to DTO mappings
   cfg.CreateMap<TenantViewModel, CreateTenantDto>();

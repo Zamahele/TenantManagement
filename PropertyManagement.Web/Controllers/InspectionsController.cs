@@ -86,6 +86,50 @@ namespace PropertyManagement.Web.Controllers
       return PartialView("_InspectionModal", model);
     }
 
+    // GET: /Inspections/InspectionForm
+    [HttpGet]
+    public async Task<IActionResult> InspectionForm(int? id = null)
+    {
+      var roomsResult = await _roomApplicationService.GetAllRoomsAsync();
+      var roomList = new List<SelectListItem>();
+      
+      if (roomsResult.IsSuccess)
+      {
+        roomList = roomsResult.Data.Select(r => new SelectListItem
+        {
+          Value = r.RoomId.ToString(),
+          Text = $"Room {r.Number} ({r.Type})"
+        }).ToList();
+      }
+
+      InspectionViewModel model;
+
+      if (id.HasValue)
+      {
+        // Editing existing inspection
+        var result = await _inspectionApplicationService.GetInspectionByIdAsync(id.Value);
+        if (!result.IsSuccess)
+        {
+          SetErrorMessage(result.ErrorMessage);
+          return PartialView("_InspectionForm", new InspectionViewModel { RoomOptions = roomList });
+        }
+        
+        model = _mapper.Map<InspectionViewModel>(result.Data);
+      }
+      else
+      {
+        // Creating new inspection
+        model = new InspectionViewModel
+        {
+          Date = DateTime.Today,
+          Result = "Pending"
+        };
+      }
+      
+      model.RoomOptions = roomList;
+      return PartialView("_InspectionForm", model);
+    }
+
     // GET: Modal for Add/Edit (Legacy - keeping for compatibility)
     [HttpGet]
     public async Task<IActionResult> InspectionModal(int? id = null)
@@ -105,19 +149,40 @@ namespace PropertyManagement.Web.Controllers
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CreateOrEdit(InspectionViewModel model)
     {
+      bool isAjax = Request.Headers["X-Requested-With"] == "XMLHttpRequest";
+      
+      // Add room options for dropdown in case of validation error
+      var roomsResult = await _roomApplicationService.GetAllRoomsAsync();
+      var roomList = new List<SelectListItem>();
+      
+      if (roomsResult.IsSuccess)
+      {
+        roomList = roomsResult.Data.Select(r => new SelectListItem
+        {
+          Value = r.RoomId.ToString(),
+          Text = $"Room {r.Number} ({r.Type})"
+        }).ToList();
+      }
+      
+      model.RoomOptions = roomList;
+
+      if (!ModelState.IsValid)
+      {
+        if (isAjax)
+        {
+          var errors = ModelState.Values
+              .SelectMany(v => v.Errors)
+              .Select(e => e.ErrorMessage)
+              .ToList();
+          return Json(new { success = false, message = "Please correct the form errors.", errors = errors });
+        }
+        
+        SetErrorMessage("Please correct the errors in the form.");
+        return PartialView("_InspectionForm", model);
+      }
+
       try
       {
-        if (!ModelState.IsValid)
-        {
-          var roomsResult = await _roomApplicationService.GetAllRoomsAsync();
-          if (roomsResult.IsSuccess)
-          {
-            ViewBag.Rooms = new SelectList(roomsResult.Data, "RoomId", "Number", model.RoomId);
-          }
-          SetErrorMessage("Please correct the errors in the form.");
-          return PartialView("_InspectionModal", model);
-        }
-
         if (model.InspectionId == 0)
         {
           var createInspectionDto = _mapper.Map<CreateInspectionDto>(model);
@@ -125,10 +190,20 @@ namespace PropertyManagement.Web.Controllers
           
           if (!result.IsSuccess)
           {
-            SetErrorMessage(result.ErrorMessage);
-            return await PrepareInspectionModal(model);
+            if (isAjax)
+            {
+              return Json(new { success = false, message = result.ErrorMessage });
+            }
+            
+            SetErrorMessage($"Failed to create inspection: {result.ErrorMessage}");
+            return PartialView("_InspectionForm", model);
           }
-          
+
+          if (isAjax)
+          {
+            return Json(new { success = true, message = "Inspection created successfully!" });
+          }
+
           SetSuccessMessage("Inspection created successfully.");
         }
         else
@@ -138,19 +213,35 @@ namespace PropertyManagement.Web.Controllers
           
           if (!result.IsSuccess)
           {
-            SetErrorMessage(result.ErrorMessage);
-            return await PrepareInspectionModal(model);
+            if (isAjax)
+            {
+              return Json(new { success = false, message = result.ErrorMessage });
+            }
+            
+            SetErrorMessage($"Failed to update inspection: {result.ErrorMessage}");
+            return PartialView("_InspectionForm", model);
           }
-          
+
+          if (isAjax)
+          {
+            return Json(new { success = true, message = "Inspection updated successfully!" });
+          }
+
           SetSuccessMessage("Inspection updated successfully.");
         }
-        return RedirectToAction(nameof(Index));
       }
       catch (Exception ex)
       {
-        SetErrorMessage("Error saving inspection: " + ex.Message);
-        return await PrepareInspectionModal(model);
+        if (isAjax)
+        {
+          return Json(new { success = false, message = $"An unexpected error occurred: {ex.Message}" });
+        }
+        
+        SetErrorMessage($"An unexpected error occurred: {ex.Message}");
+        return PartialView("_InspectionForm", model);
       }
+
+      return RedirectToAction(nameof(Index));
     }
 
     // POST: Save Add/Edit (Legacy - keeping for compatibility)

@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace PropertyManagement.Web.ViewModels
 {
@@ -21,5 +22,8 @@ namespace PropertyManagement.Web.ViewModels
 
         [MaxLength(1000)]
         public string? Notes { get; set; }
+
+        // For dropdown population
+        public List<SelectListItem>? RoomOptions { get; set; }
     }
 }

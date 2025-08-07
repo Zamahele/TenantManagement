@@ -117,8 +117,152 @@
   </div>
 </div>
 
-@Html.Partial("_RoomModal", new RoomFormViewModel { StatusOptions = Model.StatusOptions.Where(s => s.Value == "Available"), RoomTypes = Model.RoomTypes })
+<!-- Custom Room Modal -->
+<div id="roomModal" class="custom-modal" style="display: none;">
+  <div class="custom-modal-backdrop" onclick="closeRoomModal()"></div>
+  <div class="custom-modal-content">
+    <div class="custom-modal-header">
+      <h4 class="custom-modal-title">
+        <i class="bi bi-door-closed me-2"></i>
+        <span id="roomModalLabel">Add Room</span>
+      </h4>
+      <button type="button" class="custom-modal-close" onclick="closeRoomModal()">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+    <div class="custom-modal-body" id="roomModalBody">
+      @Html.Partial("_RoomModal", new RoomFormViewModel { StatusOptions = Model.StatusOptions.Where(s => s.Value == "Available"), RoomTypes = Model.RoomTypes })
+    </div>
+  </div>
+</div>
+
 <div id="bookingModalContainer"></div>
+
+@section Styles {
+  <style>
+    /* Custom Modal Styles */
+    .custom-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1050;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .custom-modal-backdrop {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.4);
+    }
+    
+    .custom-modal-content {
+      position: relative;
+      background: white;
+      border-radius: 8px;
+      width: 90%;
+      max-width: 900px;
+      max-height: 90vh;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+      border: 1px solid #dee2e6;
+      z-index: 1051;
+    }
+    
+    .custom-modal-header {
+      background: #f8f9fa;
+      color: #495057;
+      padding: 1.25rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #dee2e6;
+    }
+    
+    .custom-modal-title {
+      margin: 0;
+      font-size: 1.125rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      color: #212529;
+    }
+    
+    .custom-modal-close {
+      background: none;
+      border: none;
+      color: #6c757d;
+      font-size: 1.25rem;
+      cursor: pointer;
+      padding: 0.25rem;
+      border-radius: 4px;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+    }
+    
+    .custom-modal-close:hover {
+      background-color: #e9ecef;
+      color: #495057;
+    }
+    
+    .custom-modal-body {
+      padding: 1.5rem;
+      max-height: calc(90vh - 100px);
+      overflow-y: auto;
+    }
+    
+    /* Responsive Design */
+    @@media (max-width: 768px) {
+      .custom-modal-content {
+        width: 95%;
+        max-height: 95vh;
+        margin: 1rem;
+      }
+      
+      .custom-modal-header {
+        padding: 1rem 1.5rem;
+      }
+      
+      .custom-modal-body {
+        padding: 1.5rem;
+        max-height: calc(95vh - 100px);
+      }
+      
+      .custom-modal-title {
+        font-size: 1.1rem;
+      }
+    }
+    
+    /* Smooth scrollbar for modal body */
+    .custom-modal-body::-webkit-scrollbar {
+      width: 6px;
+    }
+    
+    .custom-modal-body::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 3px;
+    }
+    
+    .custom-modal-body::-webkit-scrollbar-thumb {
+      background: #c1c1c1;
+      border-radius: 3px;
+    }
+    
+    .custom-modal-body::-webkit-scrollbar-thumb:hover {
+      background: #a1a1a1;
+    }
+  </style>
+}
 
 @section Scripts {
   <script>
@@ -131,8 +275,8 @@
         document.getElementById('roomForm').reset();
         document.getElementById('RoomId').value = 0;
         document.getElementById('roomModalLabel').innerText = 'Add Room';
-        var modal = new bootstrap.Modal(document.getElementById('roomModal'));
-        modal.show();
+        document.getElementById('roomModal').style.display = 'flex';
+        document.body.style.overflow = 'hidden';
     }
 
     function openEditModal(id) {
@@ -146,14 +290,164 @@
                 if (document.getElementById('Status')) document.getElementById('Status').value = data.status;
                 if (document.getElementById('CottageId')) document.getElementById('CottageId').value = data.cottageId || '';
                 document.getElementById('roomModalLabel').innerText = 'Edit Room';
-                var modal = new bootstrap.Modal(document.getElementById('roomModal'));
-                modal.show();
+                document.getElementById('roomModal').style.display = 'flex';
+                document.body.style.overflow = 'hidden';
             });
     }
+    
+    function closeRoomModal() {
+        document.getElementById('roomModal').style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }
+    
     function deleteRoom(id) {
         if (confirm('Are you sure you want to delete this room? This action cannot be undone.')) {
             document.getElementById('deleteForm-' + id).submit();
         }
+    }
+    
+    // Initialize room form with AJAX submission
+    function initializeRoomForm() {
+        console.log('🎉 initializeRoomForm called!');
+        
+        var form = document.getElementById('roomForm');
+        if (form) {
+            console.log('🔗 Binding submit event to room form');
+            form.addEventListener('submit', function(event) {
+                console.log('📝 Room form submit event triggered');
+                event.preventDefault();
+                submitRoomForm(event);
+            });
+        } else {
+            console.error('❌ Could not find room form to bind submit event');
+        }
+        
+        // Also add click event directly to submit button as backup
+        var submitBtn = document.querySelector('button[form="roomForm"]') || form.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            console.log('🔗 Binding click event to submit button as backup');
+            submitBtn.addEventListener('click', function(event) {
+                console.log('🖱️ Submit button clicked directly');
+                event.preventDefault();
+                submitRoomForm(event);
+            });
+        } else {
+            console.error('❌ Could not find submit button to bind click event');
+        }
+    }
+    
+    // Submit room form via AJAX
+    function submitRoomForm(event) {
+        console.log('🚀 submitRoomForm called!', event);
+        event.preventDefault();
+        
+        var form = document.getElementById('roomForm');
+        var submitBtn = document.querySelector('button[form="roomForm"]') || (form ? form.querySelector('button[type="submit"]') : null);
+        var spinner = submitBtn ? submitBtn.querySelector('.spinner-border') : null;
+        var formErrors = document.getElementById('formErrors');
+        var formSuccess = document.getElementById('formSuccess');
+        
+        console.log('🔍 Form elements found:', {
+            form: !!form,
+            submitBtn: !!submitBtn,
+            spinner: !!spinner,
+            formErrors: !!formErrors,
+            formSuccess: !!formSuccess
+        });
+        
+        if (!form) {
+            console.error('❌ Form not found!');
+            return false;
+        }
+        
+        if (!submitBtn) {
+            console.error('❌ Submit button not found!');
+            return false;
+        }
+        
+        // Validate form
+        console.log('🔎 Checking form validity...');
+        if (!form.checkValidity()) {
+            console.log('⚠️ Form is invalid, showing validation errors');
+            form.classList.add('was-validated');
+            return false;
+        }
+        
+        console.log('✅ Form is valid, proceeding with submission');
+        
+        // Show loading state
+        console.log('⏳ Showing loading state');
+        submitBtn.disabled = true;
+        if (spinner) {
+            spinner.style.display = 'inline-block';
+        }
+        
+        // Hide previous messages
+        if (formErrors) formErrors.style.display = 'none';
+        if (formSuccess) formSuccess.style.display = 'none';
+        
+        // Submit form via AJAX
+        var formData = new FormData(form);
+        console.log('📤 Submitting form to:', form.action);
+        console.log('📦 Form data entries:');
+        for (let [key, value] of formData.entries()) {
+            console.log(`  ${key}:`, value);
+        }
+        
+        fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => {
+            console.log('📥 Response received:', response.status, response.statusText);
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(result => {
+            console.log('🎯 Response data:', result);
+            if (result.success) {
+                console.log('✅ Success! Showing success message');
+                if (formSuccess) {
+                    formSuccess.innerHTML = '<i class="bi bi-check-circle"></i> ' + result.message;
+                    formSuccess.style.display = 'block';
+                }
+                
+                // Close modal and reload page after short delay
+                setTimeout(() => {
+                    console.log('🔄 Closing modal and reloading page');
+                    closeRoomModal();
+                    window.location.reload();
+                }, 1500);
+            } else {
+                console.log('❌ Server returned error:', result);
+                if (formErrors) {
+                    var errors = Array.isArray(result.errors) ? result.errors : [result.message || 'An error occurred'];
+                    formErrors.innerHTML = '<i class="bi bi-exclamation-triangle"></i> ' + errors.join('<br>');
+                    formErrors.style.display = 'block';
+                }
+            }
+        })
+        .catch(error => {
+            console.error('💥 Form submission error:', error);
+            if (formErrors) {
+                formErrors.innerHTML = '<i class="bi bi-exclamation-triangle"></i> An error occurred while saving. Please try again.';
+                formErrors.style.display = 'block';
+            }
+        })
+        .finally(() => {
+            console.log('🔄 Resetting form state');
+            submitBtn.disabled = false;
+            if (spinner) {
+                spinner.style.display = 'none';
+            }
+        });
+        
+        return false;
     }
     function BookRoom(roomId) {
         fetch('/Rooms/BookRoom?roomId=' + roomId, {

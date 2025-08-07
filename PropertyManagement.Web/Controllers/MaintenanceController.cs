@@ -1,326 +1,458 @@
 using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using PropertyManagement.Domain.Entities;
-using PropertyManagement.Infrastructure.Repositories;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using PropertyManagement.Application.DTOs;
+using PropertyManagement.Application.Services;
 using PropertyManagement.Web.Controllers;
 using PropertyManagement.Web.ViewModels;
-using System.Linq;
 using System.Security.Claims;
-using System.Threading.Tasks;
 
 [Authorize]
 public class MaintenanceController : BaseController
 {
-  private readonly IGenericRepository<MaintenanceRequest> _maintenanceRepository;
-  private readonly IGenericRepository<Room> _roomRepository;
-  private readonly IGenericRepository<Tenant> _tenantRepository;
-  private readonly IMapper _mapper;
+    private readonly IMaintenanceRequestApplicationService _maintenanceApplicationService;
+    private readonly IRoomApplicationService _roomApplicationService;
+    private readonly ITenantApplicationService _tenantApplicationService;
+    private readonly IMapper _mapper;
 
-  public MaintenanceController(
-      IGenericRepository<MaintenanceRequest> maintenanceRepository,
-      IGenericRepository<Room> roomRepository,
-      IGenericRepository<Tenant> tenantRepository,
-      IMapper mapper)
-  {
-    _maintenanceRepository = maintenanceRepository;
-    _roomRepository = roomRepository;
-    _tenantRepository = tenantRepository;
-    _mapper = mapper;
-  }
-
-  // GET: /Maintenance
-  public async Task<IActionResult> Index()
-  {
-    if (User.IsInRole("Manager"))
+    public MaintenanceController(
+        IMaintenanceRequestApplicationService maintenanceApplicationService,
+        IRoomApplicationService roomApplicationService,
+        ITenantApplicationService tenantApplicationService,
+        IMapper mapper)
     {
-      ViewBag.IsManager = true;
-      var rooms = await _roomRepository.GetAllAsync();
-      ViewBag.Rooms = _mapper.Map<List<RoomViewModel>>(rooms);
-
-      var requests = await _maintenanceRepository.Query()
-          .Include(r => r.Room)
-          .OrderByDescending(r => r.RequestDate)
-          .ToListAsync();
-      var vm = _mapper.Map<List<MaintenanceRequestViewModel>>(requests);
-      return View(vm);
-    }
-    else if (User.IsInRole("Tenant"))
-    {
-      ViewBag.IsManager = false;
-      var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
-      var tenant = await _tenantRepository.Query().FirstOrDefaultAsync(t => t.UserId == userId);
-      if (tenant == null)
-      {
-        SetErrorMessage("Tenant record not found.");
-        return View(Enumerable.Empty<MaintenanceRequestViewModel>());
-      }
-      var requests = await _maintenanceRepository.Query()
-          .Where(r => r.TenantId == tenant.TenantId.ToString())
-          .Include(r => r.Room)
-          .OrderByDescending(r => r.RequestDate)
-          .ToListAsync();
-      var vm = _mapper.Map<List<MaintenanceRequestViewModel>>(requests);
-      return View(vm);
-    }
-    else
-    {
-      return Forbid();
-    }
-  }
-
-  // GET: /Maintenance/SubmitTenantRequest
-  [Authorize(Roles = "Tenant")]
-  public async Task<IActionResult> SubmitTenantRequest()
-  {
-    var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
-    var tenant = await _tenantRepository.Query().Include(t => t.Room).FirstOrDefaultAsync(t => t.UserId == userId);
-    if (tenant == null)
-    {
-      SetErrorMessage("Tenant record not found.");
-      return RedirectToAction("Index");
+        _maintenanceApplicationService = maintenanceApplicationService;
+        _roomApplicationService = roomApplicationService;
+        _tenantApplicationService = tenantApplicationService;
+        _mapper = mapper;
     }
 
-    var model = new MaintenanceRequestViewModel
+    // GET: /Maintenance
+    public async Task<IActionResult> Index()
     {
-      RoomId = tenant.RoomId,
-      TenantId = tenant.TenantId.ToString()
-    };
-
-    ViewBag.RoomNumber = tenant.Room?.Number;
-    return View(model);
-  }
-
-  // POST: /Maintenance/SubmitTenantRequest
-  [HttpPost]
-  [Authorize(Roles = "Tenant")]
-  public async Task<IActionResult> SubmitTenantRequest(MaintenanceRequestViewModel model)
-  {
-    var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
-    var tenant = await _tenantRepository.Query().FirstOrDefaultAsync(t => t.UserId == userId);
-    if (tenant == null)
-    {
-      SetErrorMessage("Tenant record not found.");
-      return RedirectToAction("Index");
-    }
-
-    if (!ModelState.IsValid)
-    {
-      var room = await _roomRepository.GetByIdAsync(tenant.RoomId);
-      ViewBag.RoomNumber = room?.Number;
-      return View(model);
-    }
-
-    model.TenantId = tenant.TenantId.ToString();
-    model.RoomId = tenant.RoomId;
-    model.Status = "Pending";
-    model.RequestDate = DateTime.UtcNow;
-    model.CompletedDate = null;
-    model.AssignedTo = "Manager";
-
-    var entity = _mapper.Map<MaintenanceRequest>(model);
-    await _maintenanceRepository.AddAsync(entity);
-
-    // Set room status to "Under Maintenance"
-    var roomToUpdate = await _roomRepository.GetByIdAsync(model.RoomId);
-    if (roomToUpdate != null)
-    {
-      roomToUpdate.Status = "Under Maintenance";
-      await _roomRepository.UpdateAsync(roomToUpdate);
-    }
-
-    TempData["Success"] = $"Your maintenance request has been submitted. Reference Number: {entity.MaintenanceRequestId}";
-    return RedirectToAction(nameof(Index));
-  }
-
-  // MANAGER ACTIONS
-
-  [Authorize(Roles = "Manager")]
-  public async Task<IActionResult> Create()
-  {
-    var rooms = await _roomRepository.GetAllAsync();
-    ViewBag.Rooms = _mapper.Map<List<RoomViewModel>>(rooms);
-    return View(new MaintenanceRequestViewModel());
-  }
-
-  // GET: /Maintenance/RequestModal (for AJAX/modal)
-  [HttpGet]
-  [Authorize(Roles = "Manager")]
-  public async Task<IActionResult> RequestModal(int? id = null)
-  {
-    MaintenanceRequestViewModel model;
-    if (id.HasValue && id.Value > 0)
-    {
-      var entity = await _maintenanceRepository.GetByIdAsync(id.Value);
-      model = entity != null ? _mapper.Map<MaintenanceRequestViewModel>(entity) : new MaintenanceRequestViewModel();
-    }
-    else
-    {
-      model = new MaintenanceRequestViewModel();
-    }
-    var rooms = await _roomRepository.GetAllAsync();
-    ViewBag.Rooms = _mapper.Map<List<RoomViewModel>>(rooms);
-    return PartialView("_RequestModal", model);
-  }
-
-  // POST: /Maintenance/CreateOrEdit
-  [HttpPost]
-  [Authorize(Roles = "Manager")]
-  public async Task<IActionResult> CreateOrEdit(MaintenanceRequestViewModel request)
-  {
-    var tenant = await _tenantRepository.Query().FirstOrDefaultAsync(t => t.RoomId == request.RoomId);
-    if (tenant != null)
-    {
-      request.TenantId = tenant.TenantId.ToString();
-    }
-    else
-    {
-      SetErrorMessage("No tenant found for the selected room.");
-      var rooms = await _roomRepository.GetAllAsync();
-      ViewBag.Rooms = _mapper.Map<List<RoomViewModel>>(rooms);
-      var requests = await _maintenanceRepository.Query().Include(r => r.Room).ToListAsync();
-      var vm = _mapper.Map<List<MaintenanceRequestViewModel>>(requests);
-      return View("Index", vm);
-    }
-
-    if (request.MaintenanceRequestId == 0)
-    {
-      request.RequestDate = DateTime.UtcNow;
-      request.CompletedDate = null;
-      var entity = _mapper.Map<MaintenanceRequest>(request);
-      await _maintenanceRepository.AddAsync(entity);
-
-      // Set room status to "Under Maintenance"
-      var room = await _roomRepository.GetByIdAsync(request.RoomId);
-      if (room != null)
-      {
-        room.Status = "Under Maintenance";
-        await _roomRepository.UpdateAsync(room);
-      }
-
-      SetSuccessMessage("Maintenance request created successfully.");
-    }
-    else
-    {
-      var existing = await _maintenanceRepository.GetByIdAsync(request.MaintenanceRequestId);
-      if (existing == null)
-      {
-        SetErrorMessage("Maintenance request not found.");
-        return NotFound();
-      }
-
-      _mapper.Map(request, existing);
-
-      if (existing.Status == "Completed" && existing.CompletedDate == null)
-      {
-        existing.CompletedDate = DateTime.UtcNow;
-      }
-      else if (existing.Status != "Completed")
-      {
-        existing.CompletedDate = null;
-      }
-
-      await _maintenanceRepository.UpdateAsync(existing);
-      SetSuccessMessage("Maintenance request updated successfully.");
-    }
-    return RedirectToAction(nameof(Index));
-  }
-
-  [HttpPost]
-  [Authorize(Roles = "Manager")]
-  public async Task<IActionResult> Complete(int id)
-  {
-    var request = await _maintenanceRepository.GetByIdAsync(id);
-    if (request == null)
-    {
-      SetErrorMessage("Request not found.");
-      return NotFound();
-    }
-
-    request.Status = "Completed";
-    request.CompletedDate = DateTime.Now;
-    await _maintenanceRepository.UpdateAsync(request);
-    SetSuccessMessage("Maintenance request marked as completed.");
-    return RedirectToAction(nameof(Index));
-  }
-
-  // GET: /Maintenance/GetRequest/5
-  [Authorize(Roles = "Manager")]
-  public async Task<IActionResult> GetRequest(int id)
-  {
-    var request = await _maintenanceRepository.GetByIdAsync(id);
-    if (request == null) return NotFound();
-    var vm = _mapper.Map<MaintenanceRequestViewModel>(request);
-    return Json(vm);
-  }
-
-  // POST: /Maintenance/Delete/5
-  [HttpPost]
-  [Authorize(Roles = "Manager")]
-  public async Task<IActionResult> Delete(int id)
-  {
-    var request = await _maintenanceRepository.Query()
-        .Include(r => r.Room)
-        .FirstOrDefaultAsync(r => r.MaintenanceRequestId == id);
-
-    if (request == null)
-    {
-      SetErrorMessage("Maintenance request not found.");
-      return NotFound();
-    }
-
-    var room = request.Room;
-
-    await _maintenanceRepository.DeleteAsync(request);
-
-    if (room != null)
-    {
-      // Check if there are any remaining maintenance requests for this room
-      var hasOtherRequests = await _maintenanceRepository.Query()
-          .AnyAsync(r => r.RoomId == room.RoomId);
-
-      if (!hasOtherRequests)
-      {
-        // Load tenants for the room
-        await _roomRepository.Query().Where(r => r.RoomId == room.RoomId).SelectMany(r => r.Tenants).LoadAsync();
-
-        if (room.Tenants != null && room.Tenants.Any())
+        if (User.IsInRole("Manager"))
         {
-          room.Status = "Occupied";
+            ViewBag.IsManager = true;
+            
+            var result = await _maintenanceApplicationService.GetAllMaintenanceRequestsAsync();
+            if (!result.IsSuccess)
+            {
+                SetErrorMessage(result.ErrorMessage);
+                return View(new List<MaintenanceRequestViewModel>());
+            }
+
+            var maintenanceVms = _mapper.Map<List<MaintenanceRequestViewModel>>(result.Data);
+            
+            // Set sidebar counts
+            await SetSidebarCountsAsync();
+            
+            return View(maintenanceVms);
+        }
+        else if (User.IsInRole("Tenant"))
+        {
+            ViewBag.IsManager = false;
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            
+            var tenantResult = await _tenantApplicationService.GetTenantByUserIdAsync(userId);
+            if (!tenantResult.IsSuccess)
+            {
+                SetErrorMessage("Tenant record not found.");
+                return View(new List<MaintenanceRequestViewModel>());
+            }
+
+            var requestsResult = await _maintenanceApplicationService.GetAllMaintenanceRequestsAsync();
+            if (!requestsResult.IsSuccess)
+            {
+                SetErrorMessage(requestsResult.ErrorMessage);
+                return View(new List<MaintenanceRequestViewModel>());
+            }
+
+            // Filter requests for this tenant
+            var tenantRequests = requestsResult.Data.Where(r => r.TenantId == tenantResult.Data.TenantId.ToString());
+            var maintenanceVms = _mapper.Map<List<MaintenanceRequestViewModel>>(tenantRequests);
+            return View(maintenanceVms);
         }
         else
         {
-          room.Status = "Available";
+            return Forbid();
         }
-        await _roomRepository.UpdateAsync(room);
-      }
     }
 
-    SetSuccessMessage("Maintenance request deleted and room status updated if applicable.");
-    return RedirectToAction("Index");
-  }
+    [HttpGet]
+    public async Task<IActionResult> MaintenanceRequestForm(int? id)
+    {
+        // Load only rooms that have tenants assigned (for maintenance requests)
+        var roomsResult = await _roomApplicationService.GetAllRoomsAsync();
+        var tenantsResult = await _tenantApplicationService.GetAllTenantsAsync();
+        var roomList = new List<SelectListItem>();
+        
+        if (roomsResult.IsSuccess && tenantsResult.IsSuccess)
+        {
+            // Get list of room IDs that have tenants
+            var roomsWithTenants = tenantsResult.Data.Select(t => t.RoomId).ToHashSet();
+            
+            // Filter rooms to only include those with tenants
+            roomList = roomsResult.Data
+                .Where(r => roomsWithTenants.Contains(r.RoomId))
+                .Select(r => new SelectListItem
+                {
+                    Value = r.RoomId.ToString(),
+                    Text = $"Room {r.Number} ({r.Type})"
+                }).ToList();
+        }
 
-  // GET: /Maintenance/History/roomId
-  [Authorize(Roles = "Manager")]
-  public async Task<IActionResult> History(int roomId)
-  {
-    var history = await _maintenanceRepository.Query()
-        .Where(r => r.RoomId == roomId)
-        .Include(r => r.Room)
-        .ToListAsync();
-    var vm = _mapper.Map<List<MaintenanceRequestViewModel>>(history);
-    return View(vm);
-  }
+        MaintenanceRequestFormViewModel maintenanceVm;
 
-  // GET: /Maintenance/DeleteModal
-  public IActionResult DeleteModal(int id)
-  {
-    var request = _maintenanceRepository.GetByIdAsync(id).Result;
-    if (request == null)
-      return NotFound();
+        if (id.HasValue)
+        {
+            // Editing existing maintenance request
+            var result = await _maintenanceApplicationService.GetMaintenanceRequestByIdAsync(id.Value);
+            if (!result.IsSuccess)
+            {
+                SetErrorMessage(result.ErrorMessage);
+                return PartialView("_MaintenanceRequestForm", new MaintenanceRequestFormViewModel 
+                { 
+                    RoomOptions = roomList
+                });
+            }
+            
+            maintenanceVm = _mapper.Map<MaintenanceRequestFormViewModel>(result.Data);
+        }
+        else
+        {
+            // Creating new maintenance request
+            maintenanceVm = new MaintenanceRequestFormViewModel
+            {
+                RequestDate = DateTime.Today,
+                Status = "Pending",
+                AssignedTo = "Manager"
+            };
+        }
+        
+        maintenanceVm.RoomOptions = roomList;
 
-    var vm = _mapper.Map<MaintenanceRequestViewModel>(request);
-    return PartialView("_DeleteModal", vm);
-  }
+        return PartialView("_MaintenanceRequestForm", maintenanceVm);
+    }
+
+    // GET: /Maintenance/SubmitTenantRequest
+    [Authorize(Roles = "Tenant")]
+    public async Task<IActionResult> SubmitTenantRequest()
+    {
+        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+        var tenantResult = await _tenantApplicationService.GetTenantByUserIdAsync(userId);
+        if (!tenantResult.IsSuccess)
+        {
+            SetErrorMessage("Tenant record not found.");
+            return RedirectToAction("Index");
+        }
+
+        var model = new MaintenanceRequestViewModel
+        {
+            RoomId = tenantResult.Data.RoomId,
+            TenantId = tenantResult.Data.TenantId.ToString()
+        };
+
+        ViewBag.RoomNumber = tenantResult.Data.Room?.Number;
+        return View(model);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CreateOrEdit(MaintenanceRequestFormViewModel maintenanceVm)
+    {
+        bool isAjax = Request.Headers["X-Requested-With"] == "XMLHttpRequest";
+        
+        // Add only rooms with tenants for dropdown in case of validation error
+        var roomsResult = await _roomApplicationService.GetAllRoomsAsync();
+        var tenantsResult = await _tenantApplicationService.GetAllTenantsAsync();
+        var roomList = new List<SelectListItem>();
+        
+        if (roomsResult.IsSuccess && tenantsResult.IsSuccess)
+        {
+            // Get list of room IDs that have tenants
+            var roomsWithTenants = tenantsResult.Data.Select(t => t.RoomId).ToHashSet();
+            
+            // Filter rooms to only include those with tenants
+            roomList = roomsResult.Data
+                .Where(r => roomsWithTenants.Contains(r.RoomId))
+                .Select(r => new SelectListItem
+                {
+                    Value = r.RoomId.ToString(),
+                    Text = $"Room {r.Number} ({r.Type})"
+                }).ToList();
+        }
+        
+        maintenanceVm.RoomOptions = roomList;
+
+        if (!ModelState.IsValid)
+        {
+            if (isAjax)
+            {
+                var errors = ModelState.Values
+                    .SelectMany(v => v.Errors)
+                    .Select(e => e.ErrorMessage)
+                    .ToList();
+                return Json(new { success = false, message = "Please correct the form errors.", errors = errors });
+            }
+            
+            SetErrorMessage("Please correct the errors in the form.");
+            return PartialView("_MaintenanceRequestForm", maintenanceVm);
+        }
+
+        try
+        {
+            if (maintenanceVm.MaintenanceRequestId == 0)
+            {
+                // Create new maintenance request
+                // Need to find the tenant for the selected room
+                string tenantId = maintenanceVm.TenantId;
+                
+                if (string.IsNullOrEmpty(tenantId))
+                {
+                    // Look up tenant by room
+                    var tenantLookupResult = await _tenantApplicationService.GetAllTenantsAsync();
+                    if (tenantLookupResult.IsSuccess)
+                    {
+                        var tenant = tenantLookupResult.Data.FirstOrDefault(t => t.RoomId == maintenanceVm.RoomId);
+                        if (tenant != null)
+                        {
+                            tenantId = tenant.TenantId.ToString();
+                        }
+                        else
+                        {
+                            // No tenant found for this room - use placeholder
+                            tenantId = "0"; // This indicates no specific tenant
+                        }
+                    }
+                    else
+                    {
+                        tenantId = "0"; // Fallback value
+                    }
+                }
+                
+                var createDto = new CreateMaintenanceRequestDto
+                {
+                    RoomId = maintenanceVm.RoomId,
+                    TenantId = tenantId,
+                    Description = maintenanceVm.Description,
+                    AssignedTo = maintenanceVm.AssignedTo ?? "Manager"
+                };
+
+                var result = await _maintenanceApplicationService.CreateMaintenanceRequestAsync(createDto);
+                if (!result.IsSuccess)
+                {
+                    if (isAjax)
+                    {
+                        return Json(new { success = false, message = result.ErrorMessage });
+                    }
+                    
+                    SetErrorMessage($"Failed to create maintenance request: {result.ErrorMessage}");
+                    return PartialView("_MaintenanceRequestForm", maintenanceVm);
+                }
+
+                if (isAjax)
+                {
+                    return Json(new { success = true, message = "Maintenance request created successfully!" });
+                }
+
+                SetSuccessMessage("Maintenance request created successfully!");
+            }
+            else
+            {
+                // Update existing maintenance request
+                var updateDto = new UpdateMaintenanceRequestDto
+                {
+                    Description = maintenanceVm.Description,
+                    Status = maintenanceVm.Status,
+                    AssignedTo = maintenanceVm.AssignedTo,
+                    CompletedDate = maintenanceVm.Status == "Completed" ? DateTime.UtcNow : null
+                };
+
+                var result = await _maintenanceApplicationService.UpdateMaintenanceRequestAsync(maintenanceVm.MaintenanceRequestId, updateDto);
+                if (!result.IsSuccess)
+                {
+                    if (isAjax)
+                    {
+                        return Json(new { success = false, message = result.ErrorMessage });
+                    }
+                    
+                    SetErrorMessage($"Failed to update maintenance request: {result.ErrorMessage}");
+                    return PartialView("_MaintenanceRequestForm", maintenanceVm);
+                }
+
+                if (isAjax)
+                {
+                    return Json(new { success = true, message = "Maintenance request updated successfully!" });
+                }
+
+                SetSuccessMessage("Maintenance request updated successfully!");
+            }
+        }
+        catch (Exception ex)
+        {
+            if (isAjax)
+            {
+                return Json(new { success = false, message = $"An unexpected error occurred: {ex.Message}" });
+            }
+            
+            SetErrorMessage($"An unexpected error occurred: {ex.Message}");
+            return PartialView("_MaintenanceRequestForm", maintenanceVm);
+        }
+
+        return RedirectToAction(nameof(Index));
+    }
+
+    // POST: /Maintenance/SubmitTenantRequest
+    [HttpPost]
+    [Authorize(Roles = "Tenant")]
+    public async Task<IActionResult> SubmitTenantRequest(MaintenanceRequestViewModel model)
+    {
+        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+        var tenantResult = await _tenantApplicationService.GetTenantByUserIdAsync(userId);
+        if (!tenantResult.IsSuccess)
+        {
+            SetErrorMessage("Tenant record not found.");
+            return RedirectToAction("Index");
+        }
+
+        if (!ModelState.IsValid)
+        {
+            ViewBag.RoomNumber = tenantResult.Data.Room?.Number;
+            return View(model);
+        }
+
+        var createDto = new CreateMaintenanceRequestDto
+        {
+            RoomId = tenantResult.Data.RoomId,
+            TenantId = tenantResult.Data.TenantId.ToString(),
+            Description = model.Description,
+            AssignedTo = "Manager"
+        };
+
+        var result = await _maintenanceApplicationService.CreateMaintenanceRequestAsync(createDto);
+        if (!result.IsSuccess)
+        {
+            SetErrorMessage($"Failed to submit maintenance request: {result.ErrorMessage}");
+            ViewBag.RoomNumber = tenantResult.Data.Room?.Number;
+            return View(model);
+        }
+
+        TempData["Success"] = $"Your maintenance request has been submitted. Reference Number: {result.Data.MaintenanceRequestId}";
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetTenantForRoom(int roomId)
+    {
+        try
+        {
+            var tenantsResult = await _tenantApplicationService.GetAllTenantsAsync();
+            if (tenantsResult.IsSuccess)
+            {
+                var allTenants = tenantsResult.Data.ToList();
+                var tenant = allTenants.FirstOrDefault(t => t.RoomId == roomId);
+                
+                // Log for debugging
+                Console.WriteLine($"[GetTenantForRoom] RoomId: {roomId}");
+                Console.WriteLine($"[GetTenantForRoom] Total tenants: {allTenants.Count}");
+                Console.WriteLine($"[GetTenantForRoom] Tenants with rooms: {string.Join(", ", allTenants.Select(t => $"Tenant {t.TenantId} -> Room {t.RoomId}"))}");
+                
+                if (tenant != null)
+                {
+                    Console.WriteLine($"[GetTenantForRoom] Found tenant: {tenant.FullName} (ID: {tenant.TenantId}) for Room {roomId}");
+                    return Json(new { 
+                        success = true, 
+                        tenantId = tenant.TenantId.ToString(), 
+                        tenantName = tenant.FullName,
+                        roomId = tenant.RoomId
+                    });
+                }
+                else
+                {
+                    Console.WriteLine($"[GetTenantForRoom] No tenant found for Room {roomId}");
+                    return Json(new { 
+                        success = true, 
+                        tenantId = "0", 
+                        tenantName = "No tenant assigned",
+                        roomId = roomId,
+                        availableTenants = allTenants.Select(t => new { t.TenantId, t.FullName, t.RoomId })
+                    });
+                }
+            }
+            
+            return Json(new { success = false, message = "Failed to retrieve tenant information", error = tenantsResult.ErrorMessage });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[GetTenantForRoom] Exception: {ex.Message}");
+            return Json(new { success = false, message = ex.Message });
+        }
+    }
+
+
+    // POST: /Maintenance/Delete/5
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Authorize(Roles = "Manager")]
+    public async Task<IActionResult> Delete(int id)
+    {
+        // Get maintenance request details before deletion for better messaging
+        var maintenanceResult = await _maintenanceApplicationService.GetMaintenanceRequestByIdAsync(id);
+        string maintenanceInfo = "Maintenance request";
+        
+        if (maintenanceResult.IsSuccess && maintenanceResult.Data != null)
+        {
+            var roomNumber = maintenanceResult.Data.Room?.Number ?? "Unknown";
+            maintenanceInfo = $"Maintenance request for Room {roomNumber} (#{maintenanceResult.Data.MaintenanceRequestId})";
+        }
+
+        var result = await _maintenanceApplicationService.DeleteMaintenanceRequestAsync(id);
+        if (!result.IsSuccess)
+        {
+            SetErrorMessage($"Failed to delete maintenance request: {result.ErrorMessage}");
+        }
+        else
+        {
+            SetSuccessMessage($"{maintenanceInfo} deleted successfully.");
+        }
+
+        return RedirectToAction("Index");
+    }
+
+    private async Task SetSidebarCountsAsync()
+    {
+        try
+        {
+            // Get tenant count
+            var tenantsResult = await _tenantApplicationService.GetAllTenantsAsync();
+            var tenantCount = tenantsResult.IsSuccess && tenantsResult.Data != null ? 
+                tenantsResult.Data.Count() : 0;
+
+            // Get room count
+            var roomsResult = await _roomApplicationService.GetAllRoomsAsync();
+            var roomCount = roomsResult.IsSuccess && roomsResult.Data != null ? 
+                roomsResult.Data.Count() : 0;
+
+            // Get pending maintenance count
+            var maintenanceResult = await _maintenanceApplicationService.GetAllMaintenanceRequestsAsync();
+            var pendingCount = 0;
+            if (maintenanceResult.IsSuccess && maintenanceResult.Data != null)
+            {
+                pendingCount = maintenanceResult.Data.Count(m => 
+                    m.Status == "Pending" || m.Status == "In Progress");
+            }
+
+            // Set the ViewBag values
+            ViewBag.TenantCount = tenantCount;
+            ViewBag.RoomCount = roomCount;
+            ViewBag.PendingMaintenanceCount = pendingCount;
+        }
+        catch
+        {
+            ViewBag.TenantCount = 0;
+            ViewBag.RoomCount = 0;
+            ViewBag.PendingMaintenanceCount = 0;
+        }
+    }
 }

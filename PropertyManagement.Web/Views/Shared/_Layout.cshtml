@@ -39,7 +39,7 @@
   <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet" />
   @await RenderSectionAsync("Styles", required: false)
 </head>
-<body>
+<body class="@(User.Identity.IsAuthenticated ? "has-sidebar" : "")">
   @using System.Security.Claims
   <div class="d-flex min-vh-100 flex-column">
     <!-- Professional Header -->

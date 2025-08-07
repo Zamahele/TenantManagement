@@ -273,6 +273,11 @@ header {
   border-right: 1px solid var(--border-primary);
   transition: all var(--duration-300) var(--ease-out);
   z-index: 1020;
+  position: fixed;
+  top: 72px;
+  left: 0;
+  height: calc(100vh - 72px);
+  overflow-y: auto;
 }
 
 .sidebar-content {
@@ -411,6 +416,13 @@ header {
   flex-grow: 1;
   background: var(--bg-secondary);
   min-height: 100vh;
+  margin-left: 280px;
+  transition: margin-left var(--duration-300) var(--ease-out);
+}
+
+/* When no sidebar is present (unauthenticated users) */
+body:not(.has-sidebar) .main-content {
+  margin-left: 0;
 }
 
 .main-content-inner {
@@ -451,8 +463,8 @@ header {
   .sidebar {
     position: fixed;
     left: -280px;
-    top: 0;
-    height: 100vh;
+    top: 72px;
+    height: calc(100vh - 72px);
     z-index: 1040;
     transition: left var(--duration-300) var(--ease-out);
   }
@@ -463,6 +475,7 @@ header {
   
   .main-content {
     width: 100%;
+    margin-left: 0;
   }
   
   .main-content-inner {

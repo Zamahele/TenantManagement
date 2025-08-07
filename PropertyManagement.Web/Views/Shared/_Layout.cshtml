@@ -20,7 +20,6 @@
   <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
   <link rel="stylesheet" href="~/css/layout-professional.css" asp-append-version="true" />
   <link rel="stylesheet" href="~/css/pages.css" asp-append-version="true" />
-  <link rel="stylesheet" href="~/css/dark-mode.css" asp-append-version="true" />
   <link rel="stylesheet" href="~/css/micro-interactions.css" asp-append-version="true" />
   <link rel="stylesheet" href="~/css/mobile-optimized.css" asp-append-version="true" />
   <link rel="stylesheet" href="~/css/accessibility.css" asp-append-version="true" />
@@ -203,7 +202,7 @@
                        asp-controller="Rooms" asp-action="Index">
                       <i class="bi bi-door-closed"></i>
                       <span class="nav-text">Rooms</span>
-                      <span class="nav-badge">@(ViewBag.RoomCount ?? 0)</span>
+                      <span class="nav-badge" title="Room Count: @(ViewBag.RoomCount ?? 0)">@(ViewBag.RoomCount ?? 0)</span>
                     </a>
                   </li>
                   <li class="nav-item">
@@ -213,7 +212,7 @@
                       <span class="nav-text">Maintenance</span>
                       @if ((ViewBag.PendingMaintenanceCount ?? 0) > 0)
                       {
-                        <span class="nav-badge badge-warning">@ViewBag.PendingMaintenanceCount</span>
+                        <span class="nav-badge badge-warning" title="Pending Maintenance: @ViewBag.PendingMaintenanceCount">@ViewBag.PendingMaintenanceCount</span>
                       }
                     </a>
                   </li>
@@ -272,7 +271,7 @@
                          asp-controller="Tenants" asp-action="Index">
                         <i class="bi bi-people"></i>
                         <span class="nav-text">Tenants</span>
-                        <span class="nav-badge">@(ViewBag.TenantCount ?? 0)</span>
+                        <span class="nav-badge" title="Tenant Count: @(ViewBag.TenantCount ?? 0)">@(ViewBag.TenantCount ?? 0)</span>
                       </a>
                     </li>
                   </ul>
@@ -316,10 +315,6 @@
   <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
   <!-- DataTables Global Initialization -->
   <script src="~/js/datatables-init.js" asp-append-version="true"></script>
-  <!-- DataTables Debug Script (temporary) -->
-  <script src="~/js/datatables-debug.js" asp-append-version="true"></script>
-  <!-- Dark Mode Theme System -->
-  <script src="~/js/dark-mode.js" asp-append-version="true"></script>
   <!-- Mobile Interactions and Touch Enhancements -->
   <script src="~/js/mobile-interactions.js" asp-append-version="true"></script>
   <!-- Accessibility Enhancements -->

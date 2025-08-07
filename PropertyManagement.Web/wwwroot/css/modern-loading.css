@@ -1,0 +1,170 @@
+/* =============================================================================
+   MODERN LOADING ANIMATIONS
+   =============================================================================
+   
+   Professional loading spinners and animations for the Property Management
+   System. These styles provide modern, engaging loading experiences.
+   
+   ============================================================================= */
+
+/* Modern Multi-Ring Loading Animation */
+.modern-loader {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    margin: 0 auto;
+}
+
+.loader-rings {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+.ring {
+    position: absolute;
+    border: 2px solid transparent;
+    border-top: 2px solid;
+    border-radius: 50%;
+    animation: modernSpin 2s linear infinite;
+}
+
+.ring-1 {
+    width: 80px;
+    height: 80px;
+    border-top-color: var(--color-primary-500, #3b82f6);
+    animation-duration: 2s;
+}
+
+.ring-2 {
+    width: 60px;
+    height: 60px;
+    top: 10px;
+    left: 10px;
+    border-top-color: var(--color-primary-400, #60a5fa);
+    animation-duration: 1.5s;
+    animation-direction: reverse;
+}
+
+.ring-3 {
+    width: 40px;
+    height: 40px;
+    top: 20px;
+    left: 20px;
+    border-top-color: var(--color-primary-300, #93c5fd);
+    animation-duration: 1s;
+}
+
+.loader-center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 1.5rem;
+}
+
+/* Modern Progress Bar */
+.progress-modern {
+    width: 300px;
+    height: 4px;
+    background: #e5e7eb;
+    border-radius: 2px;
+    margin: 0 auto;
+    overflow: hidden;
+}
+
+.progress-bar-modern {
+    height: 100%;
+    background: linear-gradient(90deg, 
+        var(--color-primary-500, #3b82f6) 0%, 
+        var(--color-primary-400, #60a5fa) 50%, 
+        var(--color-primary-500, #3b82f6) 100%);
+    background-size: 200% 100%;
+    animation: progressShine 2s ease-in-out infinite;
+    width: 70%;
+}
+
+/* Processing Steps */
+.processing-steps {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    margin-top: 1rem;
+}
+
+.step-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: #6b7280;
+}
+
+.step-item.active {
+    color: #059669;
+}
+
+.step-item.loading {
+    color: var(--color-primary-600, #2563eb);
+}
+
+.step-loader {
+    width: 16px;
+    height: 16px;
+    border: 2px solid #e5e7eb;
+    border-top: 2px solid var(--color-primary-500, #3b82f6);
+    border-radius: 50%;
+    animation: modernSpin 0.8s linear infinite;
+}
+
+/* Keyframe Animations */
+@keyframes modernSpin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes progressShine {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+/* Responsive Adjustments */
+@media (max-width: 576px) {
+    .processing-steps {
+        gap: 1rem;
+        font-size: 0.75rem;
+    }
+    
+    .progress-modern {
+        width: 250px;
+    }
+    
+    .modern-loader {
+        width: 60px;
+        height: 60px;
+    }
+    
+    .ring-1 {
+        width: 60px;
+        height: 60px;
+    }
+    
+    .ring-2 {
+        width: 45px;
+        height: 45px;
+        top: 7.5px;
+        left: 7.5px;
+    }
+    
+    .ring-3 {
+        width: 30px;
+        height: 30px;
+        top: 15px;
+        left: 15px;
+    }
+    
+    .loader-center {
+        font-size: 1.2rem;
+    }
+}

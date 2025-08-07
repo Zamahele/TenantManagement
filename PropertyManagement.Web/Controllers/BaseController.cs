@@ -8,5 +8,12 @@ namespace PropertyManagement.Web.Controllers
         protected void SetErrorMessage(string message) => TempData["Error"] = message;
         protected void SetInfoMessage(string message) => TempData["Info"] = message;
         protected void SetWarningMessage(string message) => TempData["Warning"] = message;
+
+        protected void SetSidebarCounts(int? tenantCount = null, int? roomCount = null, int? pendingMaintenanceCount = null)
+        {
+            if (tenantCount.HasValue) ViewBag.TenantCount = tenantCount.Value;
+            if (roomCount.HasValue) ViewBag.RoomCount = roomCount.Value;
+            if (pendingMaintenanceCount.HasValue) ViewBag.PendingMaintenanceCount = pendingMaintenanceCount.Value;
+        }
     }
 }

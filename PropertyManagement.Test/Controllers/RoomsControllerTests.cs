@@ -39,7 +39,14 @@ public class RoomsControllerTests
         Mock<IBookingRequestApplicationService> mockBookingService,
         IMapper mapper)
     {
-        var controller = new RoomsController(mockRoomService.Object, mockBookingService.Object, mapper);
+        var mockTenantService = new Mock<ITenantApplicationService>();
+        var mockMaintenanceService = new Mock<IMaintenanceRequestApplicationService>();
+        var controller = new RoomsController(
+            mockRoomService.Object, 
+            mockBookingService.Object, 
+            mockTenantService.Object,
+            mockMaintenanceService.Object,
+            mapper);
         
         var tempData = new TempDataDictionary(
             new DefaultHttpContext(),

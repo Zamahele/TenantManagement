@@ -17,15 +17,18 @@ public class TenantsController : BaseController
 {
   private readonly ITenantApplicationService _tenantApplicationService;
   private readonly IRoomApplicationService _roomApplicationService;
+  private readonly IMaintenanceRequestApplicationService _maintenanceApplicationService;
   private readonly IMapper _mapper;
 
   public TenantsController(
       ITenantApplicationService tenantApplicationService,
       IRoomApplicationService roomApplicationService,
+      IMaintenanceRequestApplicationService maintenanceApplicationService,
       IMapper mapper)
   {
     _tenantApplicationService = tenantApplicationService;
     _roomApplicationService = roomApplicationService;
+    _maintenanceApplicationService = maintenanceApplicationService;
     _mapper = mapper;
   }
 
@@ -41,6 +44,10 @@ public class TenantsController : BaseController
     }
 
     var tenantVms = _mapper.Map<List<TenantViewModel>>(result.Data);
+    
+    // Set sidebar counts
+    await SetSidebarCountsAsync();
+    
     return View(tenantVms);
   }
 
@@ -206,6 +213,8 @@ public class TenantsController : BaseController
   [Authorize(Roles = "Manager")]
   public async Task<IActionResult> CreateOrEdit(TenantViewModel tenantVm, string username, string plainTextPassword)
   {
+    bool isAjax = Request.Headers["X-Requested-With"] == "XMLHttpRequest";
+    
     // Add available rooms for dropdown in case of validation error
     var roomsResult = await _roomApplicationService.GetAvailableRoomsAsync();
     if (roomsResult.IsSuccess)
@@ -226,6 +235,15 @@ public class TenantsController : BaseController
 
     if (!ModelState.IsValid)
     {
+      if (isAjax)
+      {
+        var errors = ModelState.Values
+            .SelectMany(v => v.Errors)
+            .Select(e => e.ErrorMessage)
+            .ToList();
+        return Json(new { success = false, message = "Please correct the form errors.", errors = errors });
+      }
+      
       SetErrorMessage("Please correct the errors in the form.");
       return PartialView("_TenantForm", tenantVm);
     }
@@ -249,6 +267,11 @@ public class TenantsController : BaseController
         var result = await _tenantApplicationService.CreateTenantAsync(createTenantDto);
         if (!result.IsSuccess)
         {
+          if (isAjax)
+          {
+            return Json(new { success = false, message = result.ErrorMessage });
+          }
+          
           // Provide specific error messages based on the failure reason
           if (result.ErrorMessage.Contains("not available") || result.ErrorMessage.Contains("already has a tenant"))
           {
@@ -278,6 +301,11 @@ public class TenantsController : BaseController
           return PartialView("_TenantForm", tenantVm);
         }
 
+        if (isAjax)
+        {
+          return Json(new { success = true, message = $"Tenant '{tenantVm.FullName}' created successfully!" });
+        }
+
         SetSuccessMessage($"✅ Tenant '{tenantVm.FullName}' created successfully and assigned to room!");
       }
       else
@@ -297,6 +325,11 @@ public class TenantsController : BaseController
         var result = await _tenantApplicationService.UpdateTenantAsync(tenantVm.TenantId, updateTenantDto);
         if (!result.IsSuccess)
         {
+          if (isAjax)
+          {
+            return Json(new { success = false, message = result.ErrorMessage });
+          }
+          
           // Provide specific error messages based on the failure reason
           if (result.ErrorMessage.Contains("not available") || result.ErrorMessage.Contains("already has a tenant"))
           {
@@ -326,11 +359,21 @@ public class TenantsController : BaseController
           return PartialView("_TenantForm", tenantVm);
         }
 
+        if (isAjax)
+        {
+          return Json(new { success = true, message = $"Tenant '{tenantVm.FullName}' updated successfully!" });
+        }
+
         SetSuccessMessage($"✅ Tenant '{tenantVm.FullName}' updated successfully with room assignment!");
       }
     }
     catch (Exception ex)
     {
+      if (isAjax)
+      {
+        return Json(new { success = false, message = $"An unexpected error occurred: {ex.Message}" });
+      }
+      
       SetErrorMessage($"❌ An unexpected error occurred: {ex.Message}");
       return PartialView("_TenantForm", tenantVm);
     }
@@ -566,5 +609,41 @@ public class TenantsController : BaseController
     if (User.Identity?.IsAuthenticated == true)
       return int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
     return 0;
+  }
+
+  private async Task SetSidebarCountsAsync()
+  {
+    try
+    {
+      // Get tenant count
+      var tenantsResult = await _tenantApplicationService.GetAllTenantsAsync();
+      var tenantCount = tenantsResult.IsSuccess && tenantsResult.Data != null ? 
+        tenantsResult.Data.Count() : 0;
+
+      // Get room count
+      var roomsResult = await _roomApplicationService.GetAllRoomsAsync();
+      var roomCount = roomsResult.IsSuccess && roomsResult.Data != null ? 
+        roomsResult.Data.Count() : 0;
+
+      // Get pending maintenance count
+      var maintenanceResult = await _maintenanceApplicationService.GetAllMaintenanceRequestsAsync();
+      var pendingCount = 0;
+      if (maintenanceResult.IsSuccess && maintenanceResult.Data != null)
+      {
+        pendingCount = maintenanceResult.Data.Count(m => 
+          m.Status == "Pending" || m.Status == "In Progress");
+      }
+
+      // Set the ViewBag values
+      ViewBag.TenantCount = tenantCount;
+      ViewBag.RoomCount = roomCount;
+      ViewBag.PendingMaintenanceCount = pendingCount;
+    }
+    catch
+    {
+      ViewBag.TenantCount = 0;
+      ViewBag.RoomCount = 0;
+      ViewBag.PendingMaintenanceCount = 0;
+    }
   }
 }

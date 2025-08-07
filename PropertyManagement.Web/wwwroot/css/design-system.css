@@ -250,32 +250,7 @@
   --modal-backdrop: rgba(0, 0, 0, 0.5);
 }
 
-/* =============================================================================
-   DARK THEME OVERRIDES
-   ============================================================================= */
 
-[data-theme="dark"] {
-  /* Background Colors */
-  --bg-primary: var(--color-gray-900);
-  --bg-secondary: var(--color-gray-800);
-  --bg-tertiary: var(--color-gray-700);
-  --bg-surface: var(--color-gray-800);
-
-  /* Text Colors */
-  --text-primary: var(--color-gray-100);
-  --text-secondary: var(--color-gray-300);
-  --text-tertiary: var(--color-gray-400);
-  --text-placeholder: var(--color-gray-500);
-
-  /* Border Colors */
-  --border-primary: var(--color-gray-700);
-  --border-secondary: var(--color-gray-600);
-
-  /* Cards */
-  --card-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.3);
-  --card-shadow-hover: 0 10px 15px -3px rgb(0 0 0 / 0.3), 0 4px 6px -4px rgb(0 0 0 / 0.3);
-  --card-border: 1px solid var(--color-gray-700);
-}
 
 /* =============================================================================
    UTILITY CLASSES

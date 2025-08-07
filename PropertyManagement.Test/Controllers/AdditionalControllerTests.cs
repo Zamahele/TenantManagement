@@ -99,7 +99,12 @@ namespace PropertyManagement.Test.Controllers
                 .ReturnsAsync(ServiceResult<TenantDto>.Success(updatedTenant));
 
             var mockRoomService = new Mock<IRoomApplicationService>();
-            var controller = new TenantsController(mockTenantService.Object, mockRoomService.Object, mapper);
+            var mockMaintenanceService = new Mock<IMaintenanceRequestApplicationService>();
+            var controller = new TenantsController(
+                mockTenantService.Object, 
+                mockRoomService.Object, 
+                mockMaintenanceService.Object,
+                mapper);
             SetupControllerContext(controller, GetUser("Manager"));
 
             var updatedTenantVm = new TenantViewModel
@@ -141,7 +146,14 @@ namespace PropertyManagement.Test.Controllers
             mockRoomService.Setup(s => s.CreateRoomAsync(It.IsAny<CreateRoomDto>()))
                 .ReturnsAsync(ServiceResult<RoomDto>.Success(createdRoom));
 
-            var controller = new RoomsController(mockRoomService.Object, mockBookingService.Object, mapper);
+            var mockTenantService = new Mock<ITenantApplicationService>();
+            var mockMaintenanceService = new Mock<IMaintenanceRequestApplicationService>();
+            var controller = new RoomsController(
+                mockRoomService.Object, 
+                mockBookingService.Object, 
+                mockTenantService.Object,
+                mockMaintenanceService.Object,
+                mapper);
             SetupControllerContext(controller, GetUser("Manager"));
 
             var roomModel = new RoomFormViewModel

@@ -528,17 +528,48 @@
   text-align: center;
 }
 
+/* Modern Multi-Ring Loading Spinner */
 .loading-spinner {
+  position: relative;
+  width: 60px;
+  height: 60px;
+  margin: 0 auto var(--space-4);
+}
+
+.loading-spinner::before,
+.loading-spinner::after {
+  content: '';
+  position: absolute;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  animation: modernSpinners 1.5s linear infinite;
+}
+
+.loading-spinner::before {
+  width: 60px;
+  height: 60px;
+  border-top-color: var(--color-primary-500);
+  border-bottom-color: var(--color-primary-500);
+  animation-duration: 1.5s;
+}
+
+.loading-spinner::after {
   width: 40px;
   height: 40px;
-  border: 3px solid var(--bg-tertiary);
-  border-top: 3px solid var(--color-primary-500);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin-bottom: var(--space-4);
+  top: 10px;
+  left: 10px;
+  border-left-color: var(--color-primary-300);
+  border-right-color: var(--color-primary-300);
+  animation-duration: 1s;
+  animation-direction: reverse;
 }
 
 @keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes modernSpinners {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }

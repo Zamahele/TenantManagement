@@ -88,28 +88,28 @@
                       : "Invalid")
           </td>
           <td>@payment.PaymentYear</td>
-          <td>
-            <div class="dropdown">
-              <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="actionsDropdown-@payment.PaymentId" data-bs-toggle="dropdown" aria-expanded="false">
-                Actions
+          <td class="text-center">
+            <div class="btn-group" role="group" aria-label="Payment actions">
+              <button type="button" 
+                      class="btn btn-sm btn-outline-primary" 
+                      data-bs-toggle="modal" 
+                      data-bs-target="#editModal-@payment.PaymentId" 
+                      title="Edit Payment">
+                <i class="bi bi-pencil-square"></i>
               </button>
-              <ul class="dropdown-menu" aria-labelledby="actionsDropdown-@payment.PaymentId">
-                <li>
-                  <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#editModal-@payment.PaymentId">
-                    <i class="bi bi-pencil-square"></i> Edit
-                  </a>
-                </li>
-                <li>
-                  <a class="dropdown-item text-danger" href="#" data-bs-toggle="modal" data-bs-target="#deleteModal-@payment.PaymentId">
-                    <i class="bi bi-trash"></i> Delete
-                  </a>
-                </li>
-                <li>
-                  <a class="dropdown-item" href="javascript:void(0);" onclick="showReceiptModal(@payment.PaymentId)">
-                    <i class="bi bi-receipt"></i> View Receipt
-                  </a>
-                </li>
-              </ul>
+              <button type="button" 
+                      class="btn btn-sm btn-outline-info" 
+                      onclick="showReceiptModal(@payment.PaymentId)" 
+                      title="View Receipt">
+                <i class="bi bi-receipt-cutoff"></i>
+              </button>
+              <button type="button" 
+                      class="btn btn-sm btn-outline-danger" 
+                      data-bs-toggle="modal" 
+                      data-bs-target="#deleteModal-@payment.PaymentId" 
+                      title="Delete Payment">
+                <i class="bi bi-trash-fill"></i>
+              </button>
             </div>
           </td>
         </tr>

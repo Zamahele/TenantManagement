@@ -17,7 +17,7 @@
       <a asp-controller="DigitalLease" asp-action="Templates" class="btn btn-outline-light me-2">
         <i class="bi bi-file-earmark-code"></i> Templates
       </a>
-      <button class="btn btn-light text-primary fw-bold" onclick="loadLeaseAgreementModal(); return false;">
+      <button class="btn btn-light text-primary fw-bold" onclick="openLeaseModal(); return false;">
         <i class="bi bi-plus-circle"></i> Add Agreement
       </button>
     </div>
@@ -40,7 +40,7 @@
           <th>Rent Due</th>
           <th>Status</th>
           <th>Document</th>
-          <th style="width: 150px;">Actions</th>
+          <th style="width: 200px;">Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -95,86 +95,78 @@
                 <span class="text-muted">No document</span>
               }
             </td>
-            <td>
-              <div class="dropdown">
-                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                  Actions
+            <td class="text-center">
+              <div class="btn-group" role="group" aria-label="Lease agreement actions">
+                <!-- Edit Action (Always available) -->
+                <button type="button" 
+                        class="btn btn-sm btn-outline-primary" 
+                        onclick="openLeaseModal(@agreement.LeaseAgreementId); return false;" 
+                        title="Edit Details">
+                  <i class="bi bi-pencil-square"></i>
                 </button>
-                <ul class="dropdown-menu">
-                  <!-- Traditional Actions -->
-                  <li>
-                    <a class="dropdown-item" href="#" onclick="loadLeaseAgreementModal(@agreement.LeaseAgreementId); return false;">
-                      <i class="bi bi-pencil text-primary"></i> Edit Details
-                    </a>
-                  </li>
-                  <li><hr class="dropdown-divider"></li>
-                  
-                  <!-- Digital Lease Actions -->
-                  @if (status < LeaseAgreement.LeaseStatus.Generated)
-                  {
-                    <li>
-                      <form asp-controller="DigitalLease" asp-action="GenerateLease" method="post" style="display: inline;" 
-                            onsubmit="showGenerateSpinner(this, @agreement.LeaseAgreementId); return true;">
-                        <input type="hidden" name="leaseAgreementId" value="@agreement.LeaseAgreementId" />
-                        <button type="submit" class="dropdown-item" id="generate-btn-@agreement.LeaseAgreementId">
-                          <i class="bi bi-gear text-info"></i> Generate Digital Lease
-                        </button>
-                      </form>
-                    </li>
-                  }
-                  
-                  @if (status == LeaseAgreement.LeaseStatus.Generated)
-                  {
-                    <li>
-                      <form asp-controller="DigitalLease" asp-action="SendToTenant" method="post" style="display: inline;">
-                        <input type="hidden" name="leaseAgreementId" value="@agreement.LeaseAgreementId" />
-                        <button type="submit" class="dropdown-item">
-                          <i class="bi bi-send text-warning"></i> Send to Tenant
-                        </button>
-                      </form>
-                    </li>
-                  }
-                  
-                  @if (hasDigitalContent)
-                  {
-                    <li>
-                      <a class="dropdown-item" href="@Url.Action("PreviewLease", "DigitalLease", new { leaseAgreementId = agreement.LeaseAgreementId })" target="_blank">
-                        <i class="bi bi-eye text-info"></i> Preview Digital Lease
-                      </a>
-                    </li>
-                  }
-                  
-                  @if (isDigitallySigned)
-                  {
-                    <li>
-                      <a class="dropdown-item" href="@agreement.GeneratedPdfPath" target="_blank">
-                        <i class="bi bi-download text-success"></i> Download Signed PDF
-                      </a>
-                    </li>
-                  }
-                  
-                  <li><hr class="dropdown-divider"></li>
-                  <li>
-                    <a class="dropdown-item text-danger" href="#" data-bs-toggle="modal" data-bs-target="#deleteModal-@agreement.LeaseAgreementId">
-                      <i class="bi bi-trash"></i> Delete
-                    </a>
-                  </li>
-                </ul>
+                
+                <!-- Generate/Send/Preview Digital Lease -->
+                @if (status < LeaseAgreement.LeaseStatus.Generated)
+                {
+                  <form asp-controller="DigitalLease" asp-action="GenerateLease" method="post" class="m-0 d-inline-block" 
+                        onsubmit="showGenerateSpinner(this, @agreement.LeaseAgreementId); return true;">
+                    <input type="hidden" name="leaseAgreementId" value="@agreement.LeaseAgreementId" />
+                    <button type="submit" 
+                            class="btn btn-sm btn-outline-info" 
+                            id="generate-btn-@agreement.LeaseAgreementId" 
+                            title="Generate Digital Lease">
+                      <i class="bi bi-gear-fill"></i>
+                    </button>
+                  </form>
+                }
+                else if (status == LeaseAgreement.LeaseStatus.Generated)
+                {
+                  <form asp-controller="DigitalLease" asp-action="SendToTenant" method="post" class="m-0 d-inline-block">
+                    <input type="hidden" name="leaseAgreementId" value="@agreement.LeaseAgreementId" />
+                    <button type="submit" 
+                            class="btn btn-sm btn-outline-warning" 
+                            title="Send to Tenant">
+                      <i class="bi bi-send-fill"></i>
+                    </button>
+                  </form>
+                }
+                
+                @if (hasDigitalContent)
+                {
+                  <a class="btn btn-sm btn-outline-info" 
+                     href="@Url.Action("PreviewLease", "DigitalLease", new { leaseAgreementId = agreement.LeaseAgreementId })" 
+                     target="_blank" 
+                     title="Preview Digital Lease">
+                    <i class="bi bi-eye-fill"></i>
+                  </a>
+                }
+                
+                @if (isDigitallySigned)
+                {
+                  <a class="btn btn-sm btn-outline-success" 
+                     href="@agreement.GeneratedPdfPath" 
+                     target="_blank" 
+                     title="Download Signed PDF">
+                    <i class="bi bi-download"></i>
+                  </a>
+                }
+                
+                <!-- Delete Action -->
+                @await Html.PartialAsync(
+                    "_DeleteModal",
+                    new PropertyManagement.Web.ViewModels.DeleteModalViewModel {
+                        ModalId = $"deleteModal-{agreement.LeaseAgreementId}",
+                        ModalLabelId = $"deleteModalLabel-{agreement.LeaseAgreementId}",
+                        Title = "Delete Lease",
+                        Body = $"Are you sure you want to delete Lease for <strong>{agreement.Tenant?.FullName}</strong>?",
+                        Action = "Delete",
+                        Controller = "LeaseAgreements",
+                        EntityId = agreement.LeaseAgreementId
+                    }
+                )
               </div>
             </td>
           </tr>
-          @await Html.PartialAsync(
-              "_DeleteModal",
-              new PropertyManagement.Web.ViewModels.DeleteModalViewModel {
-                  ModalId = $"deleteModal-{agreement.LeaseAgreementId}",
-                  ModalLabelId = $"deleteModalLabel-{agreement.LeaseAgreementId}",
-                  Title = "Delete Lease",
-                  Body = $"Are you sure you want to delete Lease for <strong>{agreement.Tenant?.FullName}</strong>? This action cannot be undone.",
-                  Action = "Delete",
-                  Controller = "LeaseAgreements",
-                  EntityId = agreement.LeaseAgreementId
-              }
-          )
         }
       </tbody>
       </table>
@@ -182,25 +174,224 @@
   </div>
 </div>
 
-<div id="leaseAgreementModalContainer"></div>
+<!-- Custom Lease Agreement Modal -->
+<div id="leaseModal" class="custom-modal" style="display: none;">
+  <div class="custom-modal-backdrop" onclick="closeLeaseModal()"></div>
+  <div class="custom-modal-content">
+    <div class="custom-modal-header">
+      <h4 class="custom-modal-title">
+        <i class="bi bi-file-earmark-text me-2"></i>
+        <span id="modalTitle">Add Lease Agreement</span>
+      </h4>
+      <button type="button" class="custom-modal-close" onclick="closeLeaseModal()">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+    <div class="custom-modal-body" id="modalBody">
+      <div class="loading-state">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-2 text-muted">Loading form...</p>
+      </div>
+    </div>
+  </div>
+</div>
 
-<!-- Lease Generation Loading Modal -->
+<!-- Modern Lease Generation Loading Modal -->
 <div class="modal fade" id="leaseGenerationModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-body text-center py-4">
-                <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
-                    <span class="visually-hidden">Loading...</span>
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-body text-center py-5">
+                <!-- Modern Loading Animation -->
+                <div class="modern-loader mb-4">
+                    <div class="loader-rings">
+                        <div class="ring ring-1"></div>
+                        <div class="ring ring-2"></div>
+                        <div class="ring ring-3"></div>
+                        <div class="loader-center">
+                            <i class="bi bi-file-earmark-text text-primary"></i>
+                        </div>
+                    </div>
                 </div>
-                <h4 class="mt-3 mb-2">Generating Digital Lease</h4>
-                <p class="text-muted mb-0">Please wait while we create your professional lease document...</p>
-                <div class="progress mt-3" style="height: 6px;">
-                    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%"></div>
+                
+                <h4 class="text-primary fw-bold mb-2">Generating Digital Lease</h4>
+                <p class="text-muted mb-4">Please wait while we create your professional lease document...</p>
+                
+                <!-- Modern Progress Indicator -->
+                <div class="progress-modern mb-3">
+                    <div class="progress-bar-modern"></div>
+                </div>
+                
+                <!-- Processing Steps -->
+                <div class="processing-steps">
+                    <div class="step-item active">
+                        <i class="bi bi-check-circle-fill text-success"></i>
+                        <span>Processing lease data</span>
+                    </div>
+                    <div class="step-item active">
+                        <i class="bi bi-check-circle-fill text-success"></i>
+                        <span>Generating document</span>
+                    </div>
+                    <div class="step-item loading">
+                        <div class="step-loader"></div>
+                        <span>Creating PDF</span>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+@section Styles {
+  <link rel="stylesheet" href="~/css/modern-loading.css" asp-append-version="true" />
+  <style>
+    /* Custom Modal Styles */
+    .custom-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1050;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn 0.3s ease-out;
+    }
+    
+    .custom-modal-backdrop {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(2px);
+    }
+    
+    .custom-modal-content {
+      position: relative;
+      background: white;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 900px;
+      max-height: 90vh;
+      overflow: hidden;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+      animation: slideIn 0.3s ease-out;
+      z-index: 1051;
+    }
+    
+    .custom-modal-header {
+      background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
+      color: white;
+      padding: 1.5rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: none;
+    }
+    
+    .custom-modal-title {
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+    }
+    
+    .custom-modal-close {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 1.2rem;
+      cursor: pointer;
+      padding: 0.5rem;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+    
+    .custom-modal-close:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+      transform: rotate(90deg);
+    }
+    
+    .custom-modal-body {
+      padding: 2rem;
+      max-height: calc(90vh - 120px);
+      overflow-y: auto;
+    }
+    
+    .loading-state {
+      text-align: center;
+      padding: 3rem 0;
+    }
+    
+    /* Animations */
+    @@keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    
+    @@keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-30px) scale(0.95);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+    
+    /* Responsive Design */
+    @@media (max-width: 768px) {
+      .custom-modal-content {
+        width: 95%;
+        max-height: 95vh;
+        margin: 1rem;
+      }
+      
+      .custom-modal-header {
+        padding: 1rem 1.5rem;
+      }
+      
+      .custom-modal-body {
+        padding: 1.5rem;
+        max-height: calc(95vh - 100px);
+      }
+      
+      .custom-modal-title {
+        font-size: 1.1rem;
+      }
+    }
+    
+    /* Smooth scrollbar for modal body */
+    .custom-modal-body::-webkit-scrollbar {
+      width: 6px;
+    }
+    
+    .custom-modal-body::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 3px;
+    }
+    
+    .custom-modal-body::-webkit-scrollbar-thumb {
+      background: #c1c1c1;
+      border-radius: 3px;
+    }
+    
+    .custom-modal-body::-webkit-scrollbar-thumb:hover {
+      background: #a1a1a1;
+    }
+  </style>
+}
 
 @section Scripts {
   <script>
@@ -221,15 +412,328 @@
         return true;
     }
 
-    function loadLeaseAgreementModal(id) {
-        fetch('/LeaseAgreements/LeaseAgreementModal' + (id ? ('?id=' + id) : ''))
-            .then(response => response.text())
-            .then(html => {
-                document.getElementById('leaseAgreementModalContainer').innerHTML = html;
-                var modal = new bootstrap.Modal(document.getElementById('agreementModal'));
-                modal.show();
-            });
+    function openLeaseModal(id) {
+        var modal = document.getElementById('leaseModal');
+        var modalTitle = document.getElementById('modalTitle');
+        var modalBody = document.getElementById('modalBody');
+        
+        // Set title
+        modalTitle.textContent = id ? 'Edit Lease Agreement' : 'Add Lease Agreement';
+        
+        // Show loading state
+        modalBody.innerHTML = `
+            <div class="loading-state">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2 text-muted">Loading form...</p>
+            </div>
+        `;
+        
+        // Show modal
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        
+        // Load form content
+        fetch('/LeaseAgreements/LeaseAgreementModal' + (id ? ('?id=' + id) : ''), {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.text();
+        })
+        .then(html => {
+            console.log('📥 Modal content loaded successfully');
+            modalBody.innerHTML = html;
+            
+            // Initialize form functionality
+            if (typeof initializeLeaseForm === 'function') {
+                console.log('🎉 Calling initializeLeaseForm after modal load');
+                initializeLeaseForm();
+            } else {
+                console.error('❌ initializeLeaseForm function not available');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading lease agreement form:', error);
+            modalBody.innerHTML = `
+                <div class="alert alert-danger">
+                    <h5><i class="bi bi-exclamation-triangle me-2"></i>Error Loading Form</h5>
+                    <p class="mb-2">There was an error loading the lease agreement form. Please check your connection and try again.</p>
+                    <button type="button" class="btn btn-primary btn-sm" onclick="openLeaseModal(${id || 'null'})">
+                        <i class="bi bi-arrow-clockwise"></i> Retry
+                    </button>
+                </div>
+            `;
+        });
     }
+    
+    function closeLeaseModal() {
+        var modal = document.getElementById('leaseModal');
+        modal.style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }
+    
+    // Close modal when clicking outside or pressing Escape
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeLeaseModal();
+        }
+    });
+    
+    // Lease form functions (need to be global for dynamic content)
+    function updateRentDayDisplay(value) {
+        document.getElementById('expectedRentDayValue').textContent = value;
+        updateLeaseSummary();
+    }
+    
+    function updateRoomFields() {
+        var tenantSelect = document.getElementById('TenantId');
+        var selectedOption = tenantSelect.options[tenantSelect.selectedIndex];
+        
+        if (selectedOption && selectedOption.value) {
+            var roomId = selectedOption.getAttribute('data-room-id');
+            var roomNumber = selectedOption.getAttribute('data-room-number');
+            
+            document.getElementById('RoomId').value = roomId || '';
+            document.getElementById('RoomDisplay').value = roomNumber ? 'Room ' + roomNumber : '';
+        } else {
+            document.getElementById('RoomId').value = '';
+            document.getElementById('RoomDisplay').value = '';
+        }
+        
+        updateLeaseSummary();
+    }
+    
+    function updateLeaseSummary() {
+        var startDate = document.getElementById('StartDate')?.value;
+        var endDate = document.getElementById('EndDate')?.value;
+        var rentAmount = parseFloat(document.getElementById('RentAmount')?.value) || 0;
+        var rentDay = parseInt(document.getElementById('ExpectedRentDay')?.value) || 1;
+        
+        var durationSpan = document.getElementById('leaseDuration');
+        var valueSpan = document.getElementById('leaseValue');
+        var nextPaymentSpan = document.getElementById('nextPayment');
+        
+        if (!durationSpan || !valueSpan || !nextPaymentSpan) return;
+        
+        if (startDate && endDate) {
+            var start = new Date(startDate);
+            var end = new Date(endDate);
+            var timeDiff = end.getTime() - start.getTime();
+            var daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
+            var monthsDiff = Math.ceil(daysDiff / 30);
+            
+            durationSpan.textContent = monthsDiff > 0 ? monthsDiff + ' months (' + daysDiff + ' days)' : daysDiff + ' days';
+            
+            var totalValue = rentAmount * monthsDiff;
+            valueSpan.textContent = 'R ' + totalValue.toLocaleString('en-ZA', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            
+            // Calculate next payment date
+            var today = new Date();
+            var nextPayment = new Date(today.getFullYear(), today.getMonth(), rentDay);
+            if (nextPayment <= today) {
+                nextPayment.setMonth(nextPayment.getMonth() + 1);
+            }
+            nextPaymentSpan.textContent = nextPayment.toLocaleDateString('en-ZA');
+        } else {
+            durationSpan.textContent = '--';
+            valueSpan.textContent = '--';
+            nextPaymentSpan.textContent = '--';
+        }
+    }
+    
+    function submitLeaseForm(event) {
+        console.log('🚀 submitLeaseForm called!', event);
+        event.preventDefault();
+        
+        var form = document.getElementById('agreementForm');
+        var submitBtn = document.getElementById('saveAgreementBtn');
+        var spinner = submitBtn ? submitBtn.querySelector('.spinner-border') : null;
+        var formErrors = document.getElementById('formErrors');
+        var formSuccess = document.getElementById('formSuccess');
+        
+        console.log('🔍 Form elements found:', {
+            form: !!form,
+            submitBtn: !!submitBtn,
+            spinner: !!spinner,
+            formErrors: !!formErrors,
+            formSuccess: !!formSuccess
+        });
+        
+        if (!form) {
+            console.error('❌ Form not found!');
+            return false;
+        }
+        
+        if (!submitBtn) {
+            console.error('❌ Submit button not found!');
+            return false;
+        }
+        
+        // Validate form
+        console.log('🔎 Checking form validity...');
+        if (!form.checkValidity()) {
+            console.log('⚠️ Form is invalid, showing validation errors');
+            form.classList.add('was-validated');
+            return false;
+        }
+        
+        console.log('✅ Form is valid, proceeding with submission');
+        
+        // Show loading state
+        console.log('⏳ Showing loading state');
+        submitBtn.disabled = true;
+        if (spinner) {
+            spinner.style.display = 'inline-block';
+        }
+        
+        // Hide previous messages
+        if (formErrors) formErrors.style.display = 'none';
+        if (formSuccess) formSuccess.style.display = 'none';
+        
+        // Submit form via AJAX
+        var formData = new FormData(form);
+        console.log('📤 Submitting form to:', form.action);
+        console.log('📦 Form data entries:');
+        for (let [key, value] of formData.entries()) {
+            console.log(`  ${key}:`, value);
+        }
+        
+        fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => {
+            console.log('📥 Response received:', response.status, response.statusText);
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(result => {
+            console.log('🎯 Response data:', result);
+            if (result.success) {
+                console.log('✅ Success! Showing success message');
+                if (formSuccess) {
+                    formSuccess.innerHTML = '<i class="bi bi-check-circle"></i> ' + result.message;
+                    formSuccess.style.display = 'block';
+                }
+                
+                // Close modal and reload page after short delay
+                setTimeout(() => {
+                    console.log('🔄 Closing modal and reloading page');
+                    closeLeaseModal();
+                    window.location.reload();
+                }, 1500);
+            } else {
+                console.log('❌ Server returned error:', result);
+                if (formErrors) {
+                    var errors = Array.isArray(result.errors) ? result.errors : [result.message || 'An error occurred'];
+                    formErrors.innerHTML = '<i class="bi bi-exclamation-triangle"></i> ' + errors.join('<br>');
+                    formErrors.style.display = 'block';
+                }
+            }
+        })
+        .catch(error => {
+            console.error('💥 Form submission error:', error);
+            if (formErrors) {
+                formErrors.innerHTML = '<i class="bi bi-exclamation-triangle"></i> An error occurred while saving. Please try again.';
+                formErrors.style.display = 'block';
+            }
+        })
+        .finally(() => {
+            console.log('🔄 Resetting form state');
+            submitBtn.disabled = false;
+            if (spinner) {
+                spinner.style.display = 'none';
+            }
+        });
+        
+        return false;
+    }
+    
+    function initializeLeaseForm() {
+        console.log('🎉 initializeLeaseForm called!');
+        
+        // Initialize form field event listeners
+        ['StartDate', 'EndDate', 'RentAmount'].forEach(function(fieldId) {
+            var field = document.getElementById(fieldId);
+            if (field) {
+                console.log(`✅ Found field: ${fieldId}`);
+                field.addEventListener('change', updateLeaseSummary);
+                field.addEventListener('input', updateLeaseSummary);
+            } else {
+                console.log(`❌ Field not found: ${fieldId}`);
+            }
+        });
+        
+        // Initialize rent day slider
+        var rentDayField = document.getElementById('ExpectedRentDay');
+        if (rentDayField) {
+            rentDayField.addEventListener('input', function() {
+                updateRentDayDisplay(this.value);
+            });
+        }
+        
+        // Add form submit event listener
+        var form = document.getElementById('agreementForm');
+        if (form) {
+            console.log('🔗 Binding submit event to form');
+            form.addEventListener('submit', function(event) {
+                console.log('📝 Form submit event triggered');
+                event.preventDefault();
+                submitLeaseForm(event);
+            });
+        } else {
+            console.error('❌ Could not find form to bind submit event');
+        }
+        
+        // Also add click event directly to submit button as backup
+        var submitBtn = document.getElementById('saveAgreementBtn');
+        if (submitBtn) {
+            console.log('🔗 Binding click event to submit button as backup');
+            submitBtn.addEventListener('click', function(event) {
+                console.log('🖱️ Submit button clicked directly');
+                event.preventDefault();
+                submitLeaseForm(event);
+            });
+        } else {
+            console.error('❌ Could not find submit button to bind click event');
+        }
+        
+        // Add real-time validation
+        const inputs = document.querySelectorAll('#agreementForm input, #agreementForm select');
+        inputs.forEach(input => {
+            input.addEventListener('blur', function() {
+                if (this.checkValidity()) {
+                    this.classList.remove('is-invalid');
+                    this.classList.add('is-valid');
+                } else {
+                    this.classList.remove('is-valid');
+                    this.classList.add('is-invalid');
+                }
+            });
+        });
+        
+        // Initial calculation
+        setTimeout(updateLeaseSummary, 100);
+    }
+    
+    // Make functions globally available
+    window.updateRentDayDisplay = updateRentDayDisplay;
+    window.updateLeaseSummary = updateLeaseSummary;
+    window.updateRoomFields = updateRoomFields;
+    window.submitLeaseForm = submitLeaseForm;
+    window.initializeLeaseForm = initializeLeaseForm;
 
     function updateRoomFields() {
       var tenantSelect = document.getElementById('TenantId');

@@ -115,25 +115,25 @@
                 }
               </td>
               <td class="text-center">
-                <div class="btn-group" role="group">
+                <div class="btn-group" role="group" aria-label="Tenant actions">
                   <button type="button" 
                           class="btn btn-sm btn-outline-primary" 
-                          onclick="openEditModal(@tenant.TenantId)"
+                          onclick="openEditModal(@tenant.TenantId)" 
                           title="Edit Tenant">
-                    <i class="bi bi-pencil"></i>
+                    <i class="bi bi-pencil-square"></i>
                   </button>
                   <button type="button" 
                           class="btn btn-sm btn-outline-warning" 
-                          onclick="openChangePasswordModal(@tenant.TenantId)"
+                          onclick="openChangePasswordModal(@tenant.TenantId)" 
                           title="Change Password">
-                    <i class="bi bi-key"></i>
+                    <i class="bi bi-key-fill"></i>
                   </button>
                   <button type="button" 
                           class="btn btn-sm btn-outline-danger" 
                           data-bs-toggle="modal" 
-                          data-bs-target="#deleteModal-@tenant.TenantId"
+                          data-bs-target="#deleteModal-@tenant.TenantId" 
                           title="Delete Tenant">
-                    <i class="bi bi-trash"></i>
+                    <i class="bi bi-trash-fill"></i>
                   </button>
                 </div>
                 <form id="deleteForm-@tenant.TenantId" asp-action="Delete" method="post" style="display:none;">
@@ -183,17 +183,19 @@
 <div class="modal fade" id="tenantModal" tabindex="-1" aria-labelledby="tenantModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-lg">
     <div class="modal-content">
-      <div class="modal-header">
-        <h1 class="modal-title">
-          <i class="bi bi-person-plus"></i>
+      <div class="modal-header border-bottom">
+        <h1 class="modal-title h5 fw-bold">
+          <i class="bi bi-person-plus text-primary"></i>
           <span id="tenantModalLabel">Add Tenant</span>
         </h1>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <div class="modal-body" id="tenantModalBody">
-        <div class="loading-container">
-          <div class="loading-spinner"></div>
-          <div class="loading-text">Loading form...</div>
+      <div class="modal-body p-4" id="tenantModalBody">
+        <div class="text-center py-4">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+          <div class="mt-2">Loading form...</div>
         </div>
       </div>
     </div>
@@ -228,41 +230,156 @@
     }
 
     function openAddModal() {
-        fetch('/Tenants/TenantForm', {
-            method: 'GET',
-            headers: {
-                'RequestVerificationToken': getAntiForgeryToken()
-            }
-        })
-            .then(response => response.text())
-            .then(html => {
-                document.getElementById('tenantModalLabel').innerText = 'Add Tenant';
-                document.getElementById('tenantModalBody').innerHTML = html;
-                var modal = new bootstrap.Modal(document.getElementById('tenantModal'));
-                modal.show();
-            })
-            .catch(error => {
-                console.error('Error loading form:', error);
-            });
+        loadTenantForm('Add Tenant', '/Tenants/TenantForm');
     }
     
     function openEditModal(id) {
-        fetch('/Tenants/TenantForm?id=' + id, {
+        loadTenantForm('Edit Tenant', '/Tenants/TenantForm?id=' + id);
+    }
+
+    function loadTenantForm(title, url) {
+        // Show loading state
+        document.getElementById('tenantModalLabel').innerText = title;
+        document.getElementById('tenantModalBody').innerHTML = `
+            <div class="text-center py-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <div class="mt-2">Loading form...</div>
+            </div>`;
+        
+        // Show modal
+        var modal = new bootstrap.Modal(document.getElementById('tenantModal'));
+        modal.show();
+        
+        // Load form content
+        fetch(url, {
             method: 'GET',
             headers: {
-                'RequestVerificationToken': getAntiForgeryToken()
+                'RequestVerificationToken': getAntiForgeryToken(),
+                'X-Requested-With': 'XMLHttpRequest'
             }
         })
-            .then(response => response.text())
-            .then(html => {
-                document.getElementById('tenantModalLabel').innerText = 'Edit Tenant';
-                document.getElementById('tenantModalBody').innerHTML = html;
-                var modal = new bootstrap.Modal(document.getElementById('tenantModal'));
-                modal.show();
-            })
-            .catch(error => {
-                console.error('Error loading form:', error);
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.text();
+        })
+        .then(html => {
+            document.getElementById('tenantModalBody').innerHTML = html;
+            initializeTenantForm();
+        })
+        .catch(error => {
+            console.error('Error loading form:', error);
+            document.getElementById('tenantModalBody').innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle"></i> 
+                    Error loading form. Please try again.
+                </div>`;
+        });
+    }
+
+    function initializeTenantForm() {
+        // Initialize form after it's loaded into modal
+        var contactField = document.getElementById('Contact');
+        var usernameField = document.getElementById('username');
+        var form = document.getElementById('tenantForm');
+        
+        // Sync username with contact number
+        if (contactField && usernameField) {
+            // Set initial value
+            if (contactField.value && !usernameField.value) {
+                usernameField.value = contactField.value;
+            }
+            
+            // Update on input
+            contactField.addEventListener('input', function() {
+                usernameField.value = this.value;
             });
+        }
+        
+        // Handle form submission via AJAX
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                submitTenantForm(form);
+            });
+        }
+        
+        // Enable Bootstrap validation
+        form.classList.add('needs-validation');
+    }
+
+    function submitTenantForm(form) {
+        var submitButton = form.querySelector('button[type="submit"]');
+        var spinner = submitButton.querySelector('.spinner-border');
+        var submitText = submitButton.querySelector('.submit-text');
+        var errorDiv = document.getElementById('formErrors');
+        var successDiv = document.getElementById('formSuccess');
+        
+        // Show loading state
+        submitButton.disabled = true;
+        spinner.style.display = 'inline-block';
+        errorDiv.style.display = 'none';
+        successDiv.style.display = 'none';
+        
+        // Validate form
+        if (!form.checkValidity()) {
+            form.classList.add('was-validated');
+            submitButton.disabled = false;
+            spinner.style.display = 'none';
+            return;
+        }
+        
+        // Submit form
+        var formData = new FormData(form);
+        
+        fetch('/Tenants/CreateOrEdit', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.text().then(text => {
+                    throw new Error(text || 'Server error');
+                });
+            }
+            return response.json();
+        })
+        .then(result => {
+            if (result.success) {
+                // Show success message
+                successDiv.innerHTML = '<i class="bi bi-check-circle"></i> ' + result.message;
+                successDiv.style.display = 'block';
+                
+                // Close modal after short delay
+                setTimeout(() => {
+                    var modal = bootstrap.Modal.getInstance(document.getElementById('tenantModal'));
+                    modal.hide();
+                    
+                    // Refresh the page to show updated data
+                    window.location.reload();
+                }, 1500);
+            } else {
+                // Show error messages
+                var errors = Array.isArray(result.errors) ? result.errors : [result.message || 'An error occurred'];
+                errorDiv.innerHTML = '<i class="bi bi-exclamation-triangle"></i> ' + errors.join('<br>');
+                errorDiv.style.display = 'block';
+            }
+        })
+        .catch(error => {
+            console.error('Form submission error:', error);
+            errorDiv.innerHTML = '<i class="bi bi-exclamation-triangle"></i> An error occurred while saving. Please try again.';
+            errorDiv.style.display = 'block';
+        })
+        .finally(() => {
+            submitButton.disabled = false;
+            spinner.style.display = 'none';
+        });
     }
 
     function openChangePasswordModal(id) {

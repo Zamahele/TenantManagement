@@ -3,106 +3,168 @@
   var rooms = ViewBag.Rooms as List<PropertyManagement.Web.ViewModels.RoomViewModel>;
   bool isEdit = Model?.TenantId > 0;
 }
-<form id="tenantForm" asp-action="CreateOrEdit" method="post" autocomplete="off">
+
+<!-- Form Error Display -->
+<div id="formErrors" class="alert alert-danger" style="display: none;"></div>
+<div id="formSuccess" class="alert alert-success" style="display: none;"></div>
+
+<form id="tenantForm" asp-action="CreateOrEdit" method="post" autocomplete="off" class="needs-validation" novalidate>
+  @Html.AntiForgeryToken()
   <input asp-for="TenantId" type="hidden" />
+  
+    <!-- Left Column -->
+    <div class="col-lg-6">
+      <div class="mb-3">
+        <label asp-for="RoomId" class="form-label fw-semibold">Room Assignment <span class="text-danger">*</span></label>
+        <div class="input-group">
+          <span class="input-group-text">
+            <i class="bi bi-door-closed"></i>
+          </span>
+          <select asp-for="RoomId" class="form-select" required>
+            <option value="">-- Select Room --</option>
+            @if (rooms != null)
+            {
+              foreach (var room in rooms)
+              {
+                <option value="@room.RoomId" selected="@(room.RoomId == Model?.RoomId)">
+                  Room @room.Number (@room.Type)
+                </option>
+              }
+            }
+          </select>
+        </div>
+        <div class="invalid-feedback">Please select a room.</div>
+      </div>
 
-  <div class="mb-3">
-    <label asp-for="RoomId" class="form-label"></label>
-    <select asp-for="RoomId" class="form-select" asp-items="@(new SelectList(rooms, "RoomId", "Number", Model?.RoomId))" required>
-      <option value="">-- Select Room --</option>
-    </select>
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Contact Number <span class="text-danger">*</span></label>
+        <div class="input-group">
+          <span class="input-group-text">
+            <i class="bi bi-telephone"></i>
+          </span>
+          <input type="tel"
+                 class="form-control"
+                 name="Contact"
+                 id="Contact"
+                 value="@Model?.Contact"
+                 placeholder="0821234567"
+                 pattern="^0[6-8][0-9]{8}$"
+                 title="South African mobile number (e.g., 0821234567)"
+                 required />
+        </div>
+        <div class="invalid-feedback">Please enter a valid SA mobile number.</div>
+        <small class="text-muted">South African mobile format (e.g., 0821234567)</small>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Username <span class="text-danger">*</span></label>
+        <div class="input-group">
+          <span class="input-group-text">
+            <i class="bi bi-person"></i>
+          </span>
+          <input type="text"
+                 class="form-control"
+                 name="username"
+                 id="username"
+                 value="@(Model?.User?.Username ?? Model?.Contact)"
+                 readonly
+                 required />
+        </div>
+        <small class="text-muted">Username will be auto-generated from contact number</small>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Password @(!isEdit ? Html.Raw("<span class=\"text-danger\">*</span>") : "")</label>
+        <div class="input-group">
+          <span class="input-group-text">
+            <i class="bi bi-lock"></i>
+          </span>
+          <input type="password"
+                 class="form-control"
+                 name="plainTextPassword"
+                 id="plainTextPassword"
+                 placeholder="@(isEdit ? "Leave blank to keep current password" : "Enter password (minimum 8 characters)")"
+                 minlength="8"
+                 required="@(!isEdit)" />
+        </div>
+        <div class="invalid-feedback">Password must be at least 8 characters long.</div>
+        <small class="text-muted">@(isEdit ? "Leave blank to keep current password" : "Password must be at least 8 characters long")</small>
+      </div>
+    </div>
+
+    <!-- Right Column -->
+    <div class="col-lg-6">
+      <div class="mb-3">
+        <label asp-for="FullName" class="form-label fw-semibold">Full Name <span class="text-danger">*</span></label>
+        <div class="input-group">
+          <span class="input-group-text">
+            <i class="bi bi-person-circle"></i>
+          </span>
+          <input asp-for="FullName" class="form-control" placeholder="John Doe" required />
+        </div>
+        <div class="invalid-feedback">Please enter the tenant's full name.</div>
+      </div>
+
+      <div class="mb-3">
+        <label asp-for="EmergencyContactName" class="form-label fw-semibold">Emergency Contact Name <span class="text-danger">*</span></label>
+        <div class="input-group">
+          <span class="input-group-text">
+            <i class="bi bi-person-exclamation"></i>
+          </span>
+          <input asp-for="EmergencyContactName" class="form-control" placeholder="Jane Doe" required />
+        </div>
+        <div class="invalid-feedback">Please enter emergency contact name.</div>
+      </div>
+
+      <div class="mb-3">
+        <label asp-for="EmergencyContactNumber" class="form-label fw-semibold">Emergency Contact Number <span class="text-danger">*</span></label>
+        <div class="input-group">
+          <span class="input-group-text">
+            <i class="bi bi-telephone-plus"></i>
+          </span>
+          <input asp-for="EmergencyContactNumber" 
+                 class="form-control" 
+                 type="tel"
+                 placeholder="0821234567"
+                 pattern="^0[6-8][0-9]{8}$"
+                 title="South African mobile number (e.g., 0821234567)"
+                 required />
+        </div>
+        <div class="invalid-feedback">Please enter a valid SA mobile number.</div>
+        <small class="text-muted">Emergency contact mobile number</small>
+      </div>
+    </div>
   </div>
 
-  <div class="mb-3">
-    <label class="form-label">Contact</label>
-    <input type="text"
-           class="form-control"
-           name="Contact"
-           id="Contact"
-           value="@Model?.Contact"
-           required
-           oninput="document.getElementById('username').value = this.value;" />
-  </div>
-
-  <div class="mb-3">
-    <label class="form-label">Username</label>
-    <input type="text"
-           class="form-control"
-           name="username"
-           id="username"
-           value="@Model?.Contact"
-           readonly
-           required />
-  </div>
-
-  <div class="mb-3">
-    <label class="form-label">Password</label>
-    <input type="password"
-           class="form-control"
-           name="plainTextPassword"
-           id="plainTextPassword"
-           placeholder="@(isEdit ? "Leave blank to keep current password" : "Enter password (minimum 8 characters)")"
-           required="@(!isEdit)" />
-    <small class="text-muted">@(isEdit ? "Leave blank to keep current password" : "Password must be at least 8 characters long")</small>
-  </div>
-
-  <div class="mb-3">
-    <label asp-for="FullName" class="form-label"></label>
-    <input asp-for="FullName" class="form-control" required />
-  </div>
-
-  <div class="mb-3">
-    <label asp-for="EmergencyContactName" class="form-label"></label>
-    <input asp-for="EmergencyContactName" class="form-control" required />
-  </div>
-
-  <div class="mb-3">
-    <label asp-for="EmergencyContactNumber" class="form-label"></label>
-    <input asp-for="EmergencyContactNumber" class="form-control" required />
-  </div>
-
-  <div class="d-grid mt-3">
-    <button type="submit" class="btn btn-primary">
-      <i class="bi bi-person-plus"></i> Save
-    </button>
-  </div>
 </form>
 
-@section Scripts {
-  <script>
-    // Ensure username is always in sync with contact on page load (for edit)
-    document.addEventListener('DOMContentLoaded', function () {
-      var contact = document.getElementById('Contact');
-      var username = document.getElementById('username');
-      if (contact && username) {
-        username.value = contact.value;
-        contact.addEventListener('input', function () {
-          username.value = contact.value;
-        });
-      }
-      
-      // Password validation
-      var pwd = document.getElementById('plainTextPassword');
-      var isEdit = @(isEdit.ToString().ToLower());
-      
-      if (pwd) {
-        pwd.addEventListener('input', function() {
-          var value = this.value;
-          
-          // For edit mode, allow empty password (keeps current password)
-          if (isEdit && value === '') {
-            this.setCustomValidity('');
-            return;
-          }
-          
-          // For create mode or when password is provided in edit mode, validate length
-          if (value.length > 0 && value.length < 8) {
-            this.setCustomValidity('Password must be at least 8 characters');
-          } else {
-            this.setCustomValidity('');
-          }
-        });
-      }
-    });
-  </script>
-}
+<div class="row mt-4">
+  <div class="col-12">
+    <div class="d-flex justify-content-end gap-2">
+      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+        <i class="bi bi-x-circle"></i> Cancel
+      </button>
+      <button type="submit" class="btn btn-primary" form="tenantForm">
+        <i class="bi bi-person-plus"></i> 
+        <span class="submit-text">@(isEdit ? "Update Tenant" : "Add Tenant")</span>
+        <div class="spinner-border spinner-border-sm ms-2" style="display: none;" role="status" aria-hidden="true"></div>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script type="text/javascript">
+  // Form initialization will be handled by parent page JavaScript
+  document.addEventListener('DOMContentLoaded', function() {
+    if (document.getElementById('tenantForm') && typeof initializeTenantForm === 'function') {
+      initializeTenantForm();
+    }
+  });
+  
+  // Initialize immediately for dynamic content
+  setTimeout(function() {
+    if (document.getElementById('tenantForm') && typeof initializeTenantForm === 'function') {
+      initializeTenantForm();
+    }
+  }, 100);
+</script>

@@ -522,3 +522,10 @@ curl http://localhost:5000/metrics
 # Enable EF logging in appsettings.Development.json:
 # "Microsoft.EntityFrameworkCore.Database.Command": "Information"
 ```
+
+## Command Line Development Shortcuts
+
+### Build and Development Shortcuts
+- **Build command**: `dotnet build` with specific configuration
+- **Export PATH for dotnet**: `export PATH="$PATH:$HOME/.dotnet"`
+- **Build in TenantManagement repo**: `Bash(export PATH="$PATH:$HOME/.dotnet" && cd /mnt/c/Users/zamajasonn/source/repos/TenantManagement && dotnet build)`

@@ -632,8 +632,6 @@ class AccessibilityManager {
        ========================================================================= */
     
     setupKeyboardShortcuts() {
-        this.createKeyboardShortcutsPanel();
-        
         // Global shortcuts
         this.shortcuts = {
             'h': 'Go to homepage',
@@ -643,9 +641,10 @@ class AccessibilityManager {
             'Alt+1': 'Go to tenants',
             'Alt+2': 'Go to rooms', 
             'Alt+3': 'Go to payments',
-            'Alt+4': 'Go to maintenance',
-            'Ctrl+Shift+D': 'Toggle dark mode'
+            'Alt+4': 'Go to maintenance'
         };
+        
+        this.createKeyboardShortcutsPanel();
     }
     
     handleKeyboardShortcuts(e) {

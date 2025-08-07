@@ -70,6 +70,13 @@ function initializeDataTable($table) {
                         $(this).addClass('btn btn-primary btn-sm');
                     }
                 });
+                
+                // Force table overflow after each draw to support dropdown portals
+                $('.dataTables_wrapper, .dataTables_scroll, .dataTables_scrollBody, .table-responsive').css({
+                    'overflow': 'visible !important',
+                    'overflow-x': 'visible !important',
+                    'overflow-y': 'visible !important'
+                });
             }, 50);
         }
     };
@@ -123,3 +130,5 @@ function getColumnDefs($table) {
     
     return columnDefs;
 }
+
+// Dropdown positioning code removed - using simple button groups instead

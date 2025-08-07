@@ -1,4 +1,12 @@
 /* =============================================================================
+   UNIVERSAL BOX-SIZING AND RESET
+   ============================================================================= */
+
+*, ::after, ::before {
+    box-sizing: border-box;
+}
+
+/* =============================================================================
    DATATABLES PROFESSIONAL STYLING
    =============================================================================
    
@@ -307,26 +315,938 @@ table[data-datatable] + .pagination-wrapper {
     }
 }
 
+
 /* =============================================================================
-   DARK MODE SUPPORT
+   TABLE ACTION BUTTON GROUPS
    ============================================================================= */
 
-[data-theme="dark"] .dataTables_wrapper .dataTables_paginate .paginate_button {
-    background: var(--bg-surface) !important;
-    border-color: var(--border-primary) !important;
-    color: var(--color-primary-400) !important;
+/* Professional button group styling for table actions */
+.dataTables_wrapper .btn-group .btn {
+    border-radius: 0;
+    margin: 0;
 }
 
-[data-theme="dark"] .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
-    background: var(--bg-elevated) !important;
-    border-color: var(--color-primary-400) !important;
-    color: var(--color-primary-300) !important;
+.dataTables_wrapper .btn-group .btn:first-child {
+    border-top-left-radius: var(--radius-md, 0.375rem);
+    border-bottom-left-radius: var(--radius-md, 0.375rem);
 }
 
-[data-theme="dark"] .dataTables_wrapper .dataTables_paginate .paginate_button.current {
-    background: linear-gradient(135deg, var(--color-primary-600) 0%, var(--color-primary-700) 100%) !important;
-    border-color: var(--color-primary-700) !important;
-    color: var(--text-on-primary) !important;
+.dataTables_wrapper .btn-group .btn:last-child {
+    border-top-right-radius: var(--radius-md, 0.375rem);
+    border-bottom-right-radius: var(--radius-md, 0.375rem);
+}
+
+.dataTables_wrapper .btn-group .btn + .btn {
+    margin-left: -1px;
+}
+
+/* Ensure button groups display properly in tables */
+.dataTables_wrapper .btn-group {
+    display: inline-flex;
+    vertical-align: middle;
+}
+
+/* Mobile responsive button group adjustments */
+@media (max-width: 767.98px) {
+    .dataTables_wrapper .btn-group .btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+    }
+    
+    .dataTables_wrapper .btn-group .btn i {
+        font-size: 0.75rem;
+    }
+}
+
+/* =============================================================================
+   PROFESSIONAL MODAL SYSTEM
+   ============================================================================= */
+
+/* Modal Backdrop Enhancement */
+.modal.fade .modal-dialog {
+    transform: translate(0, -100px);
+    transition: transform 0.3s ease-out;
+}
+
+.modal.show .modal-dialog {
+    transform: translate(0, 0);
+}
+
+/* Enhanced Modal Backdrop - Clean background */
+.modal-backdrop {
+    background-color: rgba(0, 0, 0, 0.5) !important;
+    backdrop-filter: blur(2px);
+}
+
+/* Professional Modal Base */
+.professional-modal {
+    border-radius: 20px !important;
+    overflow: hidden;
+    box-shadow: none !important;
+    min-height: 85vh !important;
+    width: 100% !important;
+    border: none !important;
+}
+
+.professional-modal .modal-dialog {
+    max-width: 1450px !important;
+    width: 1450px !important;
+    margin: 2.5vh auto !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-height: 95vh !important;
+    position: relative !important;
+}
+
+/* Center the modal perfectly */
+#agreementModal .modal-dialog {
+    max-width: 1450px !important;
+    width: 1450px !important;
+    margin: 2.5vh auto !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-height: 95vh !important;
+    position: relative !important;
+}
+
+#agreementModal .modal-content {
+    width: 1400px !important;
+    max-width: none !important;
+    height: 90vh !important;
+    max-height: 90vh !important;
+    display: flex !important;
+    flex-direction: column !important;
+    border: none !important;
+    box-shadow: none !important;
+    margin: 0 auto !important;
+    overflow: hidden !important;
+}
+
+/* Professional Header */
+.professional-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    padding: 2rem 2.5rem 1.5rem;
+    color: white;
+}
+
+.professional-header .modal-icon {
+    width: 60px;
+    height: 60px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.professional-header .modal-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0;
+    color: white;
+}
+
+.professional-header .modal-subtitle {
+    font-size: 0.95rem;
+    opacity: 0.85;
+    margin: 0;
+    color: white;
+}
+
+.professional-close {
+    background: rgba(255, 255, 255, 0.2) !important;
+    border-radius: 50% !important;
+    padding: 0.5rem !important;
+    opacity: 1 !important;
+}
+
+.professional-close:hover {
+    background: rgba(255, 255, 255, 0.3) !important;
+}
+
+/* Professional Status Bar */
+.professional-status-bar {
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    border-bottom: 1px solid #cbd5e1;
+    padding: 2rem 2.5rem;
+    position: relative;
+}
+
+.status-steps {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    max-width: 600px;
+    margin: 0 auto;
+    position: relative;
+}
+
+/* Connection line between steps */
+.status-steps::before {
+    content: '';
+    position: absolute;
+    top: 20px;
+    left: 60px;
+    right: 60px;
+    height: 2px;
+    background: #cbd5e1;
+    z-index: 1;
+}
+
+.status-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    position: relative;
+    z-index: 2;
+    flex: 1;
+    max-width: 120px;
+}
+
+.step-number {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #e5e7eb;
+    color: #6b7280;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    border: 3px solid #f3f4f6;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 8px;
+}
+
+.status-step.active .step-number {
+    background: #3b82f6;
+    color: white;
+    border-color: #1d4ed8;
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.status-step.completed .step-number {
+    background: #10b981;
+    color: white;
+    border-color: #047857;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.step-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #6b7280;
+    text-align: center;
+    line-height: 1.3;
+    transition: all 0.3s ease;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.status-step.active .step-label {
+    color: #3b82f6;
+    font-weight: 700;
+}
+
+.status-step.completed .step-label {
+    color: #10b981;
+    font-weight: 700;
+}
+
+/* Progress line animation */
+.status-steps.progress-25::before {
+    background: linear-gradient(to right, #3b82f6 25%, #cbd5e1 25%);
+}
+
+.status-steps.progress-50::before {
+    background: linear-gradient(to right, #3b82f6 50%, #cbd5e1 50%);
+}
+
+.status-steps.progress-75::before {
+    background: linear-gradient(to right, #3b82f6 75%, #cbd5e1 75%);
+}
+
+.status-steps.progress-100::before {
+    background: #10b981;
+}
+
+/* Professional Body */
+.professional-body {
+    max-height: calc(90vh - 200px);
+    overflow-y: auto;
+    flex: 1;
+    padding: 0;
+}
+
+.professional-form-container {
+    background: white;
+    flex: 1;
+    overflow: hidden;
+}
+
+/* Form Sections */
+.form-sections {
+    height: 100%;
+    padding: 1rem 0;
+    overflow-y: auto;
+}
+
+.form-section {
+    display: none;
+    padding: 2rem 0;
+    height: auto;
+}
+
+.form-section.active {
+    display: block;
+    animation: slideInRight 0.4s ease-out;
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.section-header {
+    text-align: center;
+    margin-bottom: 2rem;
+    padding: 0 2rem;
+}
+
+.section-title {
+    color: #1e293b;
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.section-description {
+    color: #64748b;
+    font-size: 0.95rem;
+    margin: 0;
+}
+
+/* Professional Form Elements */
+.professional-input-group {
+    margin-bottom: 1.5rem;
+}
+
+.professional-label {
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 0.75rem;
+    font-size: 0.95rem;
+    display: block;
+}
+
+.required {
+    color: #dc2626;
+}
+
+.professional-input {
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 0.875rem 1rem;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+    background: #fafbfc;
+}
+
+.professional-input:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+    background: white;
+    outline: none;
+}
+
+.professional-input.is-valid {
+    border-color: #10b981;
+    background: #f0fdf4;
+}
+
+.professional-input.is-invalid {
+    border-color: #dc2626;
+    background: #fef2f2;
+}
+
+/* Professional Range Input */
+.professional-range {
+    width: 100%;
+    margin: 1rem 0;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 6px;
+    background: #e5e7eb;
+    border-radius: 3px;
+    outline: none;
+}
+
+.professional-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 24px;
+    height: 24px;
+    background: #667eea;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.professional-range::-moz-range-thumb {
+    width: 24px;
+    height: 24px;
+    background: #667eea;
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+}
+
+.rent-day-selector {
+    background: #f8fafc;
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+}
+
+.range-display {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 0.5rem;
+}
+
+.range-label {
+    font-size: 0.85rem;
+    color: #64748b;
+}
+
+.range-value {
+    background: #667eea;
+    color: white;
+    padding: 0.375rem 0.875rem;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+/* Lease Summary Card */
+.lease-summary-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 16px;
+    color: white;
+    padding: 1.5rem;
+    margin-top: 1rem;
+}
+
+.summary-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+}
+
+.summary-header i {
+    font-size: 1.25rem;
+}
+
+.summary-header h6 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.summary-content {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.summary-item {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 1rem;
+    border-radius: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.summary-label {
+    font-weight: 600;
+    opacity: 0.9;
+}
+
+.summary-value {
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+/* File Upload Area */
+.file-upload-area {
+    position: relative;
+    border: 2px dashed #cbd5e1;
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+    background: #f8fafc;
+    transition: all 0.3s ease;
+}
+
+.file-upload-area:hover {
+    border-color: #667eea;
+    background: #f1f5f9;
+}
+
+.professional-file-input {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.file-upload-hint {
+    color: #64748b;
+}
+
+.file-upload-hint i {
+    font-size: 2rem;
+    color: #cbd5e1;
+    margin-bottom: 0.5rem;
+}
+
+.current-file-info {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: #f0fdf4;
+    border-radius: 8px;
+    border: 1px solid #d1fae5;
+}
+
+.file-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.file-link {
+    color: #059669;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.file-status {
+    background: #10b981;
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+/* Professional Footer */
+.professional-footer {
+    background: #f8fafc;
+    border-top: 1px solid #e5e7eb;
+    padding: 1.5rem 2.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.footer-navigation {
+    display: flex;
+    gap: 1rem;
+}
+
+.footer-actions {
+    display: flex;
+    gap: 1rem;
+}
+
+.professional-btn-secondary {
+    background: #f1f5f9;
+    border: 2px solid #e2e8f0;
+    color: #475569;
+    font-weight: 600;
+    padding: 0.75rem 1.5rem;
+    border-radius: 10px;
+    transition: all 0.3s ease;
+}
+
+.professional-btn-secondary:hover {
+    background: #e2e8f0;
+    border-color: #cbd5e1;
+    transform: translateY(-1px);
+}
+
+.professional-btn-primary {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    border: none;
+    color: white;
+    font-weight: 700;
+    padding: 0.875rem 2rem;
+    border-radius: 10px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+}
+
+.professional-btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+}
+
+/* Lease form specific enhancements */
+#agreementModal .form-label {
+    font-weight: 600;
+    color: var(--text-primary, #374151);
+    margin-bottom: 0.5rem;
+}
+
+#agreementModal .form-control,
+#agreementModal .form-select {
+    border-radius: 0.5rem;
+    border: 1px solid var(--border-primary, #d1d5db);
+    padding: 0.75rem 1rem;
+    font-size: 0.95rem;
+    transition: all 0.15s ease;
+}
+
+#agreementModal .form-control:focus,
+#agreementModal .form-select:focus {
+    border-color: var(--color-primary-500, #3b82f6);
+    box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.25);
+}
+
+#agreementModal .input-group-text {
+    background-color: var(--bg-elevated, #f8fafc);
+    border-color: var(--border-primary, #d1d5db);
+    font-weight: 600;
+    color: var(--text-secondary, #6b7280);
+}
+
+#agreementModal .card {
+    border-radius: 0.75rem;
+    border: 1px solid var(--border-secondary, #e5e7eb);
+}
+
+/* =============================================================================
+   PROFESSIONAL MODAL RESPONSIVE DESIGN
+   ============================================================================= */
+
+/* Tablet Adjustments */
+@media (max-width: 1450px) {
+    #agreementModal .modal-content {
+        width: 95vw !important;
+        max-width: 95vw !important;
+    }
+    
+    #agreementModal .modal-dialog {
+        max-width: 98vw !important;
+        width: 98vw !important;
+    }
+}
+
+@media (max-width: 991.98px) {
+    .professional-modal .modal-dialog,
+    #agreementModal .modal-dialog {
+        max-width: 98vw !important;
+        width: 98vw !important;
+        margin: 0.5rem auto !important;
+        min-height: calc(100vh - 1rem) !important;
+    }
+    
+    #agreementModal .modal-content {
+        width: 95vw !important;
+        max-width: 95vw !important;
+        min-height: 600px !important;
+        max-height: calc(100vh - 1rem) !important;
+    }
+    
+    .professional-header {
+        padding: 1.5rem 2rem 1rem;
+    }
+    
+    .professional-status-bar {
+        padding: 1rem 1.5rem;
+    }
+    
+    .status-steps {
+        max-width: 500px;
+    }
+    
+    .status-steps::before {
+        left: 50px;
+        right: 50px;
+    }
+    
+    .step-number {
+        width: 36px;
+        height: 36px;
+        font-size: 0.9rem;
+    }
+    
+    .step-label {
+        font-size: 0.8rem;
+        min-height: 35px;
+    }
+    
+    .section-header {
+        padding: 0 1rem;
+    }
+    
+    .form-section {
+        padding: 1.5rem 0 1rem;
+    }
+    
+    .professional-footer {
+        padding: 1rem 1.5rem;
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .footer-navigation,
+    .footer-actions {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* Mobile Adjustments */
+@media (max-width: 767.98px) {
+    .professional-modal .modal-dialog,
+    #agreementModal .modal-dialog {
+        max-width: 100vw !important;
+        width: 100vw !important;
+        margin: 0 !important;
+        min-height: 100vh !important;
+        border-radius: 0 !important;
+    }
+    
+    #agreementModal .modal-content {
+        min-height: 100vh !important;
+        max-height: 100vh !important;
+        border-radius: 0 !important;
+    }
+    
+    .professional-modal {
+        border-radius: 0 !important;
+    }
+    
+    .professional-header {
+        padding: 1rem 1.5rem 0.75rem;
+    }
+    
+    .professional-header .modal-icon {
+        width: 50px;
+        height: 50px;
+        font-size: 1.25rem;
+    }
+    
+    .professional-header .modal-title {
+        font-size: 1.25rem;
+    }
+    
+    .professional-header .modal-subtitle {
+        font-size: 0.85rem;
+    }
+    
+    .professional-status-bar {
+        padding: 0.75rem 1rem;
+    }
+    
+    .status-steps {
+        max-width: 400px;
+        margin: 0 auto;
+    }
+    
+    .status-steps::before {
+        display: none;
+    }
+    
+    .status-step {
+        flex-direction: column;
+        text-align: center;
+        max-width: 100px;
+    }
+    
+    .step-number {
+        width: 32px;
+        height: 32px;
+        font-size: 0.85rem;
+        border-width: 2px;
+        margin-bottom: 6px;
+    }
+    
+    .step-label {
+        font-size: 0.7rem;
+        min-height: 30px;
+        line-height: 1.2;
+    }
+    
+    .professional-body {
+        max-height: calc(100vh - 300px);
+    }
+    
+    .section-header {
+        padding: 0 0.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .section-title {
+        font-size: 1.1rem;
+    }
+    
+    .section-description {
+        font-size: 0.85rem;
+    }
+    
+    .form-section {
+        padding: 1rem 0 0.5rem;
+    }
+    
+    .form-sections {
+        min-height: 400px;
+    }
+    
+    .row.g-4 {
+        margin: 0;
+        padding: 0 1rem;
+    }
+    
+    .row.g-4 > * {
+        padding-left: 0;
+        padding-right: 0;
+    }
+    
+    .professional-input-group {
+        margin-bottom: 1.25rem;
+    }
+    
+    .professional-label {
+        font-size: 0.9rem;
+    }
+    
+    .professional-input {
+        padding: 0.75rem;
+        font-size: 0.9rem;
+    }
+    
+    .rent-day-selector {
+        padding: 1rem;
+    }
+    
+    .lease-summary-card {
+        padding: 1rem;
+        margin-top: 0.75rem;
+    }
+    
+    .summary-content {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+    
+    .summary-item {
+        padding: 0.75rem;
+        flex-direction: column;
+        text-align: center;
+        gap: 0.25rem;
+    }
+    
+    .file-upload-area {
+        padding: 1.5rem 1rem;
+    }
+    
+    .file-upload-hint i {
+        font-size: 1.5rem;
+    }
+    
+    .professional-footer {
+        padding: 1rem;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    
+    .footer-navigation,
+    .footer-actions {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .professional-btn-secondary,
+    .professional-btn-primary {
+        padding: 0.75rem 1.25rem;
+        font-size: 0.9rem;
+    }
+}
+
+/* Extra Small Mobile */
+@media (max-width: 480px) {
+    .professional-modal .modal-dialog {
+        margin: 0.25rem !important;
+        height: calc(100vh - 0.5rem);
+    }
+    
+    .professional-header {
+        padding: 0.75rem 1rem 0.5rem;
+    }
+    
+    .professional-header .d-flex {
+        flex-direction: column;
+        text-align: center;
+        gap: 0.75rem;
+    }
+    
+    .professional-status-bar {
+        padding: 0.5rem;
+    }
+    
+    .status-steps {
+        gap: 0.75rem;
+    }
+    
+    .step-number {
+        width: 28px;
+        height: 28px;
+        font-size: 0.8rem;
+    }
+    
+    .step-label {
+        font-size: 0.65rem;
+    }
+    
+    .section-header {
+        margin-bottom: 1rem;
+    }
+    
+    .section-title {
+        font-size: 1rem;
+    }
+    
+    .row.g-4 {
+        padding: 0 0.5rem;
+    }
+    
+    .professional-footer {
+        padding: 0.75rem;
+    }
 }
 
 /* =============================================================================

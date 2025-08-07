@@ -1,109 +1,106 @@
 @using PropertyManagement.Web.ViewModels
 @model RoomFormViewModel
+@{
+  bool isEdit = Model?.RoomId > 0;
+}
 
-<div class="modal fade" id="roomModal" tabindex="-1" aria-labelledby="roomModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered" style="max-width: 500px;">
-    <div class="modal-content shadow-lg border-0">
-      <div class="modal-header bg-primary text-white py-2">
-        <h5 class="modal-title d-flex align-items-center" id="roomModalLabel">
-          <i class="bi bi-door-closed me-2"></i>
-          @(Model.RoomId == 0 ? "Add Room" : "Edit Room")
-        </h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+<!-- Form Error Display -->
+<div id="formErrors" class="alert alert-danger" style="display: none;"></div>
+<div id="formSuccess" class="alert alert-success" style="display: none;"></div>
+
+<form id="roomForm" asp-action="CreateOrEdit" method="post" autocomplete="off" class="needs-validation" novalidate>
+  @Html.AntiForgeryToken()
+  <input type="hidden" asp-for="RoomId" />
+  
+  <div class="row g-4">
+    <!-- Left Column -->
+    <div class="col-lg-6">
+      <div class="mb-3">
+        <label asp-for="Number" class="form-label fw-semibold">Room Number <span class="text-danger">*</span></label>
+        <div class="input-group">
+          <span class="input-group-text">
+            <i class="bi bi-hash"></i>
+          </span>
+          <input asp-for="Number" class="form-control" maxlength="20" placeholder="e.g. 101, A2, Room-5" required />
+        </div>
+        <div class="invalid-feedback">Please enter a valid room number.</div>
+        <small class="text-muted">Enter a unique room identifier (max 20 characters)</small>
       </div>
-      <div class="modal-body p-3 bg-light">
+      
+      <div class="mb-3">
+        <label asp-for="Type" class="form-label fw-semibold">Room Type <span class="text-danger">*</span></label>
+        <div class="input-group">
+          <span class="input-group-text">
+            <i class="bi bi-house"></i>
+          </span>
+          <select asp-for="Type" asp-items="Model.RoomTypes" class="form-select" required>
+            <option value="">-- Select Room Type --</option>
+          </select>
+        </div>
+        <div class="invalid-feedback">Please select a room type.</div>
+        <small class="text-muted">Choose the type of room (Single, Double, etc.)</small>
+      </div>
+    </div>
 
-        <form id="roomForm" asp-action="CreateOrEdit" method="post" autocomplete="off">
-          <input type="hidden" asp-for="RoomId" />
-          
-          <div class="mb-4">
-            <label asp-for="Number" class="form-label fw-bold">
-              <i class="bi bi-hash text-primary me-1"></i>Room Number *
-            </label>
-            <input asp-for="Number" class="form-control" maxlength="20" placeholder="e.g. 101, A2, Room-5" />
-            <span asp-validation-for="Number" class="text-danger fw-bold d-block mt-1 validation-error"></span>
-            <small class="form-text text-muted">
-              <i class="bi bi-info-circle me-1"></i>Enter a unique room identifier (max 10 characters)
-            </small>
-          </div>
-          
-          <div class="mb-4">
-            <label asp-for="Type" class="form-label fw-bold">
-              <i class="bi bi-house text-primary me-1"></i>Room Type *
-            </label>
-            <select asp-for="Type" asp-items="Model.RoomTypes" class="form-control">
-              <option value="">-- Select Room Type --</option>
-            </select>
-            <span asp-validation-for="Type" class="text-danger fw-bold d-block mt-1 validation-error"></span>
-            <small class="form-text text-muted">
-              <i class="bi bi-info-circle me-1"></i>Choose the type of room (Single, Double, etc.)
-            </small>
-          </div>
-          
-          <div class="mb-4">
-            <label asp-for="Status" class="form-label fw-bold">
-              <i class="bi bi-circle-fill text-primary me-1"></i>Room Status *
-            </label>
-            <select asp-for="Status" asp-items="Model.StatusOptions" class="form-control">
-              <option value="">-- Select Status --</option>
-            </select>
-            <span asp-validation-for="Status" class="text-danger fw-bold d-block mt-1 validation-error"></span>
-            <small class="form-text text-muted">
-              <i class="bi bi-info-circle me-1"></i>Current availability status of the room
-            </small>
-          </div>
+    <!-- Right Column -->
+    <div class="col-lg-6">
+      <div class="mb-3">
+        <label asp-for="Status" class="form-label fw-semibold">Room Status <span class="text-danger">*</span></label>
+        <div class="input-group">
+          <span class="input-group-text">
+            <i class="bi bi-circle-fill"></i>
+          </span>
+          <select asp-for="Status" asp-items="Model.StatusOptions" class="form-select" required>
+            <option value="">-- Select Status --</option>
+          </select>
+        </div>
+        <div class="invalid-feedback">Please select a room status.</div>
+        <small class="text-muted">Current availability status of the room</small>
+      </div>
 
-          <div class="d-flex justify-content-between align-items-center">
-            <small class="text-muted">
-              <i class="bi bi-asterisk text-danger me-1" style="font-size: 0.7rem;"></i>
-              Required fields
-            </small>
-            <div>
-              <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">
-                <i class="bi bi-x-lg me-1"></i>Cancel
-              </button>
-              <button type="submit" class="btn btn-primary px-4">
-                <i class="bi bi-save me-1"></i>Save Room
-              </button>
+      <div class="mb-3">
+        <div class="card border-info bg-light">
+          <div class="card-body p-3">
+            <h6 class="card-title text-info mb-2">
+              <i class="bi bi-info-circle"></i> Room Information
+            </h6>
+            <div id="roomSummary">
+              <p class="mb-1"><strong>ID:</strong> <span id="roomIdDisplay">@(isEdit ? Model.RoomId.ToString() : "New Room")</span></p>
+              <p class="mb-0"><strong>Action:</strong> <span id="roomAction">@(isEdit ? "Update existing room" : "Create new room")</span></p>
             </div>
           </div>
-        </form>
+        </div>
       </div>
+    </div>
+  </div>
+</form>
+
+<div class="row mt-4">
+  <div class="col-12">
+    <div class="d-flex justify-content-end gap-2">
+      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+        <i class="bi bi-x-circle"></i> Cancel
+      </button>
+      <button type="submit" class="btn btn-primary" form="roomForm">
+        <i class="bi bi-save"></i>
+        <span class="submit-text">@(isEdit ? "Update Room" : "Save Room")</span>
+        <div class="spinner-border spinner-border-sm ms-2" style="display: none;" role="status" aria-hidden="true"></div>
+      </button>
     </div>
   </div>
 </div>
 
-<style>
-  .validation-error {
-    font-weight: 600;
-    font-size: 0.875rem;
-    min-height: 1.2em;
-  }
+<script type="text/javascript">
+  document.addEventListener('DOMContentLoaded', function() {
+    if (document.getElementById('roomForm') && typeof initializeRoomForm === 'function') {
+      initializeRoomForm();
+    }
+  });
   
-  .validation-error:not(:empty) {
-    background-color: #f8d7da;
-    color: #721c24;
-    padding: 0.5rem;
-    border-radius: 0.25rem;
-    border: 1px solid #f5c6cb;
-    margin-top: 0.5rem;
-  }
-  
-  .form-control:invalid,
-  .form-control.is-invalid {
-    border-color: #dc3545;
-    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
-  }
-  
-  .form-control.is-valid {
-    border-color: #198754;
-    box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.25);
-  }
-  
-  .validation-summary {
-    border-radius: 0.5rem;
-    margin-bottom: 1rem;
-  }
-</style>
+  setTimeout(function() {
+    if (document.getElementById('roomForm') && typeof initializeRoomForm === 'function') {
+      initializeRoomForm();
+    }
+  }, 100);
+</script>
 
-<script src="~/js/room-validation.js"></script>

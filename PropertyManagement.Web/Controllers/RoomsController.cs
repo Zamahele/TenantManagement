@@ -13,15 +13,21 @@ public class RoomsController : BaseController
 {
   private readonly IRoomApplicationService _roomApplicationService;
   private readonly IBookingRequestApplicationService _bookingRequestApplicationService;
+  private readonly ITenantApplicationService _tenantApplicationService;
+  private readonly IMaintenanceRequestApplicationService _maintenanceApplicationService;
   private readonly IMapper _mapper;
 
   public RoomsController(
     IRoomApplicationService roomApplicationService,
     IBookingRequestApplicationService bookingRequestApplicationService,
+    ITenantApplicationService tenantApplicationService,
+    IMaintenanceRequestApplicationService maintenanceApplicationService,
     IMapper mapper)
   {
     _roomApplicationService = roomApplicationService;
     _bookingRequestApplicationService = bookingRequestApplicationService;
+    _tenantApplicationService = tenantApplicationService;
+    _maintenanceApplicationService = maintenanceApplicationService;
     _mapper = mapper;
   }
 
@@ -69,6 +75,10 @@ public class RoomsController : BaseController
         new SelectListItem { Value = "Double", Text = "Double" }
       }
     };
+    
+    // Set sidebar counts
+    await SetSidebarCountsAsync();
+    
     return View(model);
   }
 
@@ -436,5 +446,41 @@ public class RoomsController : BaseController
     
     SetSuccessMessage("Booking request deleted successfully.");
     return RedirectToAction(nameof(Index));
+  }
+
+  private async Task SetSidebarCountsAsync()
+  {
+    try
+    {
+      // Get tenant count
+      var tenantsResult = await _tenantApplicationService.GetAllTenantsAsync();
+      var tenantCount = tenantsResult.IsSuccess && tenantsResult.Data != null ? 
+        tenantsResult.Data.Count() : 0;
+
+      // Get room count
+      var roomsResult = await _roomApplicationService.GetAllRoomsAsync();
+      var roomCount = roomsResult.IsSuccess && roomsResult.Data != null ? 
+        roomsResult.Data.Count() : 0;
+
+      // Get pending maintenance count
+      var maintenanceResult = await _maintenanceApplicationService.GetAllMaintenanceRequestsAsync();
+      var pendingCount = 0;
+      if (maintenanceResult.IsSuccess && maintenanceResult.Data != null)
+      {
+        pendingCount = maintenanceResult.Data.Count(m => 
+          m.Status == "Pending" || m.Status == "In Progress");
+      }
+
+      // Set the ViewBag values
+      ViewBag.TenantCount = tenantCount;
+      ViewBag.RoomCount = roomCount;
+      ViewBag.PendingMaintenanceCount = pendingCount;
+    }
+    catch
+    {
+      ViewBag.TenantCount = 0;
+      ViewBag.RoomCount = 0;
+      ViewBag.PendingMaintenanceCount = 0;
+    }
   }
 }

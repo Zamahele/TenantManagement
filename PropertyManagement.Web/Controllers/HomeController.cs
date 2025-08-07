@@ -74,6 +74,12 @@ public class HomeController : Controller
     var occupiedRooms = rooms.Count(r => r.Status == "Occupied");
     var underMaintenanceRooms = rooms.Count(r => r.Status == "Under Maintenance");
     
+    // Set sidebar counts
+    ViewBag.TenantCount = tenants.Count();
+    ViewBag.RoomCount = totalRooms;
+    ViewBag.PendingMaintenanceCount = maintenanceRequests.Count(m => 
+      m.Status == "Pending" || m.Status == "In Progress");
+    
     // Calculate financial metrics
     var activeLeases = leases.Where(l => l.StartDate <= now && l.EndDate >= now).ToList();
     var totalMonthlyRent = activeLeases.Sum(l => l.RentAmount);

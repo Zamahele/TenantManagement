@@ -190,6 +190,13 @@ public class LeaseAgreementsController : BaseController
       await _leaseAgreementRepository.UpdateAsync(existing);
       SetSuccessMessage("Lease agreement updated successfully.");
     }
+
+    // Return JSON for AJAX requests
+    if (Request.Headers.ContainsKey("X-Requested-With") && Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+    {
+      return Json(new { success = true, message = TempData["SuccessMessage"]?.ToString() ?? "Operation completed successfully." });
+    }
+    
     return RedirectToAction(nameof(Index));
   }
 
@@ -207,6 +214,13 @@ public class LeaseAgreementsController : BaseController
     {
       SetErrorMessage("Lease agreement not found.");
     }
+
+    // Return JSON for AJAX requests
+    if (Request.Headers.ContainsKey("X-Requested-With") && Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+    {
+      return Json(new { success = true, message = TempData["SuccessMessage"]?.ToString() ?? TempData["ErrorMessage"]?.ToString() ?? "Operation completed." });
+    }
+
     return RedirectToAction(nameof(Index));
   }
 

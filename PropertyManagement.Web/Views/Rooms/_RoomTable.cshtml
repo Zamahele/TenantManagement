@@ -43,39 +43,37 @@
             @room.Status
           </span>
         </td>
-        <td>
-          <!-- Action Dropdown -->
-          <div class="btn-group">
-            <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-              Actions
+        <td class="text-center">
+          <div class="btn-group" role="group" aria-label="Room actions">
+            <button type="button" 
+                    class="btn btn-sm btn-outline-primary" 
+                    onclick="openEditModal(@room.RoomId)" 
+                    title="Edit Room">
+              <i class="bi bi-pencil-square"></i>
             </button>
-            <ul class="dropdown-menu">
-              <li>
-                <a class="dropdown-item" href="javascript:void(0);" onclick="openEditModal(@room.RoomId)">
-                  <i class="bi bi-pencil"></i> Edit
-                </a>
-              </li>
-              <li>
-                <a class="dropdown-item" asp-action="GetRoom" asp-route-id="@room.RoomId">
-                  <i class="bi bi-info-circle"></i> Details
-                </a>
-              </li>
-              @if (room.Status == "Available")
-              {
-                <li>
-                  <a class="dropdown-item text-success" href="javascript:void(0);" onclick="BookRoom(@room.RoomId)">
-                    <i class="bi bi-calendar-check"></i> Book
-                  </a>
-                </li>
-              }
-              <li><hr class="dropdown-divider"></li>
-              <li>
-                <a class="dropdown-item text-danger" href="javascript:void(0);" onclick="deleteRoom(@room.RoomId)">
-                  <i class="bi bi-trash"></i> Delete
-                </a>
-              </li>
-            </ul>
+            <a class="btn btn-sm btn-outline-info" 
+               asp-action="GetRoom" 
+               asp-route-id="@room.RoomId" 
+               title="View Details">
+              <i class="bi bi-info-circle-fill"></i>
+            </a>
+            @if (room.Status == "Available")
+            {
+              <button type="button" 
+                      class="btn btn-sm btn-outline-success" 
+                      onclick="BookRoom(@room.RoomId)" 
+                      title="Book Room">
+                <i class="bi bi-calendar-check-fill"></i>
+              </button>
+            }
+            <button type="button" 
+                    class="btn btn-sm btn-outline-danger" 
+                    onclick="deleteRoom(@room.RoomId)" 
+                    title="Delete Room">
+              <i class="bi bi-trash-fill"></i>
+            </button>
           </div>
+          
           <!-- Hidden Delete Form -->
           <form id="deleteForm-@room.RoomId" asp-action="Delete" asp-route-id="@room.RoomId" method="post" style="display:none;">
             @Html.AntiForgeryToken()

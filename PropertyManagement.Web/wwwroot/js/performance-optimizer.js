@@ -326,21 +326,9 @@ class PerformanceOptimizer {
     }
     
     optimizeFonts() {
-        // Preload critical fonts
-        const criticalFonts = [
-            '/fonts/inter-regular.woff2',
-            '/fonts/inter-semibold.woff2'
-        ];
-        
-        criticalFonts.forEach(fontUrl => {
-            const link = document.createElement('link');
-            link.rel = 'preload';
-            link.as = 'font';
-            link.type = 'font/woff2';
-            link.crossOrigin = 'anonymous';
-            link.href = fontUrl;
-            document.head.appendChild(link);
-        });
+        // Font optimization disabled - using Google Fonts instead
+        // Local font files would be preloaded here if available
+        console.log('Font optimization: Using Google Fonts, no local preloading needed');
     }
     
     removeUnusedCSS() {
@@ -414,17 +402,9 @@ class PerformanceOptimizer {
        ========================================================================= */
     
     setupServiceWorker() {
-        if (!('serviceWorker' in navigator)) return;
-        
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/sw.js')
-                .then(registration => {
-                    console.log('SW registered: ', registration);
-                })
-                .catch(registrationError => {
-                    console.log('SW registration failed: ', registrationError);
-                });
-        });
+        // Service worker disabled - no sw.js file available
+        // Would register service worker for offline support if implemented
+        console.log('Service worker: Not implemented, skipping registration');
     }
 
     /* =========================================================================

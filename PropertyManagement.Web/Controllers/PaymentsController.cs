@@ -13,6 +13,7 @@ public class PaymentsController : BaseController
 {
   private readonly IPaymentApplicationService _paymentApplicationService;
   private readonly ITenantApplicationService _tenantApplicationService;
+  private readonly ILeaseAgreementApplicationService _leaseAgreementApplicationService;
   private readonly IMapper _mapper;
 
   // Prometheus counter for payment creations
@@ -22,10 +23,12 @@ public class PaymentsController : BaseController
   public PaymentsController(
       IPaymentApplicationService paymentApplicationService,
       ITenantApplicationService tenantApplicationService,
+      ILeaseAgreementApplicationService leaseAgreementApplicationService,
       IMapper mapper)
   {
     _paymentApplicationService = paymentApplicationService;
     _tenantApplicationService = tenantApplicationService;
+    _leaseAgreementApplicationService = leaseAgreementApplicationService;
     _mapper = mapper;
   }
 
@@ -45,7 +48,47 @@ public class PaymentsController : BaseController
       return View(new List<PaymentViewModel>());
     }
 
-    ViewBag.Tenants = _mapper.Map<List<TenantViewModel>>(tenantsResult.Data);
+    var leasesResult = await _leaseAgreementApplicationService.GetAllLeaseAgreementsAsync();
+    
+    var tenants = _mapper.Map<List<TenantViewModel>>(tenantsResult.Data);
+    ViewBag.Tenants = tenants;
+    
+    // Add lease data to tenants for auto-population in payments table
+    if (leasesResult.IsSuccess)
+    {
+      // Work directly with DTOs to avoid mapping issues
+      var leaseDtos = leasesResult.Data;
+      
+      // Create a dictionary for quick lookup of active leases by tenant (based on date range like HomeController)
+      var now = DateTime.Now;
+      var activeLeasesDict = leaseDtos
+        .Where(l => l.StartDate <= now && l.EndDate >= now)
+        .GroupBy(l => l.TenantId)
+        .ToDictionary(g => g.Key, g => g.OrderByDescending(l => l.StartDate).First());
+      
+      // Add lease information to ViewBag for JavaScript access
+      var tenantLeasesData = tenants.Select(t => new {
+        TenantId = t.TenantId,
+        FullName = t.FullName,
+        RoomNumber = t.Room?.Number,
+        HasActiveLease = activeLeasesDict.ContainsKey(t.TenantId),
+        MonthlyRent = activeLeasesDict.ContainsKey(t.TenantId) ? activeLeasesDict[t.TenantId].RentAmount : 0
+      }).ToList();
+      
+      ViewBag.TenantLeases = tenantLeasesData;
+      
+    }
+    else
+    {
+      ViewBag.TenantLeases = tenants.Select(t => new {
+        TenantId = t.TenantId,
+        FullName = t.FullName,
+        RoomNumber = t.Room?.Number,
+        HasActiveLease = false,
+        MonthlyRent = 0
+      }).ToList();
+    }
+
     var paymentVm = _mapper.Map<List<PaymentViewModel>>(paymentsResult.Data);
 
     return View(paymentVm);
@@ -55,8 +98,6 @@ public class PaymentsController : BaseController
   [ValidateAntiForgeryToken]
   public async Task<IActionResult> Create(PaymentViewModel payment)
   {
-    await Task.Delay(200);
-
     if (!ModelState.IsValid)
     {
       SetErrorMessage("Please correct the errors in the form.");
@@ -181,24 +222,63 @@ public class PaymentsController : BaseController
     }
     else
     {
-      // Add mode
+      // Add mode - set default values
       paymentVm = new PaymentViewModel
       {
         PaymentMonth = DateTime.Now.Month,
         PaymentYear = DateTime.Now.Year,
-        Date = DateTime.Now
+        Date = DateTime.Now,
+        Type = "Rent", // Default payment type to Rent
+        Amount = 0 // Default amount to 0 (will be updated based on lease)
       };
     }
 
-    // Load tenants for dropdown
+    // Load tenants for dropdown with lease data
     var tenantsResult = await _tenantApplicationService.GetAllTenantsAsync();
+    var leasesResult = await _leaseAgreementApplicationService.GetAllLeaseAgreementsAsync();
+    
     if (tenantsResult.IsSuccess)
     {
-      ViewBag.Tenants = _mapper.Map<List<TenantViewModel>>(tenantsResult.Data);
+      var tenants = _mapper.Map<List<TenantViewModel>>(tenantsResult.Data);
+      
+      // Add lease data to tenants for auto-population
+      if (leasesResult.IsSuccess)
+      {
+        var leases = _mapper.Map<List<LeaseAgreementViewModel>>(leasesResult.Data);
+        
+        // Create a dictionary for quick lookup of active leases by tenant (based on date range like HomeController)
+        var now = DateTime.Now;
+        var activeLeasesDict = leases
+          .Where(l => l.StartDate <= now && l.EndDate >= now)
+          .GroupBy(l => l.TenantId)
+          .ToDictionary(g => g.Key, g => g.OrderByDescending(l => l.StartDate).First());
+        
+        // Add lease information to ViewBag for JavaScript access
+        ViewBag.TenantLeases = tenants.Select(t => new {
+          TenantId = t.TenantId,
+          FullName = t.FullName,
+          RoomNumber = t.Room?.Number,
+          HasActiveLease = activeLeasesDict.ContainsKey(t.TenantId),
+          MonthlyRent = activeLeasesDict.ContainsKey(t.TenantId) ? activeLeasesDict[t.TenantId].RentAmount : 0
+        }).ToList();
+      }
+      else
+      {
+        ViewBag.TenantLeases = tenantsResult.Data.Select(t => new {
+          TenantId = t.TenantId,
+          FullName = t.FullName,
+          RoomNumber = t.Room?.Number,
+          HasActiveLease = false,
+          MonthlyRent = 0
+        }).ToList();
+      }
+      
+      ViewBag.Tenants = tenants;
     }
     else
     {
       ViewBag.Tenants = new List<TenantViewModel>();
+      ViewBag.TenantLeases = new List<object>();
     }
 
     return PartialView("_PaymentForm", paymentVm);

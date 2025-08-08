@@ -92,15 +92,10 @@
 
 <script type="text/javascript">
   document.addEventListener('DOMContentLoaded', function() {
+    // Only initialize once when DOM is ready
     if (document.getElementById('roomForm') && typeof initializeRoomForm === 'function') {
       initializeRoomForm();
     }
   });
-  
-  setTimeout(function() {
-    if (document.getElementById('roomForm') && typeof initializeRoomForm === 'function') {
-      initializeRoomForm();
-    }
-  }, 100);
 </script>
 

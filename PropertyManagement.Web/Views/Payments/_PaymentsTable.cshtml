@@ -11,7 +11,11 @@
         <option value="">Year</option>
         @for (int y = DateTime.Now.Year - 1; y <= DateTime.Now.Year + 1; y++)
         {
-          <option value="@y"> @y</option>
+          if (y == currentYear) {
+            <option value="@y" selected>@y</option>
+          } else {
+            <option value="@y">@y</option>
+          }
         }
       </select>
     </div>
@@ -20,7 +24,11 @@
         <option value="">Month</option>
         @for (int m = 1; m <= 12; m++)
         {
-          <option value="@m">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(m)</option>
+          if (m == currentMonth) {
+            <option value="@m" selected>@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(m)</option>
+          } else {
+            <option value="@m">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(m)</option>
+          }
         }
       </select>
     </div>
@@ -31,18 +39,19 @@
         {
           foreach (var tenant in tenants)
           {
-            <option value="@tenant.TenantId">@tenant.FullName (@tenant.Room?.Number)</option>
+            <option value="@tenant.TenantId" 
+                    data-room="@tenant.Room?.Number">@tenant.FullName (@tenant.Room?.Number)</option>
           }
         }
       </select>
     </div>
     <div class="col-12 col-md-auto">
-      <input name="Amount" class="form-control" placeholder="Amount" required type="number" min="0" step="0.01" />
+      <input name="Amount" class="form-control" placeholder="Amount" required type="number" min="0.01" step="any" />
     </div>
     <div class="col-12 col-md-auto">
       <select name="Type" class="form-select" required>
         <option value="">Select Payment Type</option>
-        <option value="Rent">Rent</option>
+        <option value="Rent" selected>Rent</option>
         <option value="Deposit">Deposit</option>
         <option value="Other">Other</option>
       </select>
@@ -105,8 +114,7 @@
               </button>
               <button type="button" 
                       class="btn btn-sm btn-outline-danger" 
-                      data-bs-toggle="modal" 
-                      data-bs-target="#deleteModal-@payment.PaymentId" 
+                      onclick="openDeleteModal(@payment.PaymentId, '@payment.Tenant?.FullName', 'Payment: @payment.Amount.ToString("C") for @System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(payment.PaymentMonth) @payment.PaymentYear')" 
                       title="Delete Payment">
                 <i class="bi bi-trash-fill"></i>
               </button>
@@ -131,4 +139,73 @@
     </div>
   </div>
 </div>
+
+<script type="text/javascript">
+  // Tenant lease data for auto-population in payments table
+  var tenantLeases = @Html.Raw(Json.Serialize(ViewBag.TenantLeases ?? new List<object>()));
+  
+  
+  document.addEventListener('DOMContentLoaded', function() {
+    initializePaymentsTableAutoPopulation();
+  });
+  
+  function initializePaymentsTableAutoPopulation() {
+    var tenantSelect = document.querySelector('select[name="TenantId"]');
+    var amountInput = document.querySelector('input[name="Amount"]');
+    var typeSelect = document.querySelector('select[name="Type"]');
+    
+    if (tenantSelect && amountInput) {
+      tenantSelect.addEventListener('change', function() {
+        var tenantId = parseInt(this.value);
+        
+        if (tenantId && tenantLeases) {
+          var tenantLease = tenantLeases.find(t => t.tenantId === tenantId);
+          
+          if (tenantLease) {
+            if (tenantLease.hasActiveLease && tenantLease.monthlyRent > 0) {
+              // Set amount to monthly rent from lease - try different formats
+              var rentAmount = parseFloat(tenantLease.monthlyRent);
+              
+              // Try setting as integer if it's a whole number, otherwise use minimal decimal places
+              var amountStr = (rentAmount % 1 === 0) ? rentAmount.toString() : rentAmount.toFixed(2);
+              
+              amountInput.value = amountStr;
+              
+              // Also set the HTML attribute
+              amountInput.setAttribute('value', amountStr);
+              
+            } else {
+              // No active lease, leave amount empty for manual entry
+              amountInput.value = '';
+              amountInput.removeAttribute('value');
+            }
+            
+            // Set payment type to Rent if not already set
+            if (typeSelect && typeSelect.value === '') {
+              typeSelect.value = 'Rent';
+            }
+            
+            // Trigger validation events to clear any validation errors (with small delay)
+            setTimeout(function() {
+              amountInput.dispatchEvent(new Event('input', { bubbles: true }));
+              amountInput.dispatchEvent(new Event('change', { bubbles: true }));
+              
+              if (typeSelect) {
+                typeSelect.dispatchEvent(new Event('change', { bubbles: true }));
+              }
+              
+              // Clear any validation errors by triggering validation
+              if (typeof $ !== 'undefined' && $.fn.valid) {
+                $(amountInput).closest('form').valid();
+              }
+            }, 50);
+          }
+        } else {
+          // No tenant selected, reset to default
+          amountInput.value = '';
+        }
+      });
+    }
+  }
+</script>
 

@@ -126,27 +126,48 @@ function validateTableStructure($table) {
     }
     
     var headerCells = $table.find('thead tr').first().find('th, td').length;
+    var bodyRows = $table.find('tbody tr');
+    
+    // If no body rows, that's valid for DataTables
+    if (bodyRows.length === 0) {
+        return true;
+    }
+    
     var hasValidRows = true;
     
     // Check if all body rows have the correct number of cells
-    $table.find('tbody tr').each(function() {
+    bodyRows.each(function() {
         var $row = $(this);
         var bodyCells = $row.find('td, th').length;
-        var colspan = 0;
+        var totalColspan = 0;
         
         // Calculate total cells including colspan
         $row.find('td, th').each(function() {
             var cellColspan = parseInt($(this).attr('colspan') || '1');
-            colspan += cellColspan;
+            totalColspan += cellColspan;
         });
         
-        // Allow rows with colspan to match header count
-        if (bodyCells !== headerCells && colspan !== headerCells) {
-            console.warn('Row has ' + bodyCells + ' cells (colspan: ' + colspan + ') but header has ' + headerCells + ' cells');
+        // Allow rows with colspan to match header count, or single cell with full colspan for empty states
+        if (bodyCells === 1 && totalColspan === headerCells) {
+            // This is likely an empty state row, skip validation for DataTables compatibility
+            return true;
+        }
+        else if (bodyCells !== headerCells && totalColspan !== headerCells) {
+            console.warn('Table structure issue - Row has ' + bodyCells + ' cells (total colspan: ' + totalColspan + ') but header has ' + headerCells + ' cells');
             hasValidRows = false;
             return false; // break
         }
     });
+    
+    // Additional check: if there's only one row and it has complex nested content (empty state), 
+    // we might want to defer DataTables initialization
+    if (bodyRows.length === 1) {
+        var firstRowFirstCell = bodyRows.first().find('td').first();
+        if (firstRowFirstCell.find('.empty-state').length > 0) {
+            console.log('Table appears to have empty state content, DataTables may not be necessary');
+            return false; // Don't initialize DataTables for empty state tables
+        }
+    }
     
     return hasValidRows;
 }

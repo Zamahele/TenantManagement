@@ -157,6 +157,25 @@
   </div>
 </div>
 
+<!-- Custom Delete Modal -->
+<div id="deleteModal" class="custom-modal" style="display: none;">
+  <div class="custom-modal-backdrop" onclick="closeDeleteModal()"></div>
+  <div class="custom-modal-content">
+    <div class="custom-modal-header">
+      <h4 class="custom-modal-title">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        <span id="deleteModalTitle">Confirm Delete</span>
+      </h4>
+      <button type="button" class="custom-modal-close" onclick="closeDeleteModal()">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+    <div class="custom-modal-body" id="deleteModalBody">
+      <!-- Delete form content will be loaded here -->
+    </div>
+  </div>
+</div>
+
 @section Styles {
   <style>
     /* Custom Modal Styles */
@@ -499,5 +518,87 @@
         document.getElementById('utilityBillModal').style.display = 'none';
         document.body.style.overflow = 'auto';
     }
+    
+    // Delete Modal Functions (consistent with lease agreements pattern)
+    function openDeleteModal(entityId, action, controller, body, title) {
+        var modal = document.getElementById('deleteModal');
+        var modalTitle = document.getElementById('deleteModalTitle');
+        var modalBody = document.getElementById('deleteModalBody');
+        
+        modalTitle.textContent = title || 'Confirm Delete';
+        
+        // Create delete form content with professional styling
+        modalBody.innerHTML = `
+            <!-- Form Error Display -->
+            <div id="formErrors" class="alert alert-danger" style="display: none;"></div>
+            <div id="formSuccess" class="alert alert-success" style="display: none;"></div>
+
+            <form id="deleteForm" action="/${controller}/${action}" method="post" class="needs-validation" novalidate>
+                <input name="__RequestVerificationToken" type="hidden" value="${document.querySelector('input[name="__RequestVerificationToken"]').value}" />
+                <input type="hidden" name="id" value="${entityId}" />
+                
+                <div class="row g-4">
+                    <div class="col-12">
+                        <div class="alert alert-danger border-danger">
+                            <div class="d-flex align-items-center mb-3">
+                                <i class="bi bi-exclamation-triangle-fill text-danger fs-2 me-3"></i>
+                                <div>
+                                    <h5 class="alert-heading mb-1 text-danger">${title}</h5>
+                                    <p class="mb-0">This action cannot be undone.</p>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-0">${body}</div>
+                        </div>
+                        
+                        <div class="card border-info bg-light">
+                            <div class="card-body p-3">
+                                <h6 class="card-title text-info mb-2">
+                                    <i class="bi bi-info-circle"></i> Delete Information
+                                </h6>
+                                <div>
+                                    <p class="mb-1"><strong>Entity ID:</strong> <span>${entityId}</span></p>
+                                    <p class="mb-1"><strong>Action:</strong> <span class="text-danger">Permanent Deletion</span></p>
+                                    <p class="mb-0"><strong>Controller:</strong> <span>${controller}</span></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="d-flex justify-content-end gap-2">
+                        <button type="button" class="btn btn-secondary" onclick="closeDeleteModal()">
+                            <i class="bi bi-x-circle"></i> Cancel
+                        </button>
+                        <button type="submit" class="btn btn-danger" form="deleteForm">
+                            <i class="bi bi-trash"></i>
+                            <span class="submit-text">Delete Permanently</span>
+                            <div class="spinner-border spinner-border-sm ms-2" style="display: none;" role="status" aria-hidden="true"></div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+    
+    function closeDeleteModal() {
+        var modal = document.getElementById('deleteModal');
+        modal.style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }
+    
+    // Close modals when clicking outside or pressing Escape
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeUtilityBillModal();
+            closeDeleteModal();
+        }
+    });
   </script>
 }

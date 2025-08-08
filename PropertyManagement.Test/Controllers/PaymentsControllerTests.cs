@@ -41,10 +41,12 @@ public class PaymentsControllerTests
     {
         var mockPaymentService = new Mock<IPaymentApplicationService>();
         var mockTenantService = new Mock<ITenantApplicationService>();
+        var mockLeaseService = new Mock<ILeaseAgreementApplicationService>();
 
         var controller = new PaymentsController(
             mockPaymentService.Object,
             mockTenantService.Object,
+            mockLeaseService.Object,
             autoMapper);
 
         var tempData = new TempDataDictionary(
@@ -60,9 +62,11 @@ public class PaymentsControllerTests
         Mock<ITenantApplicationService> mockTenantService,
         IMapper autoMapper)
     {
+        var mockLeaseService = new Mock<ILeaseAgreementApplicationService>();
         var controller = new PaymentsController(
             mockPaymentService.Object,
             mockTenantService.Object,
+            mockLeaseService.Object,
             autoMapper);
 
         var tempData = new TempDataDictionary(

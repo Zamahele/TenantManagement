@@ -183,7 +183,8 @@ namespace PropertyManagement.Test.Controllers
             mockPaymentService.Setup(s => s.DeletePaymentAsync(999))
                 .ReturnsAsync(ServiceResult<bool>.Failure("Payment not found"));
 
-            var controller = new PaymentsController(mockPaymentService.Object, mockTenantService.Object, mapper);
+            var mockLeaseService = new Mock<ILeaseAgreementApplicationService>();
+            var controller = new PaymentsController(mockPaymentService.Object, mockTenantService.Object, mockLeaseService.Object, mapper);
             SetupControllerContext(controller, GetUser("Manager"));
 
             // Act
@@ -216,7 +217,8 @@ namespace PropertyManagement.Test.Controllers
             mockPaymentService.Setup(s => s.CreatePaymentAsync(It.IsAny<CreatePaymentDto>()))
                 .ReturnsAsync(ServiceResult<PaymentDto>.Success(createdPayment));
 
-            var controller = new PaymentsController(mockPaymentService.Object, mockTenantService.Object, mapper);
+            var mockLeaseService = new Mock<ILeaseAgreementApplicationService>();
+            var controller = new PaymentsController(mockPaymentService.Object, mockTenantService.Object, mockLeaseService.Object, mapper);
             SetupControllerContext(controller, GetUser("Manager"));
 
             var paymentModel = new PaymentViewModel
@@ -253,7 +255,8 @@ namespace PropertyManagement.Test.Controllers
             mockTenantService.Setup(s => s.GetAllTenantsAsync())
                 .ReturnsAsync(ServiceResult<IEnumerable<TenantDto>>.Success(new List<TenantDto>()));
 
-            var controller = new PaymentsController(mockPaymentService.Object, mockTenantService.Object, mapper);
+            var mockLeaseService = new Mock<ILeaseAgreementApplicationService>();
+            var controller = new PaymentsController(mockPaymentService.Object, mockTenantService.Object, mockLeaseService.Object, mapper);
             SetupControllerContext(controller, GetUser("Manager"));
 
             var paymentViewModel = new PaymentViewModel

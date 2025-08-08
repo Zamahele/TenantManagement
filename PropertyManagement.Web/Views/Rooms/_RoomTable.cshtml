@@ -68,16 +68,11 @@
             }
             <button type="button" 
                     class="btn btn-sm btn-outline-danger" 
-                    onclick="deleteRoom(@room.RoomId)" 
+                    onclick="deleteRoom(@room.RoomId, '@room.Number')" 
                     title="Delete Room">
               <i class="bi bi-trash-fill"></i>
             </button>
           </div>
-          
-          <!-- Hidden Delete Form -->
-          <form id="deleteForm-@room.RoomId" asp-action="Delete" asp-route-id="@room.RoomId" method="post" style="display:none;">
-            @Html.AntiForgeryToken()
-          </form>
         </td>
       </tr>
     }

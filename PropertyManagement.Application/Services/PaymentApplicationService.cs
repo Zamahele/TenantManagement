@@ -30,7 +30,7 @@ public class PaymentApplicationService : IPaymentApplicationService
     {
         try
         {
-            var payments = await _paymentRepository.GetAllAsync(null, p => p.Tenant, p => p.LeaseAgreement);
+            var payments = await _paymentRepository.GetAllAsync(null, p => p.Tenant, p => p.Tenant.Room, p => p.LeaseAgreement);
             var paymentDtos = _mapper.Map<IEnumerable<PaymentDto>>(payments);
             return ServiceResult<IEnumerable<PaymentDto>>.Success(paymentDtos);
         }
@@ -44,7 +44,12 @@ public class PaymentApplicationService : IPaymentApplicationService
     {
         try
         {
-            var payment = await _paymentRepository.GetByIdAsync(id);
+            var payment = await _paymentRepository.Query()
+                .Include(p => p.Tenant)
+                    .ThenInclude(t => t.Room)
+                .Include(p => p.LeaseAgreement)
+                .FirstOrDefaultAsync(p => p.PaymentId == id);
+                
             if (payment == null)
             {
                 return ServiceResult<PaymentDto>.Failure("Payment not found");
@@ -63,7 +68,7 @@ public class PaymentApplicationService : IPaymentApplicationService
     {
         try
         {
-            var payments = await _paymentRepository.GetAllAsync(p => p.TenantId == tenantId, p => p.Tenant, p => p.LeaseAgreement);
+            var payments = await _paymentRepository.GetAllAsync(p => p.TenantId == tenantId, p => p.Tenant, p => p.Tenant.Room, p => p.LeaseAgreement);
             var paymentDtos = _mapper.Map<IEnumerable<PaymentDto>>(payments);
             return ServiceResult<IEnumerable<PaymentDto>>.Success(paymentDtos);
         }

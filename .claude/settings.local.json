@@ -12,7 +12,12 @@
       "Bash(/home/zamajasonn/.dotnet/dotnet test PropertyManagement.Test --verbosity normal)",
       "Bash(rm:*)",
       "Bash(/home/zamajasonn/.dotnet/dotnet build)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(dotnet ef migrations:*)",
+      "Bash(dotnet tool list:*)",
+      "Bash(dotnet-ef migrations:*)",
+      "Bash(dotnet ef database update:*)",
+      "Bash(mkdir:*)"
     ],
     "deny": []
   }

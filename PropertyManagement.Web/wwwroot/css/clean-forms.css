@@ -1,0 +1,346 @@
+/* =============================================================================
+   CLEAN FORMS STYLING - NO SHADOWS
+   =============================================================================
+   
+   Clean, modern forms without shadows - focus on borders and spacing
+   
+   ============================================================================= */
+
+/* Form Controls */
+.form-control, .form-select {
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 0.75rem 0.875rem;
+    font-size: 0.95rem;
+    transition: border-color 0.15s ease-in-out, background-color 0.15s ease-in-out;
+    background-color: #fff;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #86b7fe;
+    outline: none;
+    background-color: #fff;
+}
+
+/* Input Groups */
+.input-group {
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.input-group-text {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    color: #6c757d;
+    padding: 0.75rem 0.875rem;
+    font-size: 0.95rem;
+}
+
+.input-group .form-control:not(:first-child),
+.input-group .form-select:not(:first-child) {
+    border-left: none;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
+.input-group .form-control:not(:last-child),
+.input-group .form-select:not(:last-child) {
+    border-right: none;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+/* Buttons */
+.btn {
+    border: none;
+    border-radius: 8px;
+    padding: 0.75rem 1.5rem;
+    font-weight: 500;
+    font-size: 0.95rem;
+    transition: all 0.15s ease-in-out;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+    color: #fff;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #0a58ca 0%, #084298 100%);
+    color: #fff;
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: #fff;
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+    color: #fff;
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #198754 0%, #157347 100%);
+    color: #fff;
+}
+
+.btn-success:hover {
+    background: linear-gradient(135deg, #157347 0%, #0f5132 100%);
+    color: #fff;
+}
+
+.btn-outline-primary {
+    border: 1px solid #0d6efd;
+    color: #0d6efd;
+    background: transparent;
+}
+
+.btn-outline-primary:hover {
+    background: #0d6efd;
+    color: #fff;
+}
+
+.btn-outline-secondary {
+    border: 1px solid #6c757d;
+    color: #6c757d;
+    background: transparent;
+}
+
+.btn-outline-secondary:hover {
+    background: #6c757d;
+    color: #fff;
+}
+
+.btn-sm {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+}
+
+.btn-lg {
+    padding: 0.875rem 1.75rem;
+    font-size: 1.1rem;
+}
+
+/* Cards */
+.card {
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    background: #fff;
+}
+
+.card-body {
+    padding: 1.5rem;
+}
+
+.card-header {
+    background: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+    padding: 1rem 1.5rem;
+    border-radius: 12px 12px 0 0;
+}
+
+/* Tables */
+.table-container {
+    background: #fff;
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.table {
+    margin-bottom: 0;
+}
+
+.table th {
+    background: #f8f9fa;
+    border-bottom: 2px solid #e9ecef;
+    font-weight: 600;
+    padding: 1rem 0.75rem;
+}
+
+.table td {
+    padding: 0.875rem 0.75rem;
+    border-bottom: 1px solid #f1f3f4;
+}
+
+/* Modals */
+.modal-content {
+    border: 1px solid #dee2e6;
+    border-radius: 12px;
+}
+
+.modal-header {
+    border-bottom: 1px solid #e9ecef;
+    padding: 1.25rem 1.5rem;
+}
+
+.modal-body {
+    padding: 1.5rem;
+}
+
+.modal-footer {
+    border-top: 1px solid #e9ecef;
+    padding: 1rem 1.5rem;
+}
+
+/* Page Headers */
+.page-header {
+    background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    padding: 2rem;
+}
+
+/* Summary Cards */
+.summary-card {
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    background: #fff;
+    transition: transform 0.2s ease-in-out;
+}
+
+.summary-card:hover {
+    transform: translateY(-2px);
+    border-color: #0d6efd;
+}
+
+/* Form Labels */
+.form-label {
+    font-weight: 500;
+    color: #495057;
+    margin-bottom: 0.5rem;
+}
+
+.required::after {
+    content: " *";
+    color: #dc3545;
+}
+
+/* Form Text */
+.form-text {
+    font-size: 0.875rem;
+    color: #6c757d;
+    margin-top: 0.25rem;
+}
+
+/* Form Validation */
+.is-invalid {
+    border-color: #dc3545;
+}
+
+.invalid-feedback {
+    color: #dc3545;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+}
+
+/* Alerts */
+.alert {
+    border: 1px solid;
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+}
+
+.alert-success {
+    background-color: #d1e7dd;
+    border-color: #badbcc;
+    color: #0f5132;
+}
+
+.alert-danger {
+    background-color: #f8d7da;
+    border-color: #f5c2c7;
+    color: #842029;
+}
+
+.alert-info {
+    background-color: #cff4fc;
+    border-color: #b8daff;
+    color: #055160;
+}
+
+/* COMPLETELY REMOVE ALL BOX-SHADOWS */
+*,
+*::before,
+*::after {
+    box-shadow: none !important;
+}
+
+/* Remove dark modal backdrop */
+.modal-backdrop {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Override Bootstrap modal backdrop */
+.modal.fade .modal-dialog {
+    transition: transform 0.3s ease-out;
+}
+
+.modal.show .modal-dialog {
+    transform: none;
+}
+
+/* Focus states with outlines */
+.form-control:focus,
+.form-select:focus,
+.btn:focus {
+    outline: 2px solid #86b7fe;
+    outline-offset: 1px;
+}
+
+/* Custom checkbox and radio */
+.form-check-input {
+    border: 1px solid #dee2e6;
+}
+
+.form-check-input:checked {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+/* Navigation */
+.nav-tabs {
+    border-bottom: 2px solid #e9ecef;
+}
+
+.nav-link {
+    border: none;
+    border-radius: 8px 8px 0 0;
+    padding: 0.75rem 1rem;
+}
+
+.nav-link.active {
+    background: #0d6efd;
+    color: #fff;
+}
+
+/* Badges */
+.badge {
+    font-size: 0.8rem;
+    padding: 0.4em 0.6em;
+    border-radius: 6px;
+}
+
+/* Progress bars */
+.progress {
+    background-color: #f1f3f4;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    border-radius: 8px;
+}
+
+/* Breadcrumbs */
+.breadcrumb {
+    background: transparent;
+    padding: 0;
+    margin: 0;
+}
+
+.breadcrumb-item + .breadcrumb-item::before {
+    content: ">";
+    color: #6c757d;
+}

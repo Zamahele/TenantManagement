@@ -21,6 +21,10 @@ public class ApplicationDbContext : DbContext
     public DbSet<UtilityBill> UtilityBills { get; set; }
     public DbSet<LeaseTemplate> LeaseTemplate { get; set; }
     public DbSet<DigitalSignature> DigitalSignature { get; set; }
+    
+    // Waiting List entities
+    public DbSet<WaitingListEntry> WaitingListEntries { get; set; }
+    public DbSet<WaitingListNotification> WaitingListNotifications { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -94,6 +98,42 @@ public class ApplicationDbContext : DbContext
             entity.Property(e => e.WaterUsage).HasColumnType("decimal(18,2)");
             entity.Property(e => e.ElectricityUsage).HasColumnType("decimal(18,2)");
             entity.Property(e => e.TotalAmount).HasColumnType("decimal(18,2)");
+        });
+
+        // Waiting List relationships
+        modelBuilder.Entity<WaitingListEntry>(entity =>
+        {
+            entity.HasKey(w => w.WaitingListId);
+            entity.Property(w => w.PhoneNumber).IsRequired().HasMaxLength(15);
+            entity.Property(w => w.FullName).HasMaxLength(100);
+            entity.Property(w => w.Email).HasMaxLength(100);
+            entity.Property(w => w.PreferredRoomType).HasMaxLength(20);
+            entity.Property(w => w.MaxBudget).HasColumnType("decimal(18,2)");
+            entity.Property(w => w.Status).IsRequired().HasMaxLength(20);
+            entity.Property(w => w.Notes).HasMaxLength(500);
+            entity.Property(w => w.Source).HasMaxLength(50);
+        });
+
+        // WaitingListEntry-WaitingListNotification one-to-many relationship
+        modelBuilder.Entity<WaitingListNotification>()
+            .HasOne(wn => wn.WaitingListEntry)
+            .WithMany(wl => wl.Notifications)
+            .HasForeignKey(wn => wn.WaitingListId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // Room-WaitingListNotification relationship (optional)
+        modelBuilder.Entity<WaitingListNotification>()
+            .HasOne(wn => wn.Room)
+            .WithMany()
+            .HasForeignKey(wn => wn.RoomId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<WaitingListNotification>(entity =>
+        {
+            entity.HasKey(wn => wn.NotificationId);
+            entity.Property(wn => wn.MessageContent).IsRequired().HasMaxLength(1000);
+            entity.Property(wn => wn.Status).IsRequired().HasMaxLength(20);
+            entity.Property(wn => wn.Response).HasMaxLength(100);
         });
     }
 }

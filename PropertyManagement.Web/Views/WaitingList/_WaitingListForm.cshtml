@@ -1,0 +1,379 @@
+@model PropertyManagement.Web.ViewModels.WaitingListEntryViewModel
+
+@{
+    bool isEdit = Model.WaitingListId > 0;
+    string actionUrl = isEdit ? $"/WaitingList/WaitingListForm/{Model.WaitingListId}" : "/WaitingList/WaitingListForm";
+}
+
+<!-- Form Error Display -->
+<div id="formErrors" class="alert alert-danger" style="display: none;"></div>
+<div id="formSuccess" class="alert alert-success" style="display: none;"></div>
+
+<form id="waitingListForm" action="@actionUrl" method="post" class="needs-validation" novalidate>
+    @Html.AntiForgeryToken()
+    @if (isEdit)
+    {
+        <input type="hidden" asp-for="WaitingListId" />
+        <input type="hidden" asp-for="RegisteredDate" />
+        <input type="hidden" asp-for="NotificationCount" />
+    }
+
+    <div class="row g-4">
+        <!-- Left Column -->
+        <div class="col-lg-6">
+            <div class="mb-3">
+                <label asp-for="PhoneNumber" class="form-label fw-semibold">Phone Number <span class="text-danger">*</span></label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-telephone"></i></span>
+                    <input asp-for="PhoneNumber" 
+                           class="form-control" 
+                           type="tel"
+                           placeholder="0821234567" 
+                           pattern="^0[6-8][0-9]{8}$"
+                           title="South African mobile number (e.g., 0821234567)"
+                           maxlength="10" 
+                           required />
+                </div>
+                <div class="invalid-feedback">Please enter a valid SA mobile number.</div>
+                <small class="text-muted">South African mobile format (e.g., 0821234567)</small>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="FullName" class="form-label fw-semibold">Full Name <span class="text-danger">*</span></label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-person-circle"></i></span>
+                    <input asp-for="FullName" class="form-control" placeholder="John Doe" required />
+                </div>
+                <div class="invalid-feedback">Please enter the full name.</div>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Email" class="form-label fw-semibold">Email Address</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                    <input asp-for="Email" class="form-control" type="email" placeholder="email@example.com" />
+                </div>
+                <div class="invalid-feedback">Please enter a valid email address.</div>
+            </div>
+        </div>
+
+        <!-- Right Column -->
+        <div class="col-lg-6">
+            <div class="mb-3">
+                <label asp-for="PreferredRoomType" class="form-label fw-semibold">Preferred Room Type</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-house"></i></span>
+                    <select asp-for="PreferredRoomType" class="form-select">
+                        <option value="Any">Any Room Type</option>
+                        <option value="Single">Single Room</option>
+                        <option value="Double">Double Room</option>
+                        <option value="Family">Family Room</option>
+                        <option value="Studio">Studio Apartment</option>
+                    </select>
+                </div>
+                <span asp-validation-for="PreferredRoomType" class="text-danger small"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="MaxBudget" class="form-label fw-semibold">Maximum Budget</label>
+                <div class="input-group">
+                    <span class="input-group-text">R</span>
+                    <input asp-for="MaxBudget" class="form-control" type="number" step="0.01" placeholder="0.00" />
+                </div>
+                <span asp-validation-for="MaxBudget" class="text-danger small"></span>
+                <small class="text-muted">Leave empty for no budget limit</small>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Source" class="form-label fw-semibold">Source</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-info-circle"></i></span>
+                    <select asp-for="Source" class="form-select">
+                        <option value="Phone">Phone Call</option>
+                        <option value="Website">Website</option>
+                        <option value="Walk-in">Walk-in</option>
+                        <option value="Referral">Referral</option>
+                        <option value="Social Media">Social Media</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <span asp-validation-for="Source" class="text-danger small"></span>
+            </div>
+        </div>
+
+
+        @if (isEdit)
+        {
+            <!-- Status and Activity Section (Edit only) -->
+            <div class="col-12">
+                <h6 class="form-section-title">
+                    <i class="bi bi-gear me-2"></i>Status & Activity
+                </h6>
+            </div>
+
+            <div class="col-md-6">
+                <label asp-for="Status" class="form-label required">Status</label>
+                <select asp-for="Status" class="form-select">
+                    <option value="Active">Active</option>
+                    <option value="Notified">Notified</option>
+                    <option value="Interested">Interested</option>
+                    <option value="Converted">Converted</option>
+                    <option value="Inactive">Inactive</option>
+                    <option value="OptedOut">Opted Out</option>
+                </select>
+                <span asp-validation-for="Status" class="text-danger small"></span>
+            </div>
+
+            <div class="col-md-6">
+                <div class="form-check form-switch mt-4 pt-2">
+                    <input asp-for="IsActive" class="form-check-input" />
+                    <label asp-for="IsActive" class="form-check-label">Active Entry</label>
+                </div>
+                <span asp-validation-for="IsActive" class="text-danger small"></span>
+                <div class="form-text">Inactive entries won't receive notifications</div>
+            </div>
+
+            <!-- Statistics Display (Edit only) -->
+            <div class="col-12">
+                <div class="card bg-light">
+                    <div class="card-body">
+                        <h6 class="card-title">Entry Statistics</h6>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="stat-item">
+                                    <div class="stat-label">Registered</div>
+                                    <div class="stat-value">@Model.RegisteredDateFormatted</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="stat-item">
+                                    <div class="stat-label">Notifications Sent</div>
+                                    <div class="stat-value">@Model.NotificationCount</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="stat-item">
+                                    <div class="stat-label">Last Notified</div>
+                                    <div class="stat-value">@Model.LastNotifiedFormatted</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- Notes Section -->
+        <div class="col-12">
+            <div class="mb-3">
+                <label asp-for="Notes" class="form-label fw-semibold">Notes</label>
+                <textarea asp-for="Notes" class="form-control" rows="3" 
+                         placeholder="Any additional notes about this prospect..."></textarea>
+                <span asp-validation-for="Notes" class="text-danger small"></span>
+                <small class="text-muted">Maximum 500 characters</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form Actions -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-end gap-2">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle"></i> Cancel
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-circle"></i>
+                    <span class="submit-text">@(isEdit ? "Update Entry" : "Add to Waiting List")</span>
+                    <div class="spinner-border spinner-border-sm ms-2" style="display: none;" role="status" aria-hidden="true"></div>
+                </button>
+            </div>
+        </div>
+    </div>
+</form>
+
+<script>
+    $(document).ready(function() {
+        initializeWaitingListForm();
+    });
+
+    function initializeWaitingListForm() {
+        const form = $('#waitingListForm');
+        
+        // Form validation
+        form.on('submit', function(e) {
+            e.preventDefault();
+            submitWaitingListForm();
+        });
+
+        // Phone number formatting
+        $('#PhoneNumber').on('input', function() {
+            let value = $(this).val().replace(/\D/g, ''); // Remove non-digits
+            if (value.length > 10) {
+                value = value.substring(0, 10);
+            }
+            $(this).val(value);
+        });
+
+        // Budget formatting
+        $('#MaxBudget').on('blur', function() {
+            const value = parseFloat($(this).val());
+            if (!isNaN(value)) {
+                $(this).val(value.toFixed(2));
+            }
+        });
+
+        // Character count for notes
+        $('#Notes').on('input', function() {
+            const maxLength = 500;
+            const currentLength = $(this).val().length;
+            const remaining = maxLength - currentLength;
+            
+            let helpText = $(this).next('.text-danger').next('.form-text');
+            if (helpText.length === 0) {
+                helpText = $(this).siblings('.form-text');
+            }
+            
+            helpText.text(`${remaining} characters remaining`);
+            
+            if (remaining < 50) {
+                helpText.addClass('text-warning');
+            } else {
+                helpText.removeClass('text-warning');
+            }
+        });
+    }
+
+    function submitWaitingListForm() {
+        const form = $('#waitingListForm');
+        const submitButton = form.find('button[type="submit"]');
+        const spinner = submitButton.find('.spinner-border');
+        const errorDiv = $('#formErrors');
+        const successDiv = $('#formSuccess');
+        
+        // Show loading state
+        submitButton.prop('disabled', true);
+        spinner.show();
+        errorDiv.hide();
+        successDiv.hide();
+        
+        // Submit form via AJAX
+        $.ajax({
+            url: form.attr('action'),
+            method: 'POST',
+            data: form.serialize(),
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .done(function(response) {
+            if (response.success) {
+                successDiv.html(`<i class="bi bi-check-circle"></i> ${response.message}`).show();
+                
+                // Close modal after short delay
+                setTimeout(function() {
+                    $('#waitingListModal').modal('hide');
+                    // Reload the page to show updated data
+                    window.location.reload();
+                }, 1500);
+            } else {
+                if (response.errors && Array.isArray(response.errors)) {
+                    errorDiv.html(`<i class="bi bi-exclamation-triangle"></i> ${response.errors.join('<br>')}`).show();
+                } else {
+                    errorDiv.html(`<i class="bi bi-exclamation-triangle"></i> ${response.message || 'An error occurred'}`).show();
+                }
+            }
+        })
+        .fail(function(xhr) {
+            let errorMessage = 'An error occurred while saving. Please try again.';
+            if (xhr.responseJSON && xhr.responseJSON.message) {
+                errorMessage = xhr.responseJSON.message;
+            }
+            errorDiv.html(`<i class="bi bi-exclamation-triangle"></i> ${errorMessage}`).show();
+        })
+        .always(function() {
+            submitButton.prop('disabled', false);
+            spinner.hide();
+        });
+    }
+</script>
+
+<style>
+    .form-section-title {
+        color: #495057;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #e9ecef;
+    }
+
+    .required::after {
+        content: " *";
+        color: #dc3545;
+    }
+
+    .stat-item {
+        text-align: center;
+    }
+
+    .stat-label {
+        font-size: 0.875rem;
+        color: #6c757d;
+        font-weight: 500;
+    }
+
+    .stat-value {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #495057;
+    }
+
+    .input-group-text {
+        background-color: #f8f9fa;
+        border-color: #ced4da;
+        color: #6c757d;
+    }
+
+    .form-control:focus + .input-group-text,
+    .form-control:focus {
+        border-color: #86b7fe;
+        outline: none;
+    }
+
+    .form-check-input:checked {
+        background-color: #198754;
+        border-color: #198754;
+    }
+
+    .card.bg-light {
+        background-color: #f8f9fa !important;
+        border: 1px solid #e9ecef;
+    }
+
+    .form-control, .form-select {
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 0.75rem;
+        transition: border-color 0.15s ease-in-out;
+    }
+
+    .input-group {
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    .btn {
+        border: none;
+        border-radius: 8px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 500;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+    }
+
+    .btn-secondary {
+        background: #6c757d;
+    }
+</style>

@@ -1,0 +1,610 @@
+@model PropertyManagement.Web.ViewModels.WaitingListEntryViewModel
+@{
+    ViewData["Title"] = "Waiting List Details";
+}
+
+<!-- Page Header -->
+<div class="page-header mb-4">
+    <div class="d-flex justify-content-between align-items-center">
+        <div class="page-title">
+            <h1 class="page-title-main">
+                <div class="page-icon">
+                    <i class="bi bi-person-badge"></i>
+                </div>
+                Waiting List Details
+            </h1>
+            <p class="page-title-sub text-secondary mb-0">
+                Complete information for @(Model.FullName ?? "Unnamed Contact")
+            </p>
+        </div>
+        <div class="page-actions">
+            <a href="/WaitingList" class="btn btn-outline-secondary me-2">
+                <i class="bi bi-arrow-left"></i> Back to List
+            </a>
+            <button class="btn btn-outline-primary me-2" onclick="openEditWaitingListModal(@Model.WaitingListId)">
+                <i class="bi bi-pencil-square"></i> Edit
+            </button>
+            <button class="btn btn-primary" onclick="openNotificationModal()">
+                <i class="bi bi-bell"></i> Send Notification
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Main Content -->
+<div class="row">
+    <!-- Contact Information -->
+    <div class="col-md-8">
+        <div class="card detail-card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-person-vcard me-2"></i>Contact Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="detail-item">
+                            <label class="detail-label">Full Name</label>
+                            <div class="detail-value">@(Model.FullName ?? "Not provided")</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="detail-item">
+                            <label class="detail-label">Phone Number</label>
+                            <div class="detail-value">
+                                <i class="bi bi-telephone me-2"></i>
+                                <a href="tel:@Model.PhoneNumber" class="text-decoration-none">@Model.PhoneNumber</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="detail-item">
+                            <label class="detail-label">Email Address</label>
+                            <div class="detail-value">
+                                @if (!string.IsNullOrEmpty(Model.Email))
+                                {
+                                    <i class="bi bi-envelope me-2"></i>
+                                    <a href="mailto:@Model.Email" class="text-decoration-none">@Model.Email</a>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">Not provided</span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="detail-item">
+                            <label class="detail-label">Source</label>
+                            <div class="detail-value">
+                                <span class="badge bg-info">@(Model.Source ?? "Unknown")</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Preferences -->
+        <div class="card detail-card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-house me-2"></i>Room Preferences
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="detail-item">
+                            <label class="detail-label">Preferred Room Type</label>
+                            <div class="detail-value">
+                                <span class="badge bg-primary">@Model.RoomTypeDisplay</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="detail-item">
+                            <label class="detail-label">Maximum Budget</label>
+                            <div class="detail-value">
+                                <span class="badge bg-success">@Model.BudgetFormatted</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notes -->
+        @if (!string.IsNullOrEmpty(Model.Notes))
+        {
+            <div class="card detail-card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-journal-text me-2"></i>Notes
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="notes-content">
+                        @Model.Notes
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- Recent Notifications -->
+        <div class="card detail-card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-bell me-2"></i>Recent Notifications
+                </h5>
+                <a href="/WaitingList/Notifications/@Model.WaitingListId" class="btn btn-sm btn-outline-primary">
+                    View All
+                </a>
+            </div>
+            <div class="card-body">
+                @if (Model.Notifications.Any())
+                {
+                    <div class="timeline">
+                        @foreach (var notification in Model.Notifications.Take(5))
+                        {
+                            <div class="timeline-item">
+                                <div class="timeline-marker">
+                                    <i class="bi bi-bell"></i>
+                                </div>
+                                <div class="timeline-content">
+                                    <div class="timeline-header">
+                                        <span class="badge @notification.StatusBadgeClass">@notification.Status</span>
+                                        <small class="text-muted">@notification.SentDateFormatted</small>
+                                    </div>
+                                    <div class="timeline-body">
+                                        <p class="mb-1">@notification.MessageContent</p>
+                                        @if (!string.IsNullOrEmpty(notification.Response))
+                                        {
+                                            <div class="response-info">
+                                                <small class="text-success">
+                                                    <i class="bi bi-reply"></i> @notification.Response
+                                                    (@notification.ResponseDateFormatted)
+                                                </small>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-bell-slash fs-2 mb-2 d-block"></i>
+                        <p>No notifications sent yet</p>
+                        <button class="btn btn-primary btn-sm" onclick="openNotificationModal()">
+                            <i class="bi bi-bell"></i> Send First Notification
+                        </button>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-md-4">
+        <!-- Status Card -->
+        <div class="card detail-card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-info-circle me-2"></i>Status
+                </h5>
+            </div>
+            <div class="card-body text-center">
+                <div class="status-display mb-3">
+                    <span class="badge @Model.StatusBadgeClass status-badge-large">@Model.Status</span>
+                </div>
+                <div class="status-toggle">
+                    @if (Model.IsActive)
+                    {
+                        <span class="text-success">
+                            <i class="bi bi-check-circle"></i> Active
+                        </span>
+                    }
+                    else
+                    {
+                        <span class="text-muted">
+                            <i class="bi bi-pause-circle"></i> Inactive
+                        </span>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics Card -->
+        <div class="card detail-card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-graph-up me-2"></i>Statistics
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="stat-row">
+                    <div class="stat-item">
+                        <div class="stat-value">@Model.RegisteredDateFormatted</div>
+                        <div class="stat-label">Registered</div>
+                    </div>
+                </div>
+                <div class="stat-row">
+                    <div class="stat-item">
+                        <div class="stat-value">@Model.NotificationCount</div>
+                        <div class="stat-label">Notifications Sent</div>
+                    </div>
+                </div>
+                <div class="stat-row">
+                    <div class="stat-item">
+                        <div class="stat-value">@Model.LastNotifiedFormatted</div>
+                        <div class="stat-label">Last Notified</div>
+                    </div>
+                </div>
+                <div class="stat-row">
+                    <div class="stat-item">
+                        <div class="stat-value">
+                            @{
+                                var daysSinceRegistered = (DateTime.Now - Model.RegisteredDate).Days;
+                            }
+                            @daysSinceRegistered days
+                        </div>
+                        <div class="stat-label">On Waiting List</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card detail-card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-lightning me-2"></i>Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-primary" onclick="openNotificationModal()">
+                        <i class="bi bi-bell"></i> Send Notification
+                    </button>
+                    <button class="btn btn-outline-info" onclick="callContact()">
+                        <i class="bi bi-telephone"></i> Call Contact
+                    </button>
+                    <button class="btn btn-outline-success" onclick="markAsInterested()">
+                        <i class="bi bi-heart"></i> Mark as Interested
+                    </button>
+                    <button class="btn btn-outline-warning" onclick="updateStatus()">
+                        <i class="bi bi-gear"></i> Update Status
+                    </button>
+                    <button class="btn btn-outline-danger" onclick="openWaitingListDeleteModal(@Model.WaitingListId, '@Model.ContactDisplay', 'Entry registered @Model.RegisteredDateFormatted')">
+                        <i class="bi bi-trash"></i> Remove from List
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modals -->
+<div id="waitingListModal" class="modal fade" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <!-- Content will be loaded via AJAX -->
+        </div>
+    </div>
+</div>
+
+<div id="notificationModal" class="modal fade" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <!-- Content will be loaded via AJAX -->
+        </div>
+    </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalTitle" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalTitle">Delete Waiting List Entry</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p id="deleteModalBody">Are you sure you want to delete this waiting list entry?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteForm" method="post" style="display: inline;">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    // Edit modal
+    function openEditWaitingListModal(id) {
+        loadWaitingListForm('Edit Waiting List Entry', `/WaitingList/WaitingListForm/${id}`);
+    }
+
+    function loadWaitingListForm(title, url) {
+        $('#waitingListModal .modal-content').html('<div class="modal-body text-center"><div class="spinner-border" role="status"></div></div>');
+        $('#waitingListModal').modal('show');
+
+        $.get(url)
+            .done(function(data) {
+                $('#waitingListModal .modal-content').html(`
+                    <div class="modal-header">
+                        <h5 class="modal-title">${title}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        ${data}
+                    </div>
+                `);
+            })
+            .fail(function() {
+                $('#waitingListModal .modal-content').html(`
+                    <div class="modal-header">
+                        <h5 class="modal-title">Error</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-danger">Failed to load form. Please try again.</div>
+                    </div>
+                `);
+            });
+    }
+
+    // Quick actions
+    function openNotificationModal() {
+        alert('Notification modal will be implemented in Phase 2 - SMS Integration');
+    }
+
+    function callContact() {
+        if (confirm('Call @Model.PhoneNumber?')) {
+            window.location.href = 'tel:@Model.PhoneNumber';
+        }
+    }
+
+    function markAsInterested() {
+        if (confirm('Mark this entry as interested?')) {
+            updateEntryStatus('Interested');
+        }
+    }
+
+    function updateStatus() {
+        const newStatus = prompt('Enter new status (Active, Notified, Interested, Converted, Inactive, OptedOut):', '@Model.Status');
+        if (newStatus && newStatus !== '@Model.Status') {
+            updateEntryStatus(newStatus);
+        }
+    }
+
+    function updateEntryStatus(status) {
+        const form = $('<form>', {
+            method: 'POST',
+            action: '/WaitingList/UpdateStatus'
+        });
+
+        form.append($('<input>', {
+            type: 'hidden',
+            name: '__RequestVerificationToken',
+            value: $('input[name="__RequestVerificationToken"]').val()
+        }));
+
+        form.append($('<input>', {
+            type: 'hidden',
+            name: 'id',
+            value: '@Model.WaitingListId'
+        }));
+
+        form.append($('<input>', {
+            type: 'hidden',
+            name: 'status',
+            value: status
+        }));
+
+        $('body').append(form);
+        form.submit();
+    }
+
+    // Delete modal
+    function openWaitingListDeleteModal(id, contactInfo, details) {
+        openDeleteModal(id, contactInfo, details, '/WaitingList/Delete', 'Waiting List Entry');
+    }
+    
+    function openDeleteModal(entityId, contactInfo, details, actionUrl, title) {
+        var modal = document.getElementById('deleteModal');
+        var modalTitle = document.getElementById('deleteModalTitle');
+        var modalBody = document.getElementById('deleteModalBody');
+        var deleteForm = document.getElementById('deleteForm');
+        
+        modalTitle.textContent = `Delete ${title}`;
+        modalBody.innerHTML = `
+            <div class="alert alert-warning">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                <strong>Warning:</strong> This action cannot be undone.
+            </div>
+            <p><strong>Contact:</strong> ${contactInfo}</p>
+            <p><strong>Details:</strong> ${details}</p>
+            <p>Are you sure you want to delete this waiting list entry?</p>
+        `;
+        
+        deleteForm.action = actionUrl;
+        deleteForm.innerHTML = `
+            <input name="__RequestVerificationToken" type="hidden" value="${document.querySelector('input[name="__RequestVerificationToken"]').value}" />
+            <input type="hidden" name="id" value="${entityId}" />
+            <button type="submit" class="btn btn-danger">Delete</button>
+        `;
+        
+        // Show the modal
+        var bsModal = new bootstrap.Modal(modal);
+        bsModal.show();
+    }
+</script>
+}
+
+<style>
+    .detail-card {
+        border: none;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        margin-bottom: 1.5rem;
+    }
+
+    .detail-item {
+        margin-bottom: 1rem;
+    }
+
+    .detail-label {
+        font-size: 0.875rem;
+        color: #6c757d;
+        font-weight: 500;
+        display: block;
+        margin-bottom: 0.25rem;
+    }
+
+    .detail-value {
+        font-size: 1rem;
+        color: #212529;
+        font-weight: 500;
+    }
+
+    .status-badge-large {
+        font-size: 1.1rem;
+        padding: 0.5rem 1rem;
+    }
+
+    .stat-row {
+        margin-bottom: 1rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #eee;
+    }
+
+    .stat-row:last-child {
+        margin-bottom: 0;
+        padding-bottom: 0;
+        border-bottom: none;
+    }
+
+    .stat-item {
+        text-align: center;
+    }
+
+    .stat-value {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #495057;
+    }
+
+    .stat-label {
+        font-size: 0.8rem;
+        color: #6c757d;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .notes-content {
+        background: #f8f9fa;
+        padding: 1rem;
+        border-radius: 8px;
+        border-left: 4px solid #007bff;
+        font-style: italic;
+    }
+
+    .timeline {
+        position: relative;
+        padding-left: 2rem;
+    }
+
+    .timeline-item {
+        position: relative;
+        margin-bottom: 1.5rem;
+    }
+
+    .timeline-item:last-child {
+        margin-bottom: 0;
+    }
+
+    .timeline-marker {
+        position: absolute;
+        left: -2rem;
+        width: 2rem;
+        height: 2rem;
+        background: #007bff;
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.875rem;
+    }
+
+    .timeline-content {
+        background: #f8f9fa;
+        padding: 1rem;
+        border-radius: 8px;
+        position: relative;
+    }
+
+    .timeline-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+
+    .timeline-body p {
+        margin-bottom: 0.5rem;
+        font-size: 0.925rem;
+    }
+
+    .response-info {
+        padding: 0.5rem;
+        background: rgba(25, 135, 84, 0.1);
+        border-radius: 4px;
+        margin-top: 0.5rem;
+    }
+
+    .page-header {
+        background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
+        padding: 2rem;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .page-icon {
+        width: 60px;
+        height: 60px;
+        background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.75rem;
+        margin-right: 1rem;
+        float: left;
+    }
+
+    .page-title-main {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #212529;
+        margin: 0;
+        display: flex;
+        align-items: center;
+    }
+
+    .page-title-sub {
+        font-size: 1rem;
+        margin-top: 0.5rem;
+        clear: left;
+    }
+</style>

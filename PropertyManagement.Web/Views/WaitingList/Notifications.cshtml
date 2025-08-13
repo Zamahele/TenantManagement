@@ -1,0 +1,464 @@
+@model IEnumerable<PropertyManagement.Web.ViewModels.WaitingListNotificationViewModel>
+@{
+    ViewData["Title"] = "Notification History";
+}
+
+<!-- Page Header -->
+<div class="page-header mb-4">
+    <div class="d-flex justify-content-between align-items-center">
+        <div class="page-title">
+            <h1 class="page-title-main">
+                <div class="page-icon">
+                    <i class="bi bi-bell-fill"></i>
+                </div>
+                Notification History
+            </h1>
+            <p class="page-title-sub text-secondary mb-0">Complete history of all SMS notifications sent to waiting list entries</p>
+        </div>
+        <div class="page-actions">
+            <a href="/WaitingList" class="btn btn-outline-secondary me-2">
+                <i class="bi bi-arrow-left"></i> Back to Waiting List
+            </a>
+            <button class="btn btn-outline-primary" onclick="exportNotifications()">
+                <i class="bi bi-download"></i> Export History
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Summary Stats -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card summary-card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="summary-icon bg-primary">
+                        <i class="bi bi-send"></i>
+                    </div>
+                    <div class="ms-3">
+                        <h6 class="summary-title">Total Sent</h6>
+                        <h4 class="summary-value">@Model.Count()</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card summary-card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="summary-icon bg-success">
+                        <i class="bi bi-check-circle"></i>
+                    </div>
+                    <div class="ms-3">
+                        <h6 class="summary-title">Delivered</h6>
+                        <h4 class="summary-value">@Model.Count(n => n.Status == "Delivered")</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card summary-card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="summary-icon bg-info">
+                        <i class="bi bi-reply"></i>
+                    </div>
+                    <div class="ms-3">
+                        <h6 class="summary-title">Responded</h6>
+                        <h4 class="summary-value">@Model.Count(n => n.Status == "Responded")</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card summary-card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="summary-icon bg-danger">
+                        <i class="bi bi-x-circle"></i>
+                    </div>
+                    <div class="ms-3">
+                        <h6 class="summary-title">Failed</h6>
+                        <h4 class="summary-value">@Model.Count(n => n.Status == "Failed")</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Notifications Table -->
+<div class="table-container">
+    <div class="table-header">
+        <h5 class="table-title">Notification History</h5>
+        <p class="table-description">Chronological list of all SMS notifications sent to waiting list entries</p>
+    </div>
+    <div class="table-responsive">
+        <table class="table align-middle mb-0" id="notificationsTable" 
+               data-datatable
+               data-page-length="20"
+               data-search-label="Search notifications:"
+               data-empty-message="No notifications found">
+            <thead>
+                <tr>
+                    <th>Sent Date</th>
+                    <th>Recipient</th>
+                    <th>Room</th>
+                    <th>Message Preview</th>
+                    <th>Status</th>
+                    <th>Response</th>
+                    <th class="text-center">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Any())
+                {
+                    @foreach (var notification in Model)
+                    {
+                        <tr>
+                            <td>
+                                <div class="date-info">
+                                    <div class="fw-medium">@notification.SentDateFormatted</div>
+                                    <div class="small text-muted">
+                                        <i class="bi bi-clock me-1"></i>@notification.SentDate.ToString("HH:mm")
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="recipient-info">
+                                    <div class="fw-medium">@notification.RecipientDisplay</div>
+                                    @if (notification.WaitingListEntry != null)
+                                    {
+                                        <div class="small text-muted">
+                                            <i class="bi bi-telephone me-1"></i>@notification.WaitingListEntry.PhoneNumber
+                                        </div>
+                                    }
+                                </div>
+                            </td>
+                            <td>
+                                <div class="room-info">
+                                    @if (!string.IsNullOrEmpty(notification.RoomDisplay))
+                                    {
+                                        <span class="badge bg-info">@notification.RoomDisplay</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">General</span>
+                                    }
+                                </div>
+                            </td>
+                            <td>
+                                <div class="message-preview">
+                                    <div class="message-text">
+                                        @(notification.MessageContent.Length > 80 ? 
+                                          notification.MessageContent.Substring(0, 80) + "..." : 
+                                          notification.MessageContent)
+                                    </div>
+                                    @if (notification.MessageContent.Length > 80)
+                                    {
+                                        <button class="btn btn-link btn-sm p-0" 
+                                                onclick="showFullMessage('@notification.NotificationId')" 
+                                                title="View full message">
+                                            <i class="bi bi-eye"></i> Full message
+                                        </button>
+                                    }
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge @notification.StatusBadgeClass">@notification.Status</span>
+                            </td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(notification.Response))
+                                {
+                                    <div class="response-info">
+                                        <span class="badge @notification.ResponseBadgeClass">@notification.Response</span>
+                                        <div class="small text-muted">@notification.ResponseDateFormatted</div>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">No response</span>
+                                }
+                            </td>
+                            <td class="text-center">
+                                <div class="btn-group" role="group">
+                                    <button type="button" class="btn btn-sm btn-outline-info" 
+                                            onclick="showNotificationDetails(@notification.NotificationId)" 
+                                            title="View Details">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                    @if (notification.WaitingListEntry != null)
+                                    {
+                                        <a href="/WaitingList/Details/@notification.WaitingListId" 
+                                           class="btn btn-sm btn-outline-primary" 
+                                           title="View Waiting List Entry">
+                                            <i class="bi bi-person"></i>
+                                        </a>
+                                    }
+                                    @if (string.IsNullOrEmpty(notification.Response))
+                                    {
+                                        <button type="button" class="btn btn-sm btn-outline-success" 
+                                                onclick="markAsResponded(@notification.NotificationId)" 
+                                                title="Mark as Responded">
+                                            <i class="bi bi-check"></i>
+                                        </button>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-4">
+                            <i class="bi bi-bell-slash fs-1 mb-3 d-block"></i>
+                            <h5>No notifications found</h5>
+                            <p>Notifications will appear here when they are sent to waiting list entries.</p>
+                            <a href="/WaitingList" class="btn btn-primary">
+                                <i class="bi bi-arrow-left"></i> Back to Waiting List
+                            </a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Message Detail Modal -->
+<div id="messageModal" class="modal fade" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Full Message</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="fullMessageContent"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Notification Detail Modal -->
+<div id="notificationDetailModal" class="modal fade" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Notification Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="notificationDetailContent"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    // Initialize DataTable
+    $(document).ready(function() {
+        $('#notificationsTable').DataTable({
+            pageLength: 20,
+            responsive: true,
+            order: [[0, 'desc']], // Sort by date descending
+            columnDefs: [
+                { orderable: false, targets: [6] } // Disable sorting on actions column
+            ],
+            language: {
+                search: "Search notifications:",
+                emptyTable: "No notifications found"
+            }
+        });
+    });
+
+    // Show full message
+    function showFullMessage(notificationId) {
+        // Find the notification in the current page data
+        const row = $(`button[onclick="showFullMessage('${notificationId}')"]`).closest('tr');
+        const messagePreview = row.find('.message-text').text();
+        
+        // For now, just show what we have - in a real implementation, 
+        // this would fetch the full message from the server
+        $('#fullMessageContent').html(`
+            <div class="alert alert-info">
+                <h6>Message Content:</h6>
+                <p class="mb-0">${messagePreview}</p>
+            </div>
+            <p><strong>Note:</strong> This is a preview. Full message retrieval will be implemented in Phase 2.</p>
+        `);
+        
+        $('#messageModal').modal('show');
+    }
+
+    // Show notification details
+    function showNotificationDetails(notificationId) {
+        // In a real implementation, this would fetch full details from the server
+        $('#notificationDetailContent').html(`
+            <div class="alert alert-info">
+                <h6>Notification Details</h6>
+                <p>Detailed notification information for ID: ${notificationId}</p>
+                <p><strong>Note:</strong> Full notification details will be implemented in Phase 2.</p>
+            </div>
+        `);
+        
+        $('#notificationDetailModal').modal('show');
+    }
+
+    // Mark as responded
+    function markAsResponded(notificationId) {
+        const response = prompt('Enter response (e.g., Interested, Not Interested, Converted):');
+        if (response) {
+            // In a real implementation, this would update the notification via AJAX
+            alert(`Response "${response}" will be recorded for notification ${notificationId} in Phase 2`);
+            
+            // For now, just update the UI
+            const row = $(`button[onclick="markAsResponded('${notificationId}')"]`).closest('tr');
+            const responseCell = row.find('td:nth-child(6)');
+            responseCell.html(`
+                <div class="response-info">
+                    <span class="badge bg-success">${response}</span>
+                    <div class="small text-muted">Just now</div>
+                </div>
+            `);
+            
+            // Hide the mark as responded button
+            $(`button[onclick="markAsResponded('${notificationId}')"]`).hide();
+        }
+    }
+
+    // Export notifications
+    function exportNotifications() {
+        alert('Export functionality will be implemented in Phase 2');
+        // window.location.href = '/WaitingList/ExportNotifications';
+    }
+</script>
+}
+
+<style>
+    .summary-card {
+        border: none;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        transition: transform 0.2s ease;
+    }
+
+    .summary-card:hover {
+        transform: translateY(-2px);
+    }
+
+    .summary-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.2rem;
+    }
+
+    .summary-title {
+        font-size: 0.875rem;
+        color: #6c757d;
+        margin-bottom: 0.25rem;
+        font-weight: 500;
+    }
+
+    .summary-value {
+        font-size: 1.75rem;
+        font-weight: 700;
+        margin: 0;
+        line-height: 1;
+    }
+
+    .table-container {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+
+    .table-header {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        padding: 1.5rem;
+        border-bottom: 1px solid #dee2e6;
+    }
+
+    .table-title {
+        margin: 0;
+        color: #495057;
+        font-weight: 600;
+    }
+
+    .table-description {
+        margin: 0.25rem 0 0 0;
+        color: #6c757d;
+        font-size: 0.875rem;
+    }
+
+    .date-info,
+    .recipient-info,
+    .room-info,
+    .message-preview,
+    .response-info {
+        font-size: 0.875rem;
+    }
+
+    .message-text {
+        font-size: 0.85rem;
+        line-height: 1.4;
+        margin-bottom: 0.25rem;
+    }
+
+    .page-header {
+        background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
+        padding: 2rem;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .page-icon {
+        width: 60px;
+        height: 60px;
+        background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.75rem;
+        margin-right: 1rem;
+        float: left;
+    }
+
+    .page-title-main {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #212529;
+        margin: 0;
+        display: flex;
+        align-items: center;
+    }
+
+    .page-title-sub {
+        font-size: 1rem;
+        margin-top: 0.5rem;
+        clear: left;
+    }
+
+    .btn-group .btn {
+        padding: 0.25rem 0.5rem;
+    }
+
+    .response-info .small {
+        margin-top: 0.25rem;
+    }
+</style>

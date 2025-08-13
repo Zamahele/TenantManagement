@@ -86,6 +86,7 @@ builder.Services.AddScoped<IMaintenanceRequestApplicationService, MaintenanceReq
 builder.Services.AddScoped<IInspectionApplicationService, InspectionApplicationService>();
 builder.Services.AddScoped<IUtilityBillApplicationService, UtilityBillApplicationService>();
 builder.Services.AddScoped<ILeaseGenerationService, LeaseGenerationService>();
+builder.Services.AddScoped<IWaitingListApplicationService, WaitingListApplicationService>();
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
@@ -239,6 +240,25 @@ builder.Services.AddAutoMapper(cfg =>
   cfg.CreateMap<LeaseTemplateViewModel, UpdateLeaseTemplateDto>();
   cfg.CreateMap<CreateLeaseTemplateDto, LeaseTemplate>();
   cfg.CreateMap<UpdateLeaseTemplateDto, LeaseTemplate>();
+
+  // Waiting List mappings
+  // Entity to DTO mappings
+  cfg.CreateMap<WaitingListEntry, WaitingListEntryDto>().ReverseMap();
+  cfg.CreateMap<WaitingListNotification, WaitingListNotificationDto>().ReverseMap();
+  
+  // Create/Update DTO mappings
+  cfg.CreateMap<CreateWaitingListEntryDto, WaitingListEntry>();
+  cfg.CreateMap<UpdateWaitingListEntryDto, WaitingListEntry>();
+  
+  // DTO to ViewModel mappings
+  cfg.CreateMap<WaitingListEntryDto, WaitingListEntryViewModel>().ReverseMap();
+  cfg.CreateMap<WaitingListNotificationDto, WaitingListNotificationViewModel>().ReverseMap();
+  cfg.CreateMap<WaitingListSummaryDto, WaitingListSummaryViewModel>().ReverseMap();
+  
+  // ViewModel to Create/Update DTO mappings
+  cfg.CreateMap<WaitingListEntryViewModel, CreateWaitingListEntryDto>();
+  cfg.CreateMap<WaitingListEntryViewModel, UpdateWaitingListEntryDto>();
+  cfg.CreateMap<QuickAddWaitingListViewModel, CreateWaitingListEntryDto>();
 });
 
 builder.WebHost.ConfigureKestrel(options =>

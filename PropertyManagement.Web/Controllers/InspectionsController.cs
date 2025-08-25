@@ -149,99 +149,124 @@ namespace PropertyManagement.Web.Controllers
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CreateOrEdit(InspectionViewModel model)
     {
-      bool isAjax = Request.Headers["X-Requested-With"] == "XMLHttpRequest";
-      
-      // Add room options for dropdown in case of validation error
-      var roomsResult = await _roomApplicationService.GetAllRoomsAsync();
-      var roomList = new List<SelectListItem>();
-      
-      if (roomsResult.IsSuccess)
-      {
-        roomList = roomsResult.Data.Select(r => new SelectListItem
+        // Ensure model is not null
+        model ??= new InspectionViewModel();
+        
+        // Initialize RoomOptions to prevent null reference
+        model.RoomOptions ??= new List<SelectListItem>();
+        
+        bool isAjax = false;
+        try
         {
-          Value = r.RoomId.ToString(),
-          Text = $"Room {r.Number} ({r.Type})"
-        }).ToList();
-      }
-      
-      model.RoomOptions = roomList;
-
-      if (!ModelState.IsValid)
-      {
-        if (isAjax)
+            var requestedWith = Request?.Headers?["X-Requested-With"];
+            isAjax = requestedWith.HasValue && requestedWith.Value == "XMLHttpRequest";
+        }
+        catch
         {
-          var errors = ModelState.Values
-              .SelectMany(v => v.Errors)
-              .Select(e => e.ErrorMessage)
-              .ToList();
-          return Json(new { success = false, message = "Please correct the form errors.", errors = errors });
+            // If Request or Headers is null, default to false
+            isAjax = false;
         }
         
-        SetErrorMessage("Please correct the errors in the form.");
-        return PartialView("_InspectionForm", model);
-      }
-
-      try
-      {
-        if (model.InspectionId == 0)
+        // Try to populate room options
+        try
         {
-          var createInspectionDto = _mapper.Map<CreateInspectionDto>(model);
-          var result = await _inspectionApplicationService.CreateInspectionAsync(createInspectionDto);
-          
-          if (!result.IsSuccess)
-          {
-            if (isAjax)
+            if (_roomApplicationService != null)
             {
-              return Json(new { success = false, message = result.ErrorMessage });
+                var roomsResult = await _roomApplicationService.GetAllRoomsAsync();
+                if (roomsResult?.IsSuccess == true && roomsResult.Data != null)
+                {
+                    model.RoomOptions = roomsResult.Data
+                        .Where(r => r != null)
+                        .Select(r => new SelectListItem
+                        {
+                            Value = r.RoomId.ToString(),
+                            Text = $"Room {r.Number ?? "Unknown"} ({r.Type ?? "Unknown"})"
+                        }).ToList();
+                }
             }
-            
-            SetErrorMessage($"Failed to create inspection: {result.ErrorMessage}");
-            return PartialView("_InspectionForm", model);
-          }
-
-          if (isAjax)
-          {
-            return Json(new { success = true, message = "Inspection created successfully!" });
-          }
-
-          SetSuccessMessage("Inspection created successfully.");
         }
-        else
+        catch
         {
-          var updateInspectionDto = _mapper.Map<UpdateInspectionDto>(model);
-          var result = await _inspectionApplicationService.UpdateInspectionAsync(model.InspectionId, updateInspectionDto);
-          
-          if (!result.IsSuccess)
-          {
-            if (isAjax)
-            {
-              return Json(new { success = false, message = result.ErrorMessage });
-            }
-            
-            SetErrorMessage($"Failed to update inspection: {result.ErrorMessage}");
-            return PartialView("_InspectionForm", model);
-          }
-
-          if (isAjax)
-          {
-            return Json(new { success = true, message = "Inspection updated successfully!" });
-          }
-
-          SetSuccessMessage("Inspection updated successfully.");
-        }
-      }
-      catch (Exception ex)
-      {
-        if (isAjax)
-        {
-          return Json(new { success = false, message = $"An unexpected error occurred: {ex.Message}" });
+            // Ignore room service errors
         }
         
-        SetErrorMessage($"An unexpected error occurred: {ex.Message}");
-        return PartialView("_InspectionForm", model);
-      }
-
-      return RedirectToAction(nameof(Index));
+        if (!ModelState.IsValid)
+        {
+            if (isAjax)
+            {
+                var errors = ModelState.Values
+                    .SelectMany(v => v.Errors)
+                    .Select(e => e.ErrorMessage)
+                    .ToList();
+                return Json(new { success = false, message = "Please correct the form errors.", errors = errors });
+            }
+            SetErrorMessage("Please correct the errors in the form.");
+            return PartialView("_InspectionForm", model);
+        }
+        
+        try
+        {
+            if (_mapper == null)
+            {
+                SetErrorMessage("Mapper service not available.");
+                return PartialView("_InspectionForm", model);
+            }
+            
+            if (_inspectionApplicationService == null)
+            {
+                SetErrorMessage("Inspection service not available.");
+                return PartialView("_InspectionForm", model);
+            }
+            
+            if (model.InspectionId == 0)
+            {
+                var createInspectionDto = _mapper.Map<CreateInspectionDto>(model);
+                var result = await _inspectionApplicationService.CreateInspectionAsync(createInspectionDto);
+                if (!result.IsSuccess)
+                {
+                    if (isAjax)
+                    {
+                        return Json(new { success = false, message = result.ErrorMessage });
+                    }
+                    SetErrorMessage($"Failed to create inspection: {result.ErrorMessage}");
+                    return PartialView("_InspectionForm", model);
+                }
+                if (isAjax)
+                {
+                    return Json(new { success = true, message = "Inspection created successfully." });
+                }
+                SetSuccessMessage("Inspection created successfully.");
+            }
+            else
+            {
+                var updateInspectionDto = _mapper.Map<UpdateInspectionDto>(model);
+                var result = await _inspectionApplicationService.UpdateInspectionAsync(model.InspectionId, updateInspectionDto);
+                if (!result.IsSuccess)
+                {
+                    if (isAjax)
+                    {
+                        return Json(new { success = false, message = result.ErrorMessage });
+                    }
+                    SetErrorMessage($"Failed to update inspection: {result.ErrorMessage}");
+                    return PartialView("_InspectionForm", model);
+                }
+                if (isAjax)
+                {
+                    return Json(new { success = true, message = "Inspection updated successfully." });
+                }
+                SetSuccessMessage("Inspection updated successfully.");
+            }
+        }
+        catch (Exception ex)
+        {
+            if (isAjax)
+            {
+                return Json(new { success = false, message = $"An unexpected error occurred: {ex.Message}" });
+            }
+            SetErrorMessage($"An unexpected error occurred: {ex.Message}");
+            return PartialView("_InspectionForm", model);
+        }
+        return RedirectToAction(nameof(Index));
     }
 
     // POST: Save Add/Edit (Legacy - keeping for compatibility)
@@ -272,7 +297,6 @@ namespace PropertyManagement.Web.Controllers
       {
         SetErrorMessage("Error deleting inspection: " + ex.Message);
       }
-      
       return RedirectToAction(nameof(Index));
     }
 

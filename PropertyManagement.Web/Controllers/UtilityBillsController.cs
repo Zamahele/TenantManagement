@@ -45,16 +45,10 @@ public class UtilityBillsController : BaseController
             SetErrorMessage(result.ErrorMessage);
             return View(new List<UtilityBillViewModel>());
         }
-
         var utilityBillVms = _mapper.Map<List<UtilityBillViewModel>>(result.Data);
-        
-        // Set utility rates for JavaScript calculations
         ViewBag.WaterRate = GetWaterRate();
         ViewBag.ElectricityRate = GetElectricityRate();
-        
-        // Set sidebar counts
         await SetSidebarCountsAsync();
-        
         return View(utilityBillVms);
     }
 
@@ -92,20 +86,22 @@ public class UtilityBillsController : BaseController
             }
             
             utilityBillVm = _mapper.Map<UtilityBillFormViewModel>(result.Data);
+            utilityBillVm.RoomOptions = roomList;
+            utilityBillVm.WaterRate = GetWaterRate();
+            utilityBillVm.ElectricityRate = GetElectricityRate();
         }
         else
         {
             // Creating new utility bill
             utilityBillVm = new UtilityBillFormViewModel
             {
-                BillingDate = DateTime.Today
+                BillingDate = DateTime.Today,
+                RoomOptions = roomList,
+                WaterRate = GetWaterRate(),
+                ElectricityRate = GetElectricityRate()
             };
         }
         
-        utilityBillVm.RoomOptions = roomList;
-        utilityBillVm.WaterRate = GetWaterRate();
-        utilityBillVm.ElectricityRate = GetElectricityRate();
-
         return PartialView("_UtilityBillForm", utilityBillVm);
     }
 
@@ -114,15 +110,9 @@ public class UtilityBillsController : BaseController
     public async Task<IActionResult> CreateOrEdit(UtilityBillFormViewModel utilityBillVm)
     {
         bool isAjax = Request.Headers["X-Requested-With"] == "XMLHttpRequest";
-        
-        // Calculate total amount based on usage and rates
-        utilityBillVm.TotalAmount = (utilityBillVm.WaterUsage * GetWaterRate()) + 
-                                    (utilityBillVm.ElectricityUsage * GetElectricityRate());
-        
-        // Add available rooms for dropdown in case of validation error
+        utilityBillVm.TotalAmount = (utilityBillVm.WaterUsage * GetWaterRate()) + (utilityBillVm.ElectricityUsage * GetElectricityRate());
         var roomsResult = await _roomApplicationService.GetAllRoomsAsync();
         var roomList = new List<SelectListItem>();
-        
         if (roomsResult.IsSuccess)
         {
             roomList = roomsResult.Data.Select(r => new SelectListItem
@@ -131,11 +121,9 @@ public class UtilityBillsController : BaseController
                 Text = $"Room {r.Number} ({r.Type})"
             }).ToList();
         }
-        
         utilityBillVm.RoomOptions = roomList;
         utilityBillVm.WaterRate = GetWaterRate();
         utilityBillVm.ElectricityRate = GetElectricityRate();
-
         if (!ModelState.IsValid)
         {
             if (isAjax)
@@ -146,16 +134,13 @@ public class UtilityBillsController : BaseController
                     .ToList();
                 return Json(new { success = false, message = "Please correct the form errors.", errors = errors });
             }
-            
             SetErrorMessage("Please correct the errors in the form.");
             return PartialView("_UtilityBillForm", utilityBillVm);
         }
-
         try
         {
             if (utilityBillVm.UtilityBillId == 0)
             {
-                // Create new utility bill
                 var createUtilityBillDto = new CreateUtilityBillDto
                 {
                     RoomId = utilityBillVm.RoomId,
@@ -165,7 +150,6 @@ public class UtilityBillsController : BaseController
                     TotalAmount = utilityBillVm.TotalAmount,
                     Notes = utilityBillVm.Notes
                 };
-
                 var result = await _utilityBillApplicationService.CreateUtilityBillAsync(createUtilityBillDto);
                 if (!result.IsSuccess)
                 {
@@ -173,21 +157,17 @@ public class UtilityBillsController : BaseController
                     {
                         return Json(new { success = false, message = result.ErrorMessage });
                     }
-                    
                     SetErrorMessage($"Failed to create utility bill: {result.ErrorMessage}");
                     return PartialView("_UtilityBillForm", utilityBillVm);
                 }
-
                 if (isAjax)
                 {
-                    return Json(new { success = true, message = "Utility bill created successfully!" });
+                    return Json(new { success = true, message = "Utility bill created successfully." });
                 }
-
-                SetSuccessMessage("Utility bill created successfully!");
+                SetSuccessMessage("Utility bill created successfully.");
             }
             else
             {
-                // Update existing utility bill
                 var updateUtilityBillDto = new UpdateUtilityBillDto
                 {
                     BillingDate = utilityBillVm.BillingDate,
@@ -196,7 +176,6 @@ public class UtilityBillsController : BaseController
                     TotalAmount = utilityBillVm.TotalAmount,
                     Notes = utilityBillVm.Notes
                 };
-
                 var result = await _utilityBillApplicationService.UpdateUtilityBillAsync(utilityBillVm.UtilityBillId, updateUtilityBillDto);
                 if (!result.IsSuccess)
                 {
@@ -204,17 +183,14 @@ public class UtilityBillsController : BaseController
                     {
                         return Json(new { success = false, message = result.ErrorMessage });
                     }
-                    
                     SetErrorMessage($"Failed to update utility bill: {result.ErrorMessage}");
                     return PartialView("_UtilityBillForm", utilityBillVm);
                 }
-
                 if (isAjax)
                 {
-                    return Json(new { success = true, message = "Utility bill updated successfully!" });
+                    return Json(new { success = true, message = "Utility bill updated successfully." });
                 }
-
-                SetSuccessMessage("Utility bill updated successfully!");
+                SetSuccessMessage("Utility bill updated successfully.");
             }
         }
         catch (Exception ex)
@@ -223,11 +199,9 @@ public class UtilityBillsController : BaseController
             {
                 return Json(new { success = false, message = $"An unexpected error occurred: {ex.Message}" });
             }
-            
             SetErrorMessage($"An unexpected error occurred: {ex.Message}");
             return PartialView("_UtilityBillForm", utilityBillVm);
         }
-
         return RedirectToAction(nameof(Index));
     }
 
@@ -235,17 +209,14 @@ public class UtilityBillsController : BaseController
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(int id)
     {
-        // Get utility bill details before deletion for better messaging
         var utilityBillResult = await _utilityBillApplicationService.GetUtilityBillByIdAsync(id);
         string utilityBillInfo = "Utility bill";
-        
         if (utilityBillResult.IsSuccess && utilityBillResult.Data != null)
         {
             var roomNumber = utilityBillResult.Data.Room?.Number ?? "Unknown";
             var billingDate = utilityBillResult.Data.BillingDate.ToShortDateString();
             utilityBillInfo = $"Utility bill for Room {roomNumber} ({billingDate})";
         }
-
         var result = await _utilityBillApplicationService.DeleteUtilityBillAsync(id);
         if (!result.IsSuccess)
         {
@@ -253,9 +224,8 @@ public class UtilityBillsController : BaseController
         }
         else
         {
-            SetSuccessMessage($"{utilityBillInfo} deleted successfully.");
+            SetSuccessMessage("Utility bill deleted successfully.");
         }
-
         return RedirectToAction("Index");
     }
 

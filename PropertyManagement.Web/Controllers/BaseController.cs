@@ -16,5 +16,13 @@ namespace PropertyManagement.Web.Controllers
             if (pendingMaintenanceCount.HasValue) ViewBag.PendingMaintenanceCount = pendingMaintenanceCount.Value;
             if (waitingListCount.HasValue) ViewBag.WaitingListCount = waitingListCount.Value;
         }
+
+        public override RedirectToActionResult RedirectToAction(string action, string controller = null, object routeValues = null)
+        {
+            // Ensure TempData keys are always set before redirect
+            if (!TempData.ContainsKey("Success")) TempData["Success"] = null;
+            if (!TempData.ContainsKey("Error")) TempData["Error"] = null;
+            return base.RedirectToAction(action, controller, routeValues);
+        }
     }
 }

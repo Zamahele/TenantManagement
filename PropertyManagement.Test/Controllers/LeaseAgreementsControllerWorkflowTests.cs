@@ -47,6 +47,7 @@ namespace PropertyManagement.Test.Controllers
             var expr = new MapperConfigurationExpression();
             expr.CreateMap<LeaseAgreement, LeaseAgreementViewModel>()
                 .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status))
+                .ForMember(dest => dest.RentDueDate, opt => opt.Ignore()) // Ignore computed property
                 .ReverseMap();
             expr.CreateMap<Tenant, TenantViewModel>().ReverseMap();
             expr.CreateMap<Room, RoomViewModel>().ReverseMap();

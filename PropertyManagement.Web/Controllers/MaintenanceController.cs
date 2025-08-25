@@ -157,23 +157,27 @@ public class MaintenanceController : BaseController
         return View(model);
     }
 
+    private List<SelectListItem> GetStatusOptions()
+    {
+        return new List<SelectListItem>
+        {
+            new SelectListItem { Value = "Pending", Text = "Pending" },
+            new SelectListItem { Value = "In Progress", Text = "In Progress" },
+            new SelectListItem { Value = "Completed", Text = "Completed" }
+        };
+    }
+
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CreateOrEdit(MaintenanceRequestFormViewModel maintenanceVm)
     {
         bool isAjax = Request.Headers["X-Requested-With"] == "XMLHttpRequest";
-        
-        // Add only rooms with tenants for dropdown in case of validation error
         var roomsResult = await _roomApplicationService.GetAllRoomsAsync();
         var tenantsResult = await _tenantApplicationService.GetAllTenantsAsync();
         var roomList = new List<SelectListItem>();
-        
         if (roomsResult.IsSuccess && tenantsResult.IsSuccess)
         {
-            // Get list of room IDs that have tenants
             var roomsWithTenants = tenantsResult.Data.Select(t => t.RoomId).ToHashSet();
-            
-            // Filter rooms to only include those with tenants
             roomList = roomsResult.Data
                 .Where(r => roomsWithTenants.Contains(r.RoomId))
                 .Select(r => new SelectListItem
@@ -182,9 +186,8 @@ public class MaintenanceController : BaseController
                     Text = $"Room {r.Number} ({r.Type})"
                 }).ToList();
         }
-        
         maintenanceVm.RoomOptions = roomList;
-
+        maintenanceVm.StatusOptions = GetStatusOptions();
         if (!ModelState.IsValid)
         {
             if (isAjax)
@@ -195,42 +198,27 @@ public class MaintenanceController : BaseController
                     .ToList();
                 return Json(new { success = false, message = "Please correct the form errors.", errors = errors });
             }
-            
             SetErrorMessage("Please correct the errors in the form.");
             return PartialView("_MaintenanceRequestForm", maintenanceVm);
         }
-
         try
         {
             if (maintenanceVm.MaintenanceRequestId == 0)
             {
-                // Create new maintenance request
-                // Need to find the tenant for the selected room
                 string tenantId = maintenanceVm.TenantId;
-                
                 if (string.IsNullOrEmpty(tenantId))
                 {
-                    // Look up tenant by room
                     var tenantLookupResult = await _tenantApplicationService.GetAllTenantsAsync();
                     if (tenantLookupResult.IsSuccess)
                     {
                         var tenant = tenantLookupResult.Data.FirstOrDefault(t => t.RoomId == maintenanceVm.RoomId);
-                        if (tenant != null)
-                        {
-                            tenantId = tenant.TenantId.ToString();
-                        }
-                        else
-                        {
-                            // No tenant found for this room - use placeholder
-                            tenantId = "0"; // This indicates no specific tenant
-                        }
+                        tenantId = tenant != null ? tenant.TenantId.ToString() : "0";
                     }
                     else
                     {
-                        tenantId = "0"; // Fallback value
+                        tenantId = "0";
                     }
                 }
-                
                 var createDto = new CreateMaintenanceRequestDto
                 {
                     RoomId = maintenanceVm.RoomId,
@@ -238,7 +226,6 @@ public class MaintenanceController : BaseController
                     Description = maintenanceVm.Description,
                     AssignedTo = maintenanceVm.AssignedTo ?? "Manager"
                 };
-
                 var result = await _maintenanceApplicationService.CreateMaintenanceRequestAsync(createDto);
                 if (!result.IsSuccess)
                 {
@@ -246,21 +233,17 @@ public class MaintenanceController : BaseController
                     {
                         return Json(new { success = false, message = result.ErrorMessage });
                     }
-                    
                     SetErrorMessage($"Failed to create maintenance request: {result.ErrorMessage}");
                     return PartialView("_MaintenanceRequestForm", maintenanceVm);
                 }
-
                 if (isAjax)
                 {
-                    return Json(new { success = true, message = "Maintenance request created successfully!" });
+                    return Json(new { success = true, message = "Maintenance request created successfully." });
                 }
-
-                SetSuccessMessage("Maintenance request created successfully!");
+                SetSuccessMessage("Maintenance request created successfully.");
             }
             else
             {
-                // Update existing maintenance request
                 var updateDto = new UpdateMaintenanceRequestDto
                 {
                     Description = maintenanceVm.Description,
@@ -268,7 +251,6 @@ public class MaintenanceController : BaseController
                     AssignedTo = maintenanceVm.AssignedTo,
                     CompletedDate = maintenanceVm.Status == "Completed" ? DateTime.UtcNow : null
                 };
-
                 var result = await _maintenanceApplicationService.UpdateMaintenanceRequestAsync(maintenanceVm.MaintenanceRequestId, updateDto);
                 if (!result.IsSuccess)
                 {
@@ -276,17 +258,14 @@ public class MaintenanceController : BaseController
                     {
                         return Json(new { success = false, message = result.ErrorMessage });
                     }
-                    
                     SetErrorMessage($"Failed to update maintenance request: {result.ErrorMessage}");
                     return PartialView("_MaintenanceRequestForm", maintenanceVm);
                 }
-
                 if (isAjax)
                 {
-                    return Json(new { success = true, message = "Maintenance request updated successfully!" });
+                    return Json(new { success = true, message = "Maintenance request updated successfully." });
                 }
-
-                SetSuccessMessage("Maintenance request updated successfully!");
+                SetSuccessMessage("Maintenance request updated successfully.");
             }
         }
         catch (Exception ex)
@@ -295,12 +274,10 @@ public class MaintenanceController : BaseController
             {
                 return Json(new { success = false, message = $"An unexpected error occurred: {ex.Message}" });
             }
-            
             SetErrorMessage($"An unexpected error occurred: {ex.Message}");
             return PartialView("_MaintenanceRequestForm", maintenanceVm);
         }
-
-        return RedirectToAction(nameof(Index));
+        return SafeRedirectToAction(nameof(Index));
     }
 
     // POST: /Maintenance/SubmitTenantRequest
@@ -397,27 +374,29 @@ public class MaintenanceController : BaseController
     [Authorize(Roles = "Manager")]
     public async Task<IActionResult> Delete(int id)
     {
-        // Get maintenance request details before deletion for better messaging
         var maintenanceResult = await _maintenanceApplicationService.GetMaintenanceRequestByIdAsync(id);
         string maintenanceInfo = "Maintenance request";
-        
         if (maintenanceResult.IsSuccess && maintenanceResult.Data != null)
         {
             var roomNumber = maintenanceResult.Data.Room?.Number ?? "Unknown";
             maintenanceInfo = $"Maintenance request for Room {roomNumber} (#{maintenanceResult.Data.MaintenanceRequestId})";
         }
-
         var result = await _maintenanceApplicationService.DeleteMaintenanceRequestAsync(id);
         if (!result.IsSuccess)
         {
             SetErrorMessage($"Failed to delete maintenance request: {result.ErrorMessage}");
+            return SafeRedirectToAction("Index");
         }
-        else
-        {
-            SetSuccessMessage($"{maintenanceInfo} deleted successfully.");
-        }
+        SetSuccessMessage("Maintenance request deleted successfully.");
+        return SafeRedirectToAction("Index");
+    }
 
-        return RedirectToAction("Index");
+    // Ensure TempData keys are always set before redirect
+    private RedirectToActionResult SafeRedirectToAction(string action, string controller = null, object routeValues = null)
+    {
+        if (!TempData.ContainsKey("Success")) TempData["Success"] = null;
+        if (!TempData.ContainsKey("Error")) TempData["Error"] = null;
+        return controller == null ? base.RedirectToAction(action, routeValues) : base.RedirectToAction(action, controller, routeValues);
     }
 
     private async Task SetSidebarCountsAsync()
@@ -454,5 +433,14 @@ public class MaintenanceController : BaseController
             ViewBag.RoomCount = 0;
             ViewBag.PendingMaintenanceCount = 0;
         }
+    }
+
+    private new void SetSuccessMessage(string message)
+    {
+        TempData["Success"] = message;
+    }
+    private new void SetErrorMessage(string message)
+    {
+        TempData["Error"] = message;
     }
 }

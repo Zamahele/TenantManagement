@@ -272,9 +272,13 @@ namespace PropertyManagement.Test.Controllers
 
             // Assert
             var jsonResult = Assert.IsType<JsonResult>(result);
-            dynamic data = jsonResult.Value;
-            Assert.True((bool)data.success);
-            Assert.Equal("Lease signed successfully!", (string)data.message);
+            var valueType = jsonResult.Value.GetType();
+            var successProp = valueType.GetProperty("success");
+            var messageProp = valueType.GetProperty("message");
+            Assert.NotNull(successProp);
+            Assert.NotNull(messageProp);
+            Assert.True((bool)successProp.GetValue(jsonResult.Value));
+            Assert.Equal("Lease signed successfully!", (string)messageProp.GetValue(jsonResult.Value));
 
             // Verify service calls
             _mockLeaseGenerationService.Verify(s => s.SignLeaseAsync(It.Is<SignLeaseDto>(dto => 
@@ -304,9 +308,13 @@ namespace PropertyManagement.Test.Controllers
 
             // Assert
             var jsonResult = Assert.IsType<JsonResult>(result);
-            dynamic data = jsonResult.Value;
-            Assert.False((bool)data.success);
-            Assert.Equal("Lease agreement is already signed", (string)data.message);
+            var valueType = jsonResult.Value.GetType();
+            var successProp = valueType.GetProperty("success");
+            var messageProp = valueType.GetProperty("message");
+            Assert.NotNull(successProp);
+            Assert.NotNull(messageProp);
+            Assert.False((bool)successProp.GetValue(jsonResult.Value));
+            Assert.Equal("Lease agreement is already signed", (string)messageProp.GetValue(jsonResult.Value));
         }
 
         #endregion
@@ -361,8 +369,13 @@ namespace PropertyManagement.Test.Controllers
             var signResult = await tenantController.SubmitSignature(1, "data:image/png;base64,test");
 
             var jsonResult = Assert.IsType<JsonResult>(signResult);
-            dynamic data = jsonResult.Value;
-            Assert.True((bool)data.success);
+            var valueType = jsonResult.Value.GetType();
+            var successProp = valueType.GetProperty("success");
+            var messageProp = valueType.GetProperty("message");
+            Assert.NotNull(successProp);
+            Assert.NotNull(messageProp);
+            Assert.True((bool)successProp.GetValue(jsonResult.Value));
+            Assert.Contains("signed successfully", (string)messageProp.GetValue(jsonResult.Value));
 
             // Verify all services were called in the correct sequence
             _mockLeaseGenerationService.Verify(s => s.GenerateLeaseHtmlAsync(1, null), Times.Once);

@@ -28,6 +28,7 @@ public class MaintenanceControllerTests
         expr.CreateMap<TenantDto, TenantViewModel>().ReverseMap();
         expr.CreateMap<MaintenanceRequestFormViewModel, CreateMaintenanceRequestDto>().ReverseMap();
         expr.CreateMap<MaintenanceRequestFormViewModel, UpdateMaintenanceRequestDto>().ReverseMap();
+        expr.CreateMap<MaintenanceRequestDto, MaintenanceRequestFormViewModel>().ReverseMap();
         
         var config = new MapperConfiguration(expr, NullLoggerFactory.Instance);
         return config.CreateMapper();
@@ -202,10 +203,25 @@ public class MaintenanceControllerTests
     {
         // Arrange
         var mockMaintenanceService = new Mock<IMaintenanceRequestApplicationService>();
+        var mockRoomService = new Mock<IRoomApplicationService>();
+        var mockTenantService = new Mock<ITenantApplicationService>();
+        
         mockMaintenanceService.Setup(s => s.CreateMaintenanceRequestAsync(It.IsAny<CreateMaintenanceRequestDto>()))
             .ReturnsAsync(ServiceResult<MaintenanceRequestDto>.Success(new MaintenanceRequestDto()));
         
-        var controller = CreateController(mockMaintenanceService);
+        // Setup room and tenant services to return successful results
+        mockRoomService.Setup(s => s.GetAllRoomsAsync())
+            .ReturnsAsync(ServiceResult<IEnumerable<RoomDto>>.Success(new List<RoomDto> 
+            { 
+                new RoomDto { RoomId = 1, Number = "101" } 
+            }));
+        mockTenantService.Setup(s => s.GetAllTenantsAsync())
+            .ReturnsAsync(ServiceResult<IEnumerable<TenantDto>>.Success(new List<TenantDto> 
+            { 
+                new TenantDto { TenantId = 1, RoomId = 1 } 
+            }));
+        
+        var controller = CreateController(mockMaintenanceService, mockRoomService, mockTenantService);
         var model = new MaintenanceRequestFormViewModel
         {
             RoomId = 1,
@@ -226,6 +242,12 @@ public class MaintenanceControllerTests
     {
         // Arrange
         var mockMaintenanceService = new Mock<IMaintenanceRequestApplicationService>();
+        mockMaintenanceService.Setup(s => s.GetMaintenanceRequestByIdAsync(1))
+            .ReturnsAsync(ServiceResult<MaintenanceRequestDto>.Success(new MaintenanceRequestDto 
+            { 
+                MaintenanceRequestId = 1, 
+                Room = new RoomDto { Number = "101" } 
+            }));
         mockMaintenanceService.Setup(s => s.DeleteMaintenanceRequestAsync(1))
             .ReturnsAsync(ServiceResult<bool>.Success(true));
         

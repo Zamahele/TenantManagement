@@ -40,7 +40,7 @@ namespace PropertyManagement.Web.Controllers
                 var htmlResult = await _leaseGenerationService.GenerateLeaseHtmlAsync(leaseAgreementId, templateId);
                 if (!htmlResult.IsSuccess)
                 {
-                    SetErrorMessage($"? Failed to generate lease: {htmlResult.ErrorMessage}");
+                    SetErrorMessage($"Failed to generate lease: {htmlResult.ErrorMessage}");
                     return RedirectToAction("Index", "LeaseAgreements");
                 }
 
@@ -48,16 +48,16 @@ namespace PropertyManagement.Web.Controllers
                 var pdfResult = await _leaseGenerationService.GenerateLeasePdfAsync(leaseAgreementId, htmlResult.Data);
                 if (!pdfResult.IsSuccess)
                 {
-                    SetErrorMessage($"? Failed to generate PDF: {pdfResult.ErrorMessage}");
+                    SetErrorMessage($"Failed to generate lease: {pdfResult.ErrorMessage}");
                     return RedirectToAction("Index", "LeaseAgreements");
                 }
 
-                SetSuccessMessage($"? Lease agreement generated successfully! PDF created at: {pdfResult.Data}");
+                SetSuccessMessage($"Lease agreement generated successfully! PDF created at: {pdfResult.Data}");
                 return RedirectToAction("Index", "LeaseAgreements");
             }
             catch (Exception ex)
             {
-                SetErrorMessage($"? Error generating lease: {ex.Message}");
+                SetErrorMessage($"Error generating lease: {ex.Message}");
                 return RedirectToAction("Index", "LeaseAgreements");
             }
         }
@@ -71,18 +71,18 @@ namespace PropertyManagement.Web.Controllers
                 var result = await _leaseGenerationService.SendLeaseToTenantAsync(leaseAgreementId);
                 if (!result.IsSuccess)
                 {
-                    SetErrorMessage($"? Failed to send lease: {result.ErrorMessage}");
+                    SetErrorMessage($"Failed to send lease: {result.ErrorMessage}");
                 }
                 else
                 {
-                    SetSuccessMessage("? Lease agreement sent to tenant for signing!");
+                    SetSuccessMessage("Lease agreement sent to tenant for signing!");
                 }
 
                 return RedirectToAction("Index", "LeaseAgreements");
             }
             catch (Exception ex)
             {
-                SetErrorMessage($"? Error sending lease: {ex.Message}");
+                SetErrorMessage($"Error sending lease: {ex.Message}");
                 return RedirectToAction("Index", "LeaseAgreements");
             }
         }
@@ -97,14 +97,14 @@ namespace PropertyManagement.Web.Controllers
                 if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
                 {
                     SetErrorMessage("Invalid user session.");
-                    return RedirectToAction("Login", "Tenants");
+                    return RedirectToAction("Login", "Auth");
                 }
 
                 var tenantResult = await _tenantApplicationService.GetTenantByUserIdAsync(userId);
                 if (!tenantResult.IsSuccess)
                 {
                     SetErrorMessage("Tenant information not found.");
-                    return RedirectToAction("Profile", "Tenants");
+                    return RedirectToAction("Profile", "Account");
                 }
 
                 var leasesResult = await _leaseAgreementService.GetLeaseAgreementsByTenantIdAsync(tenantResult.Data.TenantId);
@@ -121,7 +121,7 @@ namespace PropertyManagement.Web.Controllers
             catch (Exception ex)
             {
                 SetErrorMessage($"Error loading leases: {ex.Message}");
-                return View(new List<LeaseAgreementViewModel>());
+                return RedirectToAction("Login", "Auth");
             }
         }
 
@@ -229,53 +229,32 @@ namespace PropertyManagement.Web.Controllers
                 if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
                 {
                     SetErrorMessage("Invalid user session.");
-                    return RedirectToAction("Login", "Tenants");
+                    return RedirectToAction("Login", "Auth");
                 }
 
                 var tenantResult = await _tenantApplicationService.GetTenantByUserIdAsync(userId);
                 if (!tenantResult.IsSuccess)
                 {
                     SetErrorMessage("Tenant information not found.");
-                    return RedirectToAction("Profile", "Tenants");
+                    return RedirectToAction("Profile", "Account");
                 }
 
                 var result = await _leaseGenerationService.DownloadSignedLeaseAsync(leaseAgreementId, tenantResult.Data.TenantId);
-                if (!result.IsSuccess)
+                if (!result.IsSuccess || result.Data == null || result.Data.Length == 0)
                 {
-                    SetErrorMessage($"? {result.ErrorMessage}");
+                    SetErrorMessage("Signed lease not found.");
                     return RedirectToAction(nameof(MyLeases));
                 }
 
-                // Get the lease to check file type
                 var leaseResult = await _leaseAgreementService.GetLeaseAgreementByIdAsync(leaseAgreementId);
-                if (leaseResult.IsSuccess && !string.IsNullOrEmpty(leaseResult.Data.GeneratedPdfPath))
+                var fileName = $"lease_{leaseAgreementId}_signed.pdf";
+                var contentType = "application/pdf";
+                if (leaseResult.IsSuccess && !string.IsNullOrEmpty(leaseResult.Data.GeneratedPdfPath) && leaseResult.Data.GeneratedPdfPath.EndsWith(".html"))
                 {
-                    var fileName = $"signed_lease_{leaseAgreementId}";
-                    var contentType = "application/pdf";
-                    var fileExtension = ".pdf";
-
-                    // Check if it's actually an HTML file
-                    if (leaseResult.Data.GeneratedPdfPath.EndsWith(".html"))
-                    {
-                        contentType = "text/html";
-                        fileExtension = ".html";
-                        fileName += ".html";
-                        
-                        // For HTML files, let the user view in browser instead of download
-                        SetInfoMessage("?? This lease document is in HTML format. Opening in browser...");
-                        return Content(System.Text.Encoding.UTF8.GetString(result.Data), contentType);
-                    }
-                    else
-                    {
-                        fileName += fileExtension;
-                    }
-
-                    return File(result.Data, contentType, fileName);
+                    contentType = "text/html";
+                    fileName = $"lease_{leaseAgreementId}_signed.html";
                 }
-
-                // Fallback
-                var fallbackFileName = $"signed_lease_{leaseAgreementId}.pdf";
-                return File(result.Data, "application/pdf", fallbackFileName);
+                return new FileContentResult(result.Data, contentType) { FileDownloadName = fileName };
             }
             catch (Exception ex)
             {
@@ -423,11 +402,11 @@ namespace PropertyManagement.Web.Controllers
                     
                     if (!result.IsSuccess)
                     {
-                        SetErrorMessage($"? Failed to create template: {result.ErrorMessage}");
+                        SetErrorMessage($"Failed to create template: {result.ErrorMessage}");
                         return View("EditTemplate", viewModel);
                     }
 
-                    SetSuccessMessage("? Template created successfully!");
+                    SetSuccessMessage("Template saved successfully");
                 }
                 else
                 {
@@ -437,18 +416,18 @@ namespace PropertyManagement.Web.Controllers
                     
                     if (!result.IsSuccess)
                     {
-                        SetErrorMessage($"? Failed to update template: {result.ErrorMessage}");
+                        SetErrorMessage($"Failed to update template: {result.ErrorMessage}");
                         return View("EditTemplate", viewModel);
                     }
 
-                    SetSuccessMessage("? Template updated successfully!");
+                    SetSuccessMessage("Template saved successfully");
                 }
 
                 return RedirectToAction(nameof(Templates));
             }
             catch (Exception ex)
             {
-                SetErrorMessage($"? Error saving template: {ex.Message}");
+                SetErrorMessage($"Error saving template: {ex.Message}");
                 return View("EditTemplate", viewModel);
             }
         }
@@ -507,14 +486,14 @@ namespace PropertyManagement.Web.Controllers
                 if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
                 {
                     SetErrorMessage("Invalid user session.");
-                    return RedirectToAction("Login", "Tenants");
+                    return RedirectToAction("Login", "Auth");
                 }
 
                 var tenantResult = await _tenantApplicationService.GetTenantByUserIdAsync(userId);
                 if (!tenantResult.IsSuccess)
                 {
                     SetErrorMessage("Tenant information not found.");
-                    return RedirectToAction("Profile", "Tenants");
+                    return RedirectToAction("Profile", "Account");
                 }
 
                 var leasesResult = await _leaseAgreementService.GetLeaseAgreementsByTenantIdAsync(tenantResult.Data.TenantId);
@@ -524,57 +503,16 @@ namespace PropertyManagement.Web.Controllers
                     return RedirectToAction(nameof(MyLeases));
                 }
 
-                // Convert to ViewModels to access digital properties
                 var leaseViewModels = _mapper.Map<List<LeaseAgreementViewModel>>(leasesResult.Data);
-                
-                // First, try to find the most recent lease with generated content
                 var leaseToPreview = leaseViewModels
-                    .Where(l => !string.IsNullOrEmpty(l.GeneratedHtmlContent))
-                    .OrderByDescending(l => l.GeneratedAt ?? DateTime.MinValue)
-                    .FirstOrDefault();
+                    .FirstOrDefault(l => !string.IsNullOrEmpty(l.GeneratedHtmlContent));
 
                 if (leaseToPreview != null)
                 {
-                    return RedirectToAction(nameof(PreviewLease), new { leaseAgreementId = leaseToPreview.LeaseAgreementId });
+                    return RedirectToAction("PreviewLease", new { leaseAgreementId = leaseToPreview.LeaseAgreementId });
                 }
 
-                // If no lease has generated content, find the most recent lease that could potentially be previewed
-                var candidateLease = leaseViewModels
-                    .Where(l => l.Status >= Domain.Entities.LeaseAgreement.LeaseStatus.Draft)
-                    .OrderByDescending(l => l.LastModifiedAt ?? l.StartDate)
-                    .FirstOrDefault();
-
-                if (candidateLease == null)
-                {
-                    SetInfoMessage("No lease agreements available for preview.");
-                    return RedirectToAction(nameof(MyLeases));
-                }
-
-                // Check the status and provide specific guidance
-                switch (candidateLease.Status)
-                {
-                    case Domain.Entities.LeaseAgreement.LeaseStatus.Draft:
-                        SetErrorMessage("? Your lease is still being prepared by management. The digital document has not been generated yet.");
-                        SetInfoMessage("?? Please wait for your property manager to generate the digital lease document, or contact them if this is taking too long.");
-                        break;
-
-                    case Domain.Entities.LeaseAgreement.LeaseStatus.Generated:
-                        SetErrorMessage("? Your lease document has been generated but not yet sent to you for signing.");
-                        SetInfoMessage("?? Please contact your property manager to send the lease for your review and signature.");
-                        break;
-
-                    case Domain.Entities.LeaseAgreement.LeaseStatus.Sent:
-                        // This is the problematic case - status is Sent but no HTML content
-                        SetErrorMessage("? Your lease is marked as ready for signing, but the document content is missing.");
-                        SetWarningMessage("?? This appears to be a data issue. Please contact your property manager to regenerate the digital lease document.");
-                        SetInfoMessage("?? Technical Note: Lease ID " + candidateLease.LeaseAgreementId + " has 'Sent' status but no GeneratedHtmlContent.");
-                        break;
-
-                    default:
-                        SetErrorMessage("? No preview is available for this lease at its current status.");
-                        break;
-                }
-
+                SetInfoMessage("No lease agreements available for preview.");
                 return RedirectToAction(nameof(MyLeases));
             }
             catch (Exception ex)
@@ -600,7 +538,7 @@ namespace PropertyManagement.Web.Controllers
                 if (!tenantResult.IsSuccess)
                 {
                     SetErrorMessage("Tenant information not found.");
-                    return RedirectToAction("Profile", "Tenants");
+                    return RedirectToAction("Profile", "Account");
                 }
 
                 var leasesResult = await _leaseAgreementService.GetLeaseAgreementsByTenantIdAsync(tenantResult.Data.TenantId);
@@ -610,57 +548,16 @@ namespace PropertyManagement.Web.Controllers
                     return RedirectToAction(nameof(MyLeases));
                 }
 
-                // Convert to ViewModels to access digital properties
                 var leaseViewModels = _mapper.Map<List<LeaseAgreementViewModel>>(leasesResult.Data);
-
-                // Find the most recent lease ready for signing (status = Sent)
                 var leaseToSign = leaseViewModels
-                    .Where(l => l.Status == Domain.Entities.LeaseAgreement.LeaseStatus.Sent && !l.IsDigitallySigned)
-                    .OrderByDescending(l => l.SentToTenantAt ?? DateTime.MinValue)
-                    .FirstOrDefault();
+                    .FirstOrDefault(l => l.Status == Domain.Entities.LeaseAgreement.LeaseStatus.Sent && !l.IsDigitallySigned);
 
                 if (leaseToSign != null)
                 {
-                    return RedirectToAction(nameof(SignLease), new { leaseAgreementId = leaseToSign.LeaseAgreementId });
+                    return RedirectToAction("SignLease", new { leaseAgreementId = leaseToSign.LeaseAgreementId });
                 }
 
-                // If no lease with 'Sent' status found, check for any lease that might be intended for signing
-                // This handles cases where UI shows "Awaiting Signature" but database status is incorrect
-                var candidateLease = leaseViewModels
-                    .Where(l => !l.IsDigitallySigned && l.Status >= Domain.Entities.LeaseAgreement.LeaseStatus.Draft)
-                    .OrderByDescending(l => l.LastModifiedAt ?? l.StartDate)
-                    .FirstOrDefault();
-
-                if (candidateLease == null)
-                {
-                    SetInfoMessage("No lease agreements are currently available for signing.");
-                    return RedirectToAction(nameof(MyLeases));
-                }
-
-                // Provide specific guidance based on the actual status
-                switch (candidateLease.Status)
-                {
-                    case Domain.Entities.LeaseAgreement.LeaseStatus.Draft:
-                        SetErrorMessage("? Your lease is still in Draft status. The property manager needs to generate the digital lease document first.");
-                        SetInfoMessage("?? Expected workflow: Draft ? Generate ? Send ? Sign");
-                        SetWarningMessage($"?? Technical Note: Lease ID {candidateLease.LeaseAgreementId} has status 'Draft' but may be showing 'Awaiting Signature' in the UI due to a display issue.");
-                        break;
-
-                    case Domain.Entities.LeaseAgreement.LeaseStatus.Generated:
-                        SetErrorMessage("? Your lease document has been generated but not yet sent to you.");
-                        SetInfoMessage("?? Please contact your property manager to send the lease for signing.");
-                        break;
-
-                    case Domain.Entities.LeaseAgreement.LeaseStatus.Sent:
-                        // This shouldn't happen as we already checked for Sent status above, but just in case
-                        SetWarningMessage("?? System inconsistency detected. Please refresh the page and try again.");
-                        break;
-
-                    default:
-                        SetErrorMessage($"? Your lease has status '{candidateLease.Status}' which is not ready for signing.");
-                        break;
-                }
-
+                SetInfoMessage("No lease agreements are currently available for signing.");
                 return RedirectToAction(nameof(MyLeases));
             }
             catch (Exception ex)
@@ -686,7 +583,7 @@ namespace PropertyManagement.Web.Controllers
                 if (!tenantResult.IsSuccess)
                 {
                     SetErrorMessage("Tenant information not found.");
-                    return RedirectToAction("Profile", "Tenants");
+                    return RedirectToAction("Profile", "Account");
                 }
 
                 var leasesResult = await _leaseAgreementService.GetLeaseAgreementsByTenantIdAsync(tenantResult.Data.TenantId);
@@ -756,63 +653,22 @@ namespace PropertyManagement.Web.Controllers
                     return RedirectToAction(nameof(MyLeases));
                 }
 
-                // Provide detailed status information
-                var statusMessage = lease.Status switch
+                if (lease.Status == Domain.Entities.LeaseAgreement.LeaseStatus.Sent)
                 {
-                    Domain.Entities.LeaseAgreement.LeaseStatus.Draft => 
-                        "?? Status: Draft - Your lease is being prepared by management. " +
-                        "The manager needs to generate the digital document first.",
-                    
-                    Domain.Entities.LeaseAgreement.LeaseStatus.Generated => 
-                        "? Status: Generated - The digital lease has been created but not yet sent to you. " +
-                        "The manager needs to click 'Send to Tenant' to make it available for signing.",
-                    
-                    Domain.Entities.LeaseAgreement.LeaseStatus.Sent => 
-                        "? Status: Sent - The lease is ready for your signature! You can sign it now.",
-                    
-                    Domain.Entities.LeaseAgreement.LeaseStatus.Signed => 
-                        "?? Status: Signed - The lease has been digitally signed and is complete.",
-                    
-                    Domain.Entities.LeaseAgreement.LeaseStatus.Completed => 
-                        "? Status: Completed - The lease process is fully complete.",
-                    
-                    Domain.Entities.LeaseAgreement.LeaseStatus.Cancelled => 
-                        "? Status: Cancelled - This lease has been cancelled.",
-                    
-                    _ => "? Status: Unknown"
-                };
-
-                SetInfoMessage(statusMessage);
-                
-                // Check for data integrity issues
-                if (lease.Status == Domain.Entities.LeaseAgreement.LeaseStatus.Sent && string.IsNullOrEmpty(lease.GeneratedHtmlContent))
-                {
-                    SetErrorMessage("?? Data Integrity Issue: This lease is marked as 'Sent' but has no digital content generated.");
-                    SetWarningMessage("?? Solution: Ask your property manager to regenerate the digital lease document.");
+                    TempData["Info"] = "Lease is ready for signing";
                 }
-                
-                // Add additional info based on what's available
-                if (!string.IsNullOrEmpty(lease.GeneratedHtmlContent))
+                else
                 {
-                    SetSuccessMessage("?? Digital document has been generated and is available for preview.");
-                }
-                else if (lease.Status > Domain.Entities.LeaseAgreement.LeaseStatus.Draft)
-                {
-                    SetWarningMessage("? Digital content is missing but lease status suggests it should be available.");
-                }
-                
-                if (lease.GeneratedAt.HasValue)
-                {
-                    SetInfoMessage($"?? Generated on: {lease.GeneratedAt.Value:dd MMM yyyy HH:mm}");
-                }
-                else if (lease.Status >= Domain.Entities.LeaseAgreement.LeaseStatus.Generated)
-                {
-                    SetWarningMessage("? No generation timestamp found.");
-                }
-                
-                if (lease.SentToTenantAt.HasValue)
-                {
-                    SetInfoMessage($"?? Sent to you on: {lease.SentToTenantAt.Value:dd MMM yyyy HH:mm}");
+                    var statusMessage = lease.Status switch
+                    {
+                        Domain.Entities.LeaseAgreement.LeaseStatus.Draft => "Draft - Your lease is being prepared by management.",
+                        Domain.Entities.LeaseAgreement.LeaseStatus.Generated => "Generated - The digital lease has been created but not yet sent to you.",
+                        Domain.Entities.LeaseAgreement.LeaseStatus.Signed => "Signed - The lease has been digitally signed and is complete.",
+                        Domain.Entities.LeaseAgreement.LeaseStatus.Completed => "Completed - The lease process is fully complete.",
+                        Domain.Entities.LeaseAgreement.LeaseStatus.Cancelled => "Cancelled - This lease has been cancelled.",
+                        _ => "Unknown status"
+                    };
+                    TempData["Info"] = statusMessage;
                 }
 
                 return RedirectToAction(nameof(MyLeases));

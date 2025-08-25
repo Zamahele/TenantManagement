@@ -26,6 +26,8 @@ namespace PropertyManagement.Test.Controllers
       expr.CreateMap<InspectionDto, InspectionViewModel>().ReverseMap();
       expr.CreateMap<InspectionViewModel, CreateInspectionDto>();
       expr.CreateMap<InspectionViewModel, UpdateInspectionDto>();
+      expr.CreateMap<CreateInspectionDto, InspectionViewModel>().ReverseMap();
+      expr.CreateMap<UpdateInspectionDto, InspectionViewModel>().ReverseMap();
       expr.CreateMap<RoomDto, RoomViewModel>().ReverseMap();
       var config = new MapperConfiguration(expr, NullLoggerFactory.Instance);
       return config.CreateMapper();
@@ -167,8 +169,15 @@ namespace PropertyManagement.Test.Controllers
           Notes = "All good"
       };
 
+      var rooms = new List<RoomDto>
+      {
+          new RoomDto { RoomId = 1, Number = "101", Type = "Single", Status = "Available" }
+      };
+
       mockInspectionService.Setup(s => s.CreateInspectionAsync(It.IsAny<CreateInspectionDto>()))
           .ReturnsAsync(ServiceResult<InspectionDto>.Success(createdInspection));
+      mockRoomService.Setup(s => s.GetAllRoomsAsync())
+          .ReturnsAsync(ServiceResult<IEnumerable<RoomDto>>.Success(rooms));
 
       var controller = GetController(mockInspectionService, mockRoomService, mapper);
       var inspectionVm = new InspectionViewModel
@@ -207,8 +216,15 @@ namespace PropertyManagement.Test.Controllers
           Notes = "Updated notes"
       };
 
+      var rooms = new List<RoomDto>
+      {
+          new RoomDto { RoomId = 1, Number = "101", Type = "Single", Status = "Available" }
+      };
+
       mockInspectionService.Setup(s => s.UpdateInspectionAsync(It.IsAny<int>(), It.IsAny<UpdateInspectionDto>()))
           .ReturnsAsync(ServiceResult<InspectionDto>.Success(updatedInspection));
+      mockRoomService.Setup(s => s.GetAllRoomsAsync())
+          .ReturnsAsync(ServiceResult<IEnumerable<RoomDto>>.Success(rooms));
 
       var controller = GetController(mockInspectionService, mockRoomService, mapper);
       var inspectionVm = new InspectionViewModel
@@ -279,7 +295,7 @@ namespace PropertyManagement.Test.Controllers
 
       // Assert
       var partial = Assert.IsType<PartialViewResult>(result);
-      Assert.Equal("_InspectionModal", partial.ViewName);
+      Assert.Equal("_InspectionForm", partial.ViewName);
       Assert.False(controller.ModelState.IsValid);
       Assert.Equal("Please correct the errors in the form.", controller.TempData["Error"]);
     }

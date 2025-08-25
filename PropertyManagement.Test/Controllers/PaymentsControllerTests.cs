@@ -2,87 +2,47 @@ using AutoMapper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
-using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using PropertyManagement.Application.Common;
 using PropertyManagement.Application.DTOs;
 using PropertyManagement.Application.Services;
+using PropertyManagement.Test.Infrastructure;
 using PropertyManagement.Web.Controllers;
 using PropertyManagement.Web.ViewModels;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
 using Assert = Xunit.Assert;
 
 namespace PropertyManagement.Test.Controllers;
 
-public class PaymentsControllerTests
+public class PaymentsControllerTests : BaseControllerTest
 {
-    private IMapper GetMapper()
-    {
-        var expr = new MapperConfigurationExpression();
-        expr.CreateMap<PaymentDto, PaymentViewModel>()
-            .ForMember(dest => dest.Date, opt => opt.MapFrom(src => src.PaymentDate))
-            .ReverseMap()
-            .ForMember(dest => dest.PaymentDate, opt => opt.MapFrom(src => src.Date));
-        expr.CreateMap<TenantDto, TenantViewModel>().ReverseMap();
-        expr.CreateMap<RoomDto, RoomViewModel>().ReverseMap();
-        expr.CreateMap<PaymentViewModel, CreatePaymentDto>()
-            .ForMember(dest => dest.PaymentDate, opt => opt.MapFrom(src => src.Date));
-        expr.CreateMap<PaymentViewModel, UpdatePaymentDto>()
-            .ForMember(dest => dest.PaymentDate, opt => opt.MapFrom(src => src.Date));
-        var config = new MapperConfiguration(expr, NullLoggerFactory.Instance);
-        return config.CreateMapper();
-    }
-
-    private PaymentsController GetController(IMapper autoMapper)
-    {
-        var mockPaymentService = new Mock<IPaymentApplicationService>();
-        var mockTenantService = new Mock<ITenantApplicationService>();
-        var mockLeaseService = new Mock<ILeaseAgreementApplicationService>();
-
-        var controller = new PaymentsController(
-            mockPaymentService.Object,
-            mockTenantService.Object,
-            mockLeaseService.Object,
-            autoMapper);
-
-        var tempData = new TempDataDictionary(
-            new DefaultHttpContext(),
-            Mock.Of<ITempDataProvider>()
-        );
-        controller.TempData = tempData;
-        return controller;
-    }
-
-    private PaymentsController GetControllerWithMockedServices(
+    private PaymentsController GetController(
         Mock<IPaymentApplicationService> mockPaymentService,
         Mock<ITenantApplicationService> mockTenantService,
-        IMapper autoMapper)
+        Mock<ILeaseAgreementApplicationService> mockLeaseService = null)
     {
-        var mockLeaseService = new Mock<ILeaseAgreementApplicationService>();
+        mockLeaseService ??= new Mock<ILeaseAgreementApplicationService>();
+
         var controller = new PaymentsController(
             mockPaymentService.Object,
             mockTenantService.Object,
             mockLeaseService.Object,
-            autoMapper);
+            Mapper);
 
-        var tempData = new TempDataDictionary(
-            new DefaultHttpContext(),
-            Mock.Of<ITempDataProvider>()
-        );
-        controller.TempData = tempData;
+        SetupControllerContext(controller, GetManagerUser());
         return controller;
     }
 
     [Fact]
     public async Task Index_ReturnsViewWithPayments()
     {
-        var mapper = GetMapper();
+        // Arrange
         var mockPaymentService = new Mock<IPaymentApplicationService>();
         var mockTenantService = new Mock<ITenantApplicationService>();
+        var mockLeaseService = new Mock<ILeaseAgreementApplicationService>();
 
         var payments = new List<PaymentDto>
         {
@@ -107,11 +67,15 @@ public class PaymentsControllerTests
             .ReturnsAsync(ServiceResult<IEnumerable<PaymentDto>>.Success(payments));
         mockTenantService.Setup(s => s.GetAllTenantsAsync())
             .ReturnsAsync(ServiceResult<IEnumerable<TenantDto>>.Success(tenants));
+        mockLeaseService.Setup(s => s.GetAllLeaseAgreementsAsync())
+            .ReturnsAsync(ServiceResult<IEnumerable<LeaseAgreementDto>>.Success(new List<LeaseAgreementDto>()));
 
-        var controller = GetControllerWithMockedServices(mockPaymentService, mockTenantService, mapper);
+        var controller = GetController(mockPaymentService, mockTenantService, mockLeaseService);
 
+        // Act
         var result = await controller.Index();
 
+        // Assert
         var viewResult = Assert.IsType<ViewResult>(result);
         Assert.IsAssignableFrom<System.Collections.IEnumerable>(viewResult.Model);
     }
@@ -119,7 +83,7 @@ public class PaymentsControllerTests
     [Fact]
     public async Task Create_ValidModel_CreatesPaymentAndRedirects()
     {
-        var mapper = GetMapper();
+        // Arrange
         var mockPaymentService = new Mock<IPaymentApplicationService>();
         var mockTenantService = new Mock<ITenantApplicationService>();
 
@@ -137,7 +101,7 @@ public class PaymentsControllerTests
         mockPaymentService.Setup(s => s.CreatePaymentAsync(It.IsAny<CreatePaymentDto>()))
             .ReturnsAsync(ServiceResult<PaymentDto>.Success(createdPayment));
 
-        var controller = GetControllerWithMockedServices(mockPaymentService, mockTenantService, mapper);
+        var controller = GetController(mockPaymentService, mockTenantService);
         var payment = new PaymentViewModel
         {
             TenantId = 1,
@@ -148,8 +112,10 @@ public class PaymentsControllerTests
             Date = DateTime.Now
         };
 
+        // Act
         var result = await controller.Create(payment);
 
+        // Assert
         var redirect = Assert.IsType<RedirectToActionResult>(result);
         Assert.Equal("Index", redirect.ActionName);
         Assert.Equal("Payment recorded successfully.", controller.TempData["Success"]);
@@ -159,7 +125,7 @@ public class PaymentsControllerTests
     [Fact]
     public async Task Edit_ValidModel_UpdatesPaymentAndRedirects()
     {
-        var mapper = GetMapper();
+        // Arrange
         var mockPaymentService = new Mock<IPaymentApplicationService>();
         var mockTenantService = new Mock<ITenantApplicationService>();
 
@@ -177,7 +143,7 @@ public class PaymentsControllerTests
         mockPaymentService.Setup(s => s.UpdatePaymentAsync(It.IsAny<int>(), It.IsAny<UpdatePaymentDto>()))
             .ReturnsAsync(ServiceResult<PaymentDto>.Success(updatedPayment));
 
-        var controller = GetControllerWithMockedServices(mockPaymentService, mockTenantService, mapper);
+        var controller = GetController(mockPaymentService, mockTenantService);
         var paymentViewModel = new PaymentViewModel
         {
             PaymentId = 1,
@@ -188,8 +154,10 @@ public class PaymentsControllerTests
             Date = DateTime.Now
         };
 
+        // Act
         var result = await controller.Edit(paymentViewModel);
 
+        // Assert
         var redirect = Assert.IsType<RedirectToActionResult>(result);
         Assert.Equal("Index", redirect.ActionName);
         Assert.Equal("Payment updated successfully.", controller.TempData["Success"]);
@@ -199,17 +167,19 @@ public class PaymentsControllerTests
     [Fact]
     public async Task Delete_DeletesPaymentAndRedirects()
     {
-        var mapper = GetMapper();
+        // Arrange
         var mockPaymentService = new Mock<IPaymentApplicationService>();
         var mockTenantService = new Mock<ITenantApplicationService>();
 
         mockPaymentService.Setup(s => s.DeletePaymentAsync(It.IsAny<int>()))
             .ReturnsAsync(ServiceResult<bool>.Success(true));
 
-        var controller = GetControllerWithMockedServices(mockPaymentService, mockTenantService, mapper);
+        var controller = GetController(mockPaymentService, mockTenantService);
 
+        // Act
         var result = await controller.Delete(1);
 
+        // Assert
         var redirect = Assert.IsType<RedirectToActionResult>(result);
         Assert.Equal("Index", redirect.ActionName);
         Assert.Equal("Payment deleted successfully.", controller.TempData["Success"]);
@@ -219,7 +189,7 @@ public class PaymentsControllerTests
     [Fact]
     public async Task Receipt_ValidId_ReturnsPartialViewWithPaymentViewModel()
     {
-        var mapper = GetMapper();
+        // Arrange
         var mockPaymentService = new Mock<IPaymentApplicationService>();
         var mockTenantService = new Mock<ITenantApplicationService>();
 
@@ -246,10 +216,12 @@ public class PaymentsControllerTests
         mockPaymentService.Setup(s => s.GetPaymentByIdAsync(It.IsAny<int>()))
             .ReturnsAsync(ServiceResult<PaymentDto>.Success(payment));
 
-        var controller = GetControllerWithMockedServices(mockPaymentService, mockTenantService, mapper);
+        var controller = GetController(mockPaymentService, mockTenantService);
 
+        // Act
         var result = await controller.Receipt(1);
 
+        // Assert
         var partial = Assert.IsType<PartialViewResult>(result);
         Assert.Equal("_PaymentReceipt", partial.ViewName);
         Assert.IsType<PaymentViewModel>(partial.Model);
@@ -259,7 +231,7 @@ public class PaymentsControllerTests
     [Fact]
     public async Task ReceiptPartial_ValidId_ReturnsPartialViewWithPaymentViewModel()
     {
-        var mapper = GetMapper();
+        // Arrange
         var mockPaymentService = new Mock<IPaymentApplicationService>();
         var mockTenantService = new Mock<ITenantApplicationService>();
 
@@ -286,10 +258,12 @@ public class PaymentsControllerTests
         mockPaymentService.Setup(s => s.GetPaymentByIdAsync(It.IsAny<int>()))
             .ReturnsAsync(ServiceResult<PaymentDto>.Success(payment));
 
-        var controller = GetControllerWithMockedServices(mockPaymentService, mockTenantService, mapper);
+        var controller = GetController(mockPaymentService, mockTenantService);
 
+        // Act
         var result = await controller.ReceiptPartial(1);
 
+        // Assert
         var partial = Assert.IsType<PartialViewResult>(result);
         Assert.Equal("_ReceiptPartial", partial.ViewName);
         Assert.IsType<PaymentViewModel>(partial.Model);
@@ -299,7 +273,7 @@ public class PaymentsControllerTests
     [Fact]
     public async Task Create_InvalidModel_ReturnsViewWithErrors()
     {
-        var mapper = GetMapper();
+        // Arrange
         var mockPaymentService = new Mock<IPaymentApplicationService>();
         var mockTenantService = new Mock<ITenantApplicationService>();
 
@@ -309,7 +283,7 @@ public class PaymentsControllerTests
         mockTenantService.Setup(s => s.GetAllTenantsAsync())
             .ReturnsAsync(ServiceResult<IEnumerable<TenantDto>>.Success(new List<TenantDto>()));
 
-        var controller = GetControllerWithMockedServices(mockPaymentService, mockTenantService, mapper);
+        var controller = GetController(mockPaymentService, mockTenantService);
         
         // Add a model error to simulate invalid model state
         controller.ModelState.AddModelError("Amount", "Amount is required");
@@ -323,8 +297,10 @@ public class PaymentsControllerTests
             // Missing Amount to make model invalid
         };
 
+        // Act
         var result = await controller.Create(payment);
 
+        // Assert
         var viewResult = Assert.IsType<ViewResult>(result);
         Assert.Equal("Index", viewResult.ViewName);
         Assert.Equal("Please correct the errors in the form.", controller.TempData["Error"]);
@@ -336,17 +312,19 @@ public class PaymentsControllerTests
     [Fact]
     public async Task Delete_ServiceFailure_ReturnsNotFound()
     {
-        var mapper = GetMapper();
+        // Arrange
         var mockPaymentService = new Mock<IPaymentApplicationService>();
         var mockTenantService = new Mock<ITenantApplicationService>();
 
         mockPaymentService.Setup(s => s.DeletePaymentAsync(It.IsAny<int>()))
             .ReturnsAsync(ServiceResult<bool>.Failure("Payment not found"));
 
-        var controller = GetControllerWithMockedServices(mockPaymentService, mockTenantService, mapper);
+        var controller = GetController(mockPaymentService, mockTenantService);
 
+        // Act
         var result = await controller.Delete(1);
 
+        // Assert
         var notFoundResult = Assert.IsType<NotFoundResult>(result);
         Assert.Equal("Payment not found", controller.TempData["Error"]);
         mockPaymentService.Verify(s => s.DeletePaymentAsync(1), Times.Once);

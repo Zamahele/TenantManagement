@@ -2,75 +2,26 @@ using AutoMapper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
-using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using PropertyManagement.Application.Common;
 using PropertyManagement.Application.DTOs;
 using PropertyManagement.Application.Services;
+using PropertyManagement.Test.Infrastructure;
 using PropertyManagement.Web.Controllers;
 using PropertyManagement.Web.ViewModels;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Security.Claims;
 using System.Threading.Tasks;
 using Xunit;
 
 namespace PropertyManagement.Test.Controllers
 {
-    public class AdditionalControllerTests
+    public class AdditionalControllerTests : BaseControllerTest
     {
-        private IMapper GetMapper()
-        {
-            var expr = new MapperConfigurationExpression();
-            expr.CreateMap<TenantDto, TenantViewModel>().ReverseMap();
-            expr.CreateMap<TenantViewModel, CreateTenantDto>();
-            expr.CreateMap<TenantViewModel, UpdateTenantDto>();
-
-            // Add the missing UserDto to UserViewModel mapping
-            expr.CreateMap<UserDto, UserViewModel>()
-                .ForMember(dest => dest.PasswordHash, opt => opt.Ignore()) // PasswordHash is not in UserDto
-                .ReverseMap()
-                .ForMember(dest => dest.Username, opt => opt.MapFrom(src => src.Username))
-                .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.UserId))
-                .ForMember(dest => dest.Role, opt => opt.MapFrom(src => src.Role));
-
-            expr.CreateMap<PaymentDto, PaymentViewModel>().ReverseMap();
-            expr.CreateMap<PaymentViewModel, CreatePaymentDto>();
-            expr.CreateMap<PaymentViewModel, UpdatePaymentDto>();
-            expr.CreateMap<RoomDto, RoomViewModel>().ReverseMap();
-            expr.CreateMap<RoomFormViewModel, CreateRoomDto>();
-            expr.CreateMap<RoomFormViewModel, UpdateRoomDto>();
-            var config = new MapperConfiguration(expr, NullLoggerFactory.Instance);
-            return config.CreateMapper();
-        }
-
-        private ClaimsPrincipal GetUser(string role, int userId = 1, string username = "testuser")
-        {
-            var claims = new List<Claim>
-            {
-                new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
-                new Claim(ClaimTypes.Name, username),
-                new Claim(ClaimTypes.Role, role)
-            };
-            var identity = new ClaimsIdentity(claims, "TestAuthentication");
-            return new ClaimsPrincipal(identity);
-        }
-
-        private void SetupControllerContext(Controller controller, ClaimsPrincipal user)
-        {
-            controller.ControllerContext = new ControllerContext
-            {
-                HttpContext = new DefaultHttpContext { User = user }
-            };
-            controller.TempData = new TempDataDictionary(controller.ControllerContext.HttpContext, Mock.Of<ITempDataProvider>());
-        }
-
         [Fact]
         public async Task TenantsController_CreateOrEdit_UpdateExisting_UpdatesSuccessfully()
         {
             // Arrange
-            var mapper = GetMapper();
             var mockTenantService = new Mock<ITenantApplicationService>();
 
             var existingTenant = new TenantDto
@@ -99,13 +50,27 @@ namespace PropertyManagement.Test.Controllers
                 .ReturnsAsync(ServiceResult<TenantDto>.Success(updatedTenant));
 
             var mockRoomService = new Mock<IRoomApplicationService>();
+            // Setup required room service methods to avoid NullReferenceException
+            mockRoomService.Setup(s => s.GetAvailableRoomsAsync())
+                .ReturnsAsync(ServiceResult<IEnumerable<RoomDto>>.Success(new List<RoomDto>()));
+            mockRoomService.Setup(s => s.GetRoomByIdAsync(It.IsAny<int>()))
+                .ReturnsAsync(ServiceResult<RoomDto>.Success(new RoomDto
+                {
+                    RoomId = existingTenant.RoomId,
+                    Number = "101",
+                    Type = "Single",
+                    Status = "Available"
+                }));
+
             var mockMaintenanceService = new Mock<IMaintenanceRequestApplicationService>();
             var controller = new TenantsController(
                 mockTenantService.Object, 
                 mockRoomService.Object, 
                 mockMaintenanceService.Object,
-                mapper);
-            SetupControllerContext(controller, GetUser("Manager"));
+                Mapper);
+            SetupControllerContext(controller, GetManagerUser());
+            // Ensure TempData is set up for the controller
+            controller.TempData = new TempDataDictionary(new DefaultHttpContext(), Mock.Of<ITempDataProvider>());
 
             var updatedTenantVm = new TenantViewModel
             {
@@ -131,7 +96,6 @@ namespace PropertyManagement.Test.Controllers
         public async Task RoomsController_CreateOrEdit_ValidModel_CreatesRoomSuccessfully()
         {
             // Arrange
-            var mapper = GetMapper();
             var mockRoomService = new Mock<IRoomApplicationService>();
             var mockBookingService = new Mock<IBookingRequestApplicationService>();
 
@@ -153,8 +117,8 @@ namespace PropertyManagement.Test.Controllers
                 mockBookingService.Object, 
                 mockTenantService.Object,
                 mockMaintenanceService.Object,
-                mapper);
-            SetupControllerContext(controller, GetUser("Manager"));
+                Mapper);
+            SetupControllerContext(controller, GetManagerUser());
 
             var roomModel = new RoomFormViewModel
             {
@@ -176,7 +140,6 @@ namespace PropertyManagement.Test.Controllers
         public async Task PaymentsController_Delete_NonExistingPayment_ReturnsNotFound()
         {
             // Arrange
-            var mapper = GetMapper();
             var mockPaymentService = new Mock<IPaymentApplicationService>();
             var mockTenantService = new Mock<ITenantApplicationService>();
 
@@ -184,8 +147,8 @@ namespace PropertyManagement.Test.Controllers
                 .ReturnsAsync(ServiceResult<bool>.Failure("Payment not found"));
 
             var mockLeaseService = new Mock<ILeaseAgreementApplicationService>();
-            var controller = new PaymentsController(mockPaymentService.Object, mockTenantService.Object, mockLeaseService.Object, mapper);
-            SetupControllerContext(controller, GetUser("Manager"));
+            var controller = new PaymentsController(mockPaymentService.Object, mockTenantService.Object, mockLeaseService.Object, Mapper);
+            SetupControllerContext(controller, GetManagerUser());
 
             // Act
             var result = await controller.Delete(999);
@@ -199,7 +162,6 @@ namespace PropertyManagement.Test.Controllers
         public async Task PaymentsController_Create_ValidModel_CreatesPaymentSuccessfully()
         {
             // Arrange
-            var mapper = GetMapper();
             var mockPaymentService = new Mock<IPaymentApplicationService>();
             var mockTenantService = new Mock<ITenantApplicationService>();
 
@@ -218,8 +180,8 @@ namespace PropertyManagement.Test.Controllers
                 .ReturnsAsync(ServiceResult<PaymentDto>.Success(createdPayment));
 
             var mockLeaseService = new Mock<ILeaseAgreementApplicationService>();
-            var controller = new PaymentsController(mockPaymentService.Object, mockTenantService.Object, mockLeaseService.Object, mapper);
-            SetupControllerContext(controller, GetUser("Manager"));
+            var controller = new PaymentsController(mockPaymentService.Object, mockTenantService.Object, mockLeaseService.Object, Mapper);
+            SetupControllerContext(controller, GetManagerUser());
 
             var paymentModel = new PaymentViewModel
             {
@@ -244,7 +206,6 @@ namespace PropertyManagement.Test.Controllers
         public async Task PaymentsController_Edit_NonExistingPayment_ReturnsIndexView()
         {
             // Arrange
-            var mapper = GetMapper();
             var mockPaymentService = new Mock<IPaymentApplicationService>();
             var mockTenantService = new Mock<ITenantApplicationService>();
 
@@ -256,8 +217,8 @@ namespace PropertyManagement.Test.Controllers
                 .ReturnsAsync(ServiceResult<IEnumerable<TenantDto>>.Success(new List<TenantDto>()));
 
             var mockLeaseService = new Mock<ILeaseAgreementApplicationService>();
-            var controller = new PaymentsController(mockPaymentService.Object, mockTenantService.Object, mockLeaseService.Object, mapper);
-            SetupControllerContext(controller, GetUser("Manager"));
+            var controller = new PaymentsController(mockPaymentService.Object, mockTenantService.Object, mockLeaseService.Object, Mapper);
+            SetupControllerContext(controller, GetManagerUser());
 
             var paymentViewModel = new PaymentViewModel
             {

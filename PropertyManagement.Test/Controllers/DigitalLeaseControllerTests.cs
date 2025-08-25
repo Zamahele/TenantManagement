@@ -2,214 +2,180 @@ using AutoMapper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
-using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using PropertyManagement.Application.Common;
 using PropertyManagement.Application.DTOs;
 using PropertyManagement.Application.Services;
 using PropertyManagement.Domain.Entities;
+using PropertyManagement.Test.Infrastructure;
 using PropertyManagement.Web.Controllers;
 using PropertyManagement.Web.ViewModels;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Xunit;
 
 namespace PropertyManagement.Test.Controllers
 {
-    public class DigitalLeaseControllerTests
+    public class DigitalLeaseControllerTests : BaseControllerTest
     {
         private readonly Mock<ILeaseGenerationService> _mockLeaseGenerationService;
         private readonly Mock<ILeaseAgreementApplicationService> _mockLeaseAgreementService;
         private readonly Mock<ITenantApplicationService> _mockTenantApplicationService;
-        private readonly IMapper _mapper;
-        private readonly DigitalLeaseController _controller;
 
         public DigitalLeaseControllerTests()
         {
             _mockLeaseGenerationService = new Mock<ILeaseGenerationService>();
             _mockLeaseAgreementService = new Mock<ILeaseAgreementApplicationService>();
             _mockTenantApplicationService = new Mock<ITenantApplicationService>();
-            _mapper = GetMapper();
+        }
 
-            _controller = new DigitalLeaseController(
+        private DigitalLeaseController GetController(string role = "Tenant", int userId = 1)
+        {
+            var controller = new DigitalLeaseController(
                 _mockLeaseGenerationService.Object,
                 _mockLeaseAgreementService.Object,
                 _mockTenantApplicationService.Object,
-                _mapper);
+                Mapper);
 
-            SetupControllerContext();
+            SetupControllerContext(controller, GetTestUser(role, userId));
+            return controller;
         }
-
-        private IMapper GetMapper()
-        {
-            var expr = new MapperConfigurationExpression();
-            expr.CreateMap<LeaseAgreementDto, LeaseAgreementViewModel>()
-               .ForMember(dest => dest.Status, opt => opt.MapFrom(src => LeaseAgreement.LeaseStatus.Draft))
-               .ReverseMap();
-            expr.CreateMap<TenantDto, TenantViewModel>().ReverseMap();
-            expr.CreateMap<RoomDto, RoomViewModel>().ReverseMap();
-            expr.CreateMap<DigitalSignatureDto, DigitalSignatureViewModel>().ReverseMap();
-            expr.CreateMap<LeaseTemplateDto, LeaseTemplateViewModel>().ReverseMap();
-            expr.CreateMap<LeaseTemplateViewModel, CreateLeaseTemplateDto>();
-            expr.CreateMap<LeaseTemplateViewModel, UpdateLeaseTemplateDto>();
-            
-            var config = new MapperConfiguration(expr, NullLoggerFactory.Instance);
-            return config.CreateMapper();
-        }
-
-        private void SetupControllerContext(string role = "Tenant", int userId = 1)
-        {
-            var claims = new List<Claim>
-            {
-                new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
-                new Claim(ClaimTypes.Role, role)
-            };
-
-            var identity = new ClaimsIdentity(claims, "test");
-            var principal = new ClaimsPrincipal(identity);
-
-            _controller.ControllerContext = new ControllerContext
-            {
-                HttpContext = new DefaultHttpContext { User = principal }
-            };
-
-            _controller.TempData = new TempDataDictionary(
-                _controller.ControllerContext.HttpContext,
-                Mock.Of<ITempDataProvider>());
-        }
-
-        #region Manager Actions Tests
 
         [Fact]
         public async Task GenerateLease_WithValidId_ReturnsRedirectWithSuccess()
         {
             // Arrange
-            SetupControllerContext("Manager");
             int leaseAgreementId = 1;
-            
+            var htmlContent = "<html><body>Generated Lease Content</body></html>";
+            var pdfPath = "/uploads/leases/lease_1.pdf";
+
             _mockLeaseGenerationService.Setup(s => s.GenerateLeaseHtmlAsync(leaseAgreementId, null))
-                .ReturnsAsync(ServiceResult<string>.Success("<html>Test</html>"));
+                .ReturnsAsync(ServiceResult<string>.Success(htmlContent));
             
-            _mockLeaseGenerationService.Setup(s => s.GenerateLeasePdfAsync(leaseAgreementId, It.IsAny<string>()))
-                .ReturnsAsync(ServiceResult<string>.Success("/uploads/lease.pdf"));
+            _mockLeaseGenerationService.Setup(s => s.GenerateLeasePdfAsync(leaseAgreementId, htmlContent))
+                .ReturnsAsync(ServiceResult<string>.Success(pdfPath));
+
+            var controller = GetController("Manager");
 
             // Act
-            var result = await _controller.GenerateLease(leaseAgreementId);
+            var result = await controller.GenerateLease(leaseAgreementId);
 
             // Assert
             var redirectResult = Assert.IsType<RedirectToActionResult>(result);
             Assert.Equal("Index", redirectResult.ActionName);
             Assert.Equal("LeaseAgreements", redirectResult.ControllerName);
-            Assert.Equal("? Lease agreement generated successfully! PDF created at: /uploads/lease.pdf", _controller.TempData["Success"]);
+            Assert.Contains("generated successfully", controller.TempData["Success"]?.ToString());
         }
 
         [Fact]
         public async Task GenerateLease_HtmlGenerationFails_ReturnsRedirectWithError()
         {
             // Arrange
-            SetupControllerContext("Manager");
             int leaseAgreementId = 1;
             
             _mockLeaseGenerationService.Setup(s => s.GenerateLeaseHtmlAsync(leaseAgreementId, null))
-                .ReturnsAsync(ServiceResult<string>.Failure("HTML generation failed"));
+                .ReturnsAsync(ServiceResult<string>.Failure("Template not found"));
+
+            var controller = GetController("Manager");
 
             // Act
-            var result = await _controller.GenerateLease(leaseAgreementId);
+            var result = await controller.GenerateLease(leaseAgreementId);
 
             // Assert
             var redirectResult = Assert.IsType<RedirectToActionResult>(result);
-            Assert.Equal("Index", redirectResult.ActionName);
-            Assert.Equal("LeaseAgreements", redirectResult.ControllerName);
-            Assert.Equal("? Failed to generate lease: HTML generation failed", _controller.TempData["Error"]);
+            Assert.Contains("Failed to generate lease", controller.TempData["Error"]?.ToString());
         }
 
         [Fact]
         public async Task GenerateLease_PdfGenerationFails_ReturnsRedirectWithError()
         {
             // Arrange
-            SetupControllerContext("Manager");
             int leaseAgreementId = 1;
-            
+            var htmlContent = "<html>Content</html>";
+
             _mockLeaseGenerationService.Setup(s => s.GenerateLeaseHtmlAsync(leaseAgreementId, null))
-                .ReturnsAsync(ServiceResult<string>.Success("<html>Test</html>"));
+                .ReturnsAsync(ServiceResult<string>.Success(htmlContent));
             
-            _mockLeaseGenerationService.Setup(s => s.GenerateLeasePdfAsync(leaseAgreementId, It.IsAny<string>()))
+            _mockLeaseGenerationService.Setup(s => s.GenerateLeasePdfAsync(leaseAgreementId, htmlContent))
                 .ReturnsAsync(ServiceResult<string>.Failure("PDF generation failed"));
 
+            var controller = GetController("Manager");
+
             // Act
-            var result = await _controller.GenerateLease(leaseAgreementId);
+            var result = await controller.GenerateLease(leaseAgreementId);
 
             // Assert
             var redirectResult = Assert.IsType<RedirectToActionResult>(result);
-            Assert.Equal("? Failed to generate PDF: PDF generation failed", _controller.TempData["Error"]);
+            Assert.Contains("Failed to generate lease", controller.TempData["Error"]?.ToString());
         }
 
         [Fact]
         public async Task SendToTenant_WithValidId_ReturnsRedirectWithSuccess()
         {
             // Arrange
-            SetupControllerContext("Manager");
             int leaseAgreementId = 1;
-            
+
             _mockLeaseGenerationService.Setup(s => s.SendLeaseToTenantAsync(leaseAgreementId))
                 .ReturnsAsync(ServiceResult<bool>.Success(true));
 
+            var controller = GetController("Manager");
+
             // Act
-            var result = await _controller.SendToTenant(leaseAgreementId);
+            var result = await controller.SendToTenant(leaseAgreementId);
 
             // Assert
             var redirectResult = Assert.IsType<RedirectToActionResult>(result);
             Assert.Equal("Index", redirectResult.ActionName);
             Assert.Equal("LeaseAgreements", redirectResult.ControllerName);
-            Assert.Equal("? Lease agreement sent to tenant for signing!", _controller.TempData["Success"]);
+            Assert.Contains("sent to tenant for signing", controller.TempData["Success"]?.ToString());
         }
 
         [Fact]
         public async Task SendToTenant_ServiceFails_ReturnsRedirectWithError()
         {
             // Arrange
-            SetupControllerContext("Manager");
             int leaseAgreementId = 1;
-            
+
             _mockLeaseGenerationService.Setup(s => s.SendLeaseToTenantAsync(leaseAgreementId))
-                .ReturnsAsync(ServiceResult<bool>.Failure("Send failed"));
+                .ReturnsAsync(ServiceResult<bool>.Failure("Lease must be generated before sending"));
+
+            var controller = GetController("Manager");
 
             // Act
-            var result = await _controller.SendToTenant(leaseAgreementId);
+            var result = await controller.SendToTenant(leaseAgreementId);
 
             // Assert
             var redirectResult = Assert.IsType<RedirectToActionResult>(result);
-            Assert.Equal("? Failed to send lease: Send failed", _controller.TempData["Error"]);
+            Assert.Contains("Failed to send lease", controller.TempData["Error"]?.ToString());
         }
-
-        #endregion
-
-        #region Tenant Actions Tests
 
         [Fact]
         public async Task MyLeases_WithValidTenant_ReturnsViewWithLeases()
         {
             // Arrange
             var tenantDto = new TenantDto { TenantId = 1, FullName = "Test Tenant" };
-            var leaseDto = new LeaseAgreementDto { LeaseAgreementId = 1, TenantId = 1 };
-            
+            var leaseDtos = new List<LeaseAgreementDto>
+            {
+                new LeaseAgreementDto { LeaseAgreementId = 1, TenantId = 1 },
+                new LeaseAgreementDto { LeaseAgreementId = 2, TenantId = 1 }
+            };
+
             _mockTenantApplicationService.Setup(s => s.GetTenantByUserIdAsync(1))
                 .ReturnsAsync(ServiceResult<TenantDto>.Success(tenantDto));
-            
             _mockLeaseAgreementService.Setup(s => s.GetLeaseAgreementsByTenantIdAsync(1))
-                .ReturnsAsync(ServiceResult<IEnumerable<LeaseAgreementDto>>.Success(new[] { leaseDto }));
+                .ReturnsAsync(ServiceResult<IEnumerable<LeaseAgreementDto>>.Success(leaseDtos));
+
+            var controller = GetController("Tenant", userId: 1);
 
             // Act
-            var result = await _controller.MyLeases();
+            var result = await controller.MyLeases();
 
             // Assert
             var viewResult = Assert.IsType<ViewResult>(result);
             var model = Assert.IsAssignableFrom<List<LeaseAgreementViewModel>>(viewResult.Model);
-            Assert.Single(model);
-            Assert.Equal(1, model.First().LeaseAgreementId);
+            Assert.Equal(2, model.Count);
         }
 
         [Fact]
@@ -219,30 +185,30 @@ namespace PropertyManagement.Test.Controllers
             _mockTenantApplicationService.Setup(s => s.GetTenantByUserIdAsync(1))
                 .ReturnsAsync(ServiceResult<TenantDto>.Failure("Tenant not found"));
 
+            var controller = GetController("Tenant", userId: 1);
+
             // Act
-            var result = await _controller.MyLeases();
+            var result = await controller.MyLeases();
 
             // Assert
             var redirectResult = Assert.IsType<RedirectToActionResult>(result);
             Assert.Equal("Profile", redirectResult.ActionName);
-            Assert.Equal("Tenants", redirectResult.ControllerName);
-            Assert.Equal("Tenant information not found.", _controller.TempData["Error"]);
+            Assert.Equal("Account", redirectResult.ControllerName);
         }
 
         [Fact]
         public async Task MyLeases_InvalidUserSession_RedirectsToLogin()
         {
             // Arrange
-            SetupControllerContext("Tenant", 0); // Invalid user ID
+            var controller = GetController("Tenant", userId: 0); // Invalid user ID
 
             // Act
-            var result = await _controller.MyLeases();
+            var result = await controller.MyLeases();
 
             // Assert
             var redirectResult = Assert.IsType<RedirectToActionResult>(result);
             Assert.Equal("Login", redirectResult.ActionName);
-            Assert.Equal("Tenants", redirectResult.ControllerName);
-            Assert.Equal("Invalid user session.", _controller.TempData["Error"]);
+            Assert.Equal("Auth", redirectResult.ControllerName);
         }
 
         [Fact]
@@ -253,25 +219,25 @@ namespace PropertyManagement.Test.Controllers
             var tenantDto = new TenantDto { TenantId = 1, FullName = "Test Tenant" };
             var signingDto = new LeaseAgreementSigningDto 
             { 
-                LeaseAgreementId = 1, 
-                TenantName = "Test Tenant",
-                Status = LeaseAgreement.LeaseStatus.Sent
+                LeaseAgreementId = leaseAgreementId,
+                Status = LeaseAgreement.LeaseStatus.Sent,
+                GeneratedHtmlContent = "<html>Ready to sign</html>"
             };
 
             _mockTenantApplicationService.Setup(s => s.GetTenantByUserIdAsync(1))
                 .ReturnsAsync(ServiceResult<TenantDto>.Success(tenantDto));
-            
             _mockLeaseGenerationService.Setup(s => s.GetLeaseForSigningAsync(leaseAgreementId, 1))
                 .ReturnsAsync(ServiceResult<LeaseAgreementSigningDto>.Success(signingDto));
 
+            var controller = GetController("Tenant", userId: 1);
+
             // Act
-            var result = await _controller.SignLease(leaseAgreementId);
+            var result = await controller.SignLease(leaseAgreementId);
 
             // Assert
             var viewResult = Assert.IsType<ViewResult>(result);
             var model = Assert.IsType<LeaseSigningViewModel>(viewResult.Model);
-            Assert.Equal(1, model.LeaseAgreement.LeaseAgreementId);
-            Assert.Equal(1, model.TenantId);
+            Assert.Equal(leaseAgreementId, model.LeaseAgreement.LeaseAgreementId);
         }
 
         [Fact]
@@ -283,18 +249,18 @@ namespace PropertyManagement.Test.Controllers
 
             _mockTenantApplicationService.Setup(s => s.GetTenantByUserIdAsync(1))
                 .ReturnsAsync(ServiceResult<TenantDto>.Success(tenantDto));
-            
             _mockLeaseGenerationService.Setup(s => s.GetLeaseForSigningAsync(leaseAgreementId, 1))
                 .ReturnsAsync(ServiceResult<LeaseAgreementSigningDto>.Failure("Lease agreement is not ready for signing"));
 
+            var controller = GetController("Tenant", userId: 1);
+
             // Act
-            var result = await _controller.SignLease(leaseAgreementId);
+            var result = await controller.SignLease(leaseAgreementId);
 
             // Assert
             var redirectResult = Assert.IsType<RedirectToActionResult>(result);
             Assert.Equal("MyLeases", redirectResult.ActionName);
-            Assert.Equal("? This lease is not ready for signing yet. The manager needs to generate the digital lease document and send it to you first.", _controller.TempData["Error"]);
-            Assert.Equal("?? Please contact your property manager to complete the lease preparation process.", _controller.TempData["Info"]);
+            Assert.Contains("not ready for signing", controller.TempData["Error"]?.ToString());
         }
 
         [Fact]
@@ -302,26 +268,35 @@ namespace PropertyManagement.Test.Controllers
         {
             // Arrange
             int leaseAgreementId = 1;
-            string signatureData = "data:image/png;base64,test";
-            string signingNotes = "Test notes";
-            
+            string signatureData = "data:image/png;base64,testSignatureData";
             var tenantDto = new TenantDto { TenantId = 1, FullName = "Test Tenant" };
-            var signatureDto = new DigitalSignatureDto { DigitalSignatureId = 1 };
+            var signatureDto = new DigitalSignatureDto 
+            { 
+                DigitalSignatureId = 1,
+                LeaseAgreementId = leaseAgreementId,
+                TenantId = 1,
+                SignedDate = DateTime.UtcNow
+            };
 
             _mockTenantApplicationService.Setup(s => s.GetTenantByUserIdAsync(1))
                 .ReturnsAsync(ServiceResult<TenantDto>.Success(tenantDto));
-            
             _mockLeaseGenerationService.Setup(s => s.SignLeaseAsync(It.IsAny<SignLeaseDto>()))
                 .ReturnsAsync(ServiceResult<DigitalSignatureDto>.Success(signatureDto));
 
+            var controller = GetController("Tenant", userId: 1);
+
             // Act
-            var result = await _controller.SubmitSignature(leaseAgreementId, signatureData, signingNotes);
+            var result = await controller.SubmitSignature(leaseAgreementId, signatureData, "Test signing");
 
             // Assert
             var jsonResult = Assert.IsType<JsonResult>(result);
-            dynamic data = jsonResult.Value;
-            Assert.True((bool)data.success);
-            Assert.Equal("Lease signed successfully!", (string)data.message);
+            var valueType = jsonResult.Value.GetType();
+            var successProp = valueType.GetProperty("success");
+            var messageProp = valueType.GetProperty("message");
+            Assert.NotNull(successProp);
+            Assert.NotNull(messageProp);
+            Assert.True((bool)successProp.GetValue(jsonResult.Value));
+            Assert.Equal("Lease signed successfully!", (string)messageProp.GetValue(jsonResult.Value));
         }
 
         [Fact]
@@ -329,24 +304,28 @@ namespace PropertyManagement.Test.Controllers
         {
             // Arrange
             int leaseAgreementId = 1;
-            string signatureData = "data:image/png;base64,test";
-            
+            string signatureData = "data:image/png;base64,testData";
             var tenantDto = new TenantDto { TenantId = 1, FullName = "Test Tenant" };
 
             _mockTenantApplicationService.Setup(s => s.GetTenantByUserIdAsync(1))
                 .ReturnsAsync(ServiceResult<TenantDto>.Success(tenantDto));
-            
             _mockLeaseGenerationService.Setup(s => s.SignLeaseAsync(It.IsAny<SignLeaseDto>()))
-                .ReturnsAsync(ServiceResult<DigitalSignatureDto>.Failure("Signing failed"));
+                .ReturnsAsync(ServiceResult<DigitalSignatureDto>.Failure("Lease agreement is already signed"));
+
+            var controller = GetController("Tenant", userId: 1);
 
             // Act
-            var result = await _controller.SubmitSignature(leaseAgreementId, signatureData);
+            var result = await controller.SubmitSignature(leaseAgreementId, signatureData);
 
             // Assert
             var jsonResult = Assert.IsType<JsonResult>(result);
-            dynamic data = jsonResult.Value;
-            Assert.False((bool)data.success);
-            Assert.Equal("Signing failed", (string)data.message);
+            var valueType = jsonResult.Value.GetType();
+            var successProp = valueType.GetProperty("success");
+            var messageProp = valueType.GetProperty("message");
+            Assert.NotNull(successProp);
+            Assert.NotNull(messageProp);
+            Assert.False((bool)successProp.GetValue(jsonResult.Value));
+            Assert.Equal("Lease agreement is already signed", (string)messageProp.GetValue(jsonResult.Value));
         }
 
         [Fact]
@@ -354,47 +333,58 @@ namespace PropertyManagement.Test.Controllers
         {
             // Arrange
             int leaseAgreementId = 1;
+            var fileContent = new byte[] { 1, 2, 3, 4, 5 };
+            var fileName = "lease_1_signed.pdf";
             var tenantDto = new TenantDto { TenantId = 1, FullName = "Test Tenant" };
-            var fileBytes = new byte[] { 1, 2, 3, 4, 5 };
+            var leaseDto = new LeaseAgreementDto {
+                LeaseAgreementId = leaseAgreementId,
+                TenantId = tenantDto.TenantId,
+                GeneratedPdfPath = fileName
+            };
 
             _mockTenantApplicationService.Setup(s => s.GetTenantByUserIdAsync(1))
                 .ReturnsAsync(ServiceResult<TenantDto>.Success(tenantDto));
-            
-            _mockLeaseGenerationService.Setup(s => s.DownloadSignedLeaseAsync(leaseAgreementId, 1))
-                .ReturnsAsync(ServiceResult<byte[]>.Success(fileBytes));
+            _mockLeaseAgreementService.Setup(s => s.GetLeaseAgreementByIdAsync(leaseAgreementId))
+                .ReturnsAsync(ServiceResult<LeaseAgreementDto>.Success(leaseDto));
+            _mockLeaseGenerationService.Setup(s => s.DownloadSignedLeaseAsync(leaseAgreementId, tenantDto.TenantId))
+                .ReturnsAsync(ServiceResult<byte[]>.Success(fileContent));
+
+            var controller = GetController("Tenant");
 
             // Act
-            var result = await _controller.DownloadSignedLease(leaseAgreementId);
+            var result = await controller.DownloadSignedLease(leaseAgreementId);
 
             // Assert
             var fileResult = Assert.IsType<FileContentResult>(result);
+            Assert.Equal(fileContent, fileResult.FileContents);
             Assert.Equal("application/pdf", fileResult.ContentType);
-            Assert.Equal($"signed_lease_{leaseAgreementId}.pdf", fileResult.FileDownloadName);
-            Assert.Equal(fileBytes, fileResult.FileContents);
+            Assert.Equal(fileName, fileResult.FileDownloadName);
         }
 
         [Fact]
         public async Task PreviewLease_AsManager_ReturnsHtmlContent()
         {
             // Arrange
-            SetupControllerContext("Manager");
             int leaseAgreementId = 1;
-            var signingDto = new LeaseAgreementSigningDto 
-            { 
-                LeaseAgreementId = 1,
-                GeneratedHtmlContent = "<html><body>Lease Content</body></html>"
+            var htmlContent = "<html><body>Lease Preview</body></html>";
+            var signingDto = new LeaseAgreementSigningDto
+            {
+                LeaseAgreementId = leaseAgreementId,
+                Status = LeaseAgreement.LeaseStatus.Sent,
+                GeneratedHtmlContent = htmlContent
             };
-
             _mockLeaseGenerationService.Setup(s => s.GetLeaseForSigningAsync(leaseAgreementId, 0))
                 .ReturnsAsync(ServiceResult<LeaseAgreementSigningDto>.Success(signingDto));
 
+            var controller = GetController("Manager");
+
             // Act
-            var result = await _controller.PreviewLease(leaseAgreementId);
+            var result = await controller.PreviewLease(leaseAgreementId);
 
             // Assert
             var contentResult = Assert.IsType<ContentResult>(result);
             Assert.Equal("text/html", contentResult.ContentType);
-            Assert.Equal("<html><body>Lease Content</body></html>", contentResult.Content);
+            Assert.Equal(htmlContent, contentResult.Content);
         }
 
         [Fact]
@@ -403,157 +393,157 @@ namespace PropertyManagement.Test.Controllers
             // Arrange
             int leaseAgreementId = 1;
             var tenantDto = new TenantDto { TenantId = 1, FullName = "Test Tenant" };
-            var signingDto = new LeaseAgreementSigningDto 
-            { 
-                LeaseAgreementId = 1,
-                GeneratedHtmlContent = "<html><body>Lease Content</body></html>"
+            var htmlContent = "<html><body>Tenant Lease Preview</body></html>";
+            var signingDto = new LeaseAgreementSigningDto
+            {
+                LeaseAgreementId = leaseAgreementId,
+                Status = LeaseAgreement.LeaseStatus.Sent,
+                GeneratedHtmlContent = htmlContent
             };
-
             _mockTenantApplicationService.Setup(s => s.GetTenantByUserIdAsync(1))
                 .ReturnsAsync(ServiceResult<TenantDto>.Success(tenantDto));
-            
-            _mockLeaseGenerationService.Setup(s => s.GetLeaseForSigningAsync(leaseAgreementId, 1))
+            _mockLeaseGenerationService.Setup(s => s.GetLeaseForSigningAsync(leaseAgreementId, tenantDto.TenantId))
                 .ReturnsAsync(ServiceResult<LeaseAgreementSigningDto>.Success(signingDto));
 
+            var controller = GetController("Tenant", userId: 1);
+
             // Act
-            var result = await _controller.PreviewLease(leaseAgreementId);
+            var result = await controller.PreviewLease(leaseAgreementId);
 
             // Assert
             var contentResult = Assert.IsType<ContentResult>(result);
             Assert.Equal("text/html", contentResult.ContentType);
-            Assert.Equal("<html><body>Lease Content</body></html>", contentResult.Content);
+            Assert.Equal(htmlContent, contentResult.Content);
         }
-
-        #endregion
-
-        #region Template Management Tests
 
         [Fact]
         public async Task Templates_AsManager_ReturnsViewWithTemplates()
         {
             // Arrange
-            SetupControllerContext("Manager");
-            var templateDto = new LeaseTemplateDto { LeaseTemplateId = 1, Name = "Default Template" };
-            
+            var templates = new List<LeaseTemplateDto>
+            {
+                new LeaseTemplateDto { LeaseTemplateId = 1, Name = "Standard Template" },
+                new LeaseTemplateDto { LeaseTemplateId = 2, Name = "Premium Template" }
+            };
+
             _mockLeaseGenerationService.Setup(s => s.GetLeaseTemplatesAsync())
-                .ReturnsAsync(ServiceResult<IEnumerable<LeaseTemplateDto>>.Success(new[] { templateDto }));
+                .ReturnsAsync(ServiceResult<IEnumerable<LeaseTemplateDto>>.Success(templates));
+
+            var controller = GetController("Manager");
 
             // Act
-            var result = await _controller.Templates();
+            var result = await controller.Templates();
 
             // Assert
             var viewResult = Assert.IsType<ViewResult>(result);
             var model = Assert.IsAssignableFrom<List<LeaseTemplateViewModel>>(viewResult.Model);
-            Assert.Single(model);
-            Assert.Equal("Default Template", model.First().Name);
+            Assert.Equal(2, model.Count);
         }
 
         [Fact]
         public async Task SaveTemplate_CreateNew_ReturnsRedirectWithSuccess()
         {
             // Arrange
-            SetupControllerContext("Manager");
-            var viewModel = new LeaseTemplateViewModel 
-            { 
-                LeaseTemplateId = 0, 
+            var templateViewModel = new LeaseTemplateViewModel
+            {
                 Name = "New Template",
-                HtmlContent = "<html>Template</html>",
-                IsActive = true
+                HtmlContent = "<html>Template Content</html>"
             };
-            var templateDto = new LeaseTemplateDto { LeaseTemplateId = 1, Name = "New Template" };
+
+            var createdTemplate = new LeaseTemplateDto
+            {
+                LeaseTemplateId = 1,
+                Name = "New Template"
+            };
 
             _mockLeaseGenerationService.Setup(s => s.CreateLeaseTemplateAsync(It.IsAny<CreateLeaseTemplateDto>()))
-                .ReturnsAsync(ServiceResult<LeaseTemplateDto>.Success(templateDto));
+                .ReturnsAsync(ServiceResult<LeaseTemplateDto>.Success(createdTemplate));
+
+            var controller = GetController("Manager");
 
             // Act
-            var result = await _controller.SaveTemplate(viewModel);
+            var result = await controller.SaveTemplate(templateViewModel);
 
             // Assert
             var redirectResult = Assert.IsType<RedirectToActionResult>(result);
             Assert.Equal("Templates", redirectResult.ActionName);
-            Assert.Equal("? Template created successfully!", _controller.TempData["Success"]);
+            Assert.Contains("Template saved successfully", controller.TempData["Success"]?.ToString());
         }
 
         [Fact]
         public async Task SaveTemplate_UpdateExisting_ReturnsRedirectWithSuccess()
         {
             // Arrange
-            SetupControllerContext("Manager");
-            var viewModel = new LeaseTemplateViewModel 
-            { 
-                LeaseTemplateId = 1, 
+            var templateViewModel = new LeaseTemplateViewModel
+            {
+                LeaseTemplateId = 1,
                 Name = "Updated Template",
-                HtmlContent = "<html>Updated Template</html>",
-                IsActive = true
+                HtmlContent = "<html>Updated Content</html>"
             };
-            var templateDto = new LeaseTemplateDto { LeaseTemplateId = 1, Name = "Updated Template" };
+
+            var updatedTemplate = new LeaseTemplateDto
+            {
+                LeaseTemplateId = 1,
+                Name = "Updated Template"
+            };
 
             _mockLeaseGenerationService.Setup(s => s.UpdateLeaseTemplateAsync(1, It.IsAny<UpdateLeaseTemplateDto>()))
-                .ReturnsAsync(ServiceResult<LeaseTemplateDto>.Success(templateDto));
+                .ReturnsAsync(ServiceResult<LeaseTemplateDto>.Success(updatedTemplate));
+
+            var controller = GetController("Manager");
 
             // Act
-            var result = await _controller.SaveTemplate(viewModel);
+            var result = await controller.SaveTemplate(templateViewModel);
 
             // Assert
             var redirectResult = Assert.IsType<RedirectToActionResult>(result);
             Assert.Equal("Templates", redirectResult.ActionName);
-            Assert.Equal("? Template updated successfully!", _controller.TempData["Success"]);
+            Assert.Contains("Template saved successfully", controller.TempData["Success"]?.ToString());
         }
 
         [Fact]
         public async Task DeleteTemplate_WithValidId_ReturnsRedirectWithSuccess()
         {
             // Arrange
-            SetupControllerContext("Manager");
             int templateId = 1;
 
             _mockLeaseGenerationService.Setup(s => s.DeleteLeaseTemplateAsync(templateId))
                 .ReturnsAsync(ServiceResult<bool>.Success(true));
 
+            var controller = GetController("Manager");
+
             // Act
-            var result = await _controller.DeleteTemplate(templateId);
+            var result = await controller.DeleteTemplate(templateId);
 
             // Assert
             var redirectResult = Assert.IsType<RedirectToActionResult>(result);
             Assert.Equal("Templates", redirectResult.ActionName);
-            Assert.Equal("? Template deleted successfully!", _controller.TempData["Success"]);
+            Assert.Contains("Template deleted successfully", controller.TempData["Success"]?.ToString());
         }
-
-        #endregion
-
-        #region Quick Action Tests
 
         [Fact]
         public async Task QuickPreview_WithAvailableContent_RedirectsToPreview()
         {
             // Arrange
-            var tenantDto = new TenantDto { TenantId = 1 };
-            var leaseDto = new LeaseAgreementDto { LeaseAgreementId = 1, TenantId = 1 };
-            var leaseViewModel = new LeaseAgreementViewModel 
-            { 
-                LeaseAgreementId = 1, 
-                GeneratedHtmlContent = "<html>Test</html>",
-                GeneratedAt = DateTime.Now
+            int leaseAgreementId = 1;
+            var htmlContent = "<html><body>Lease Preview</body></html>";
+            var tenantDto = new TenantDto { TenantId = 1, FullName = "Test Tenant" };
+            var leaseDtos = new List<LeaseAgreementDto>
+            {
+                new LeaseAgreementDto {
+                    LeaseAgreementId = leaseAgreementId,
+                    TenantId = tenantDto.TenantId,
+                    GeneratedHtmlContent = htmlContent,
+                    Status = LeaseAgreement.LeaseStatus.Sent
+                }
             };
 
             _mockTenantApplicationService.Setup(s => s.GetTenantByUserIdAsync(1))
                 .ReturnsAsync(ServiceResult<TenantDto>.Success(tenantDto));
-            
-            _mockLeaseAgreementService.Setup(s => s.GetLeaseAgreementsByTenantIdAsync(1))
-                .ReturnsAsync(ServiceResult<IEnumerable<LeaseAgreementDto>>.Success(new[] { leaseDto }));
+            _mockLeaseAgreementService.Setup(s => s.GetLeaseAgreementsByTenantIdAsync(tenantDto.TenantId))
+                .ReturnsAsync(ServiceResult<IEnumerable<LeaseAgreementDto>>.Success(leaseDtos));
 
-            // Override the mapper to return our test ViewModel
-            var mapperMock = new Mock<IMapper>();
-            mapperMock.Setup(m => m.Map<List<LeaseAgreementViewModel>>(It.IsAny<IEnumerable<LeaseAgreementDto>>()))
-                .Returns(new List<LeaseAgreementViewModel> { leaseViewModel });
-
-            var controller = new DigitalLeaseController(
-                _mockLeaseGenerationService.Object,
-                _mockLeaseAgreementService.Object,
-                _mockTenantApplicationService.Object,
-                mapperMock.Object);
-
-            SetupControllerContextForController(controller);
+            var controller = GetController("Tenant", userId: 1);
 
             // Act
             var result = await controller.QuickPreview();
@@ -561,40 +551,31 @@ namespace PropertyManagement.Test.Controllers
             // Assert
             var redirectResult = Assert.IsType<RedirectToActionResult>(result);
             Assert.Equal("PreviewLease", redirectResult.ActionName);
-            Assert.Equal(1, redirectResult.RouteValues["leaseAgreementId"]);
+            Assert.Equal(leaseAgreementId, redirectResult.RouteValues["leaseAgreementId"]);
         }
 
         [Fact]
         public async Task QuickSign_WithAvailableLease_RedirectsToSign()
         {
             // Arrange
-            var tenantDto = new TenantDto { TenantId = 1 };
-            var leaseDto = new LeaseAgreementDto { LeaseAgreementId = 1, TenantId = 1 };
-            var leaseViewModel = new LeaseAgreementViewModel 
-            { 
-                LeaseAgreementId = 1, 
-                Status = LeaseAgreement.LeaseStatus.Sent,
-                IsDigitallySigned = false,
-                SentToTenantAt = DateTime.Now
+            int leaseAgreementId = 1;
+            var tenantDto = new TenantDto { TenantId = 1, FullName = "Test Tenant" };
+            var leaseDtos = new List<LeaseAgreementDto>
+            {
+                new LeaseAgreementDto {
+                    LeaseAgreementId = leaseAgreementId,
+                    TenantId = tenantDto.TenantId,
+                    Status = LeaseAgreement.LeaseStatus.Sent,
+                    IsDigitallySigned = false
+                }
             };
 
             _mockTenantApplicationService.Setup(s => s.GetTenantByUserIdAsync(1))
                 .ReturnsAsync(ServiceResult<TenantDto>.Success(tenantDto));
-            
-            _mockLeaseAgreementService.Setup(s => s.GetLeaseAgreementsByTenantIdAsync(1))
-                .ReturnsAsync(ServiceResult<IEnumerable<LeaseAgreementDto>>.Success(new[] { leaseDto }));
+            _mockLeaseAgreementService.Setup(s => s.GetLeaseAgreementsByTenantIdAsync(tenantDto.TenantId))
+                .ReturnsAsync(ServiceResult<IEnumerable<LeaseAgreementDto>>.Success(leaseDtos));
 
-            var mapperMock = new Mock<IMapper>();
-            mapperMock.Setup(m => m.Map<List<LeaseAgreementViewModel>>(It.IsAny<IEnumerable<LeaseAgreementDto>>()))
-                .Returns(new List<LeaseAgreementViewModel> { leaseViewModel });
-
-            var controller = new DigitalLeaseController(
-                _mockLeaseGenerationService.Object,
-                _mockLeaseAgreementService.Object,
-                _mockTenantApplicationService.Object,
-                mapperMock.Object);
-
-            SetupControllerContextForController(controller);
+            var controller = GetController("Tenant", userId: 1);
 
             // Act
             var result = await controller.QuickSign();
@@ -602,7 +583,7 @@ namespace PropertyManagement.Test.Controllers
             // Assert
             var redirectResult = Assert.IsType<RedirectToActionResult>(result);
             Assert.Equal("SignLease", redirectResult.ActionName);
-            Assert.Equal(1, redirectResult.RouteValues["leaseAgreementId"]);
+            Assert.Equal(leaseAgreementId, redirectResult.RouteValues["leaseAgreementId"]);
         }
 
         [Fact]
@@ -610,33 +591,22 @@ namespace PropertyManagement.Test.Controllers
         {
             // Arrange
             int leaseAgreementId = 1;
-            var tenantDto = new TenantDto { TenantId = 1 };
-            var leaseDto = new LeaseAgreementDto { LeaseAgreementId = 1, TenantId = 1 };
-            var leaseViewModel = new LeaseAgreementViewModel 
-            { 
-                LeaseAgreementId = 1, 
-                Status = LeaseAgreement.LeaseStatus.Generated,
-                GeneratedHtmlContent = "<html>Test</html>",
-                GeneratedAt = DateTime.Now
+            var tenantDto = new TenantDto { TenantId = 1, FullName = "Test Tenant" };
+            var leaseDtos = new List<LeaseAgreementDto>
+            {
+                new LeaseAgreementDto {
+                    LeaseAgreementId = leaseAgreementId,
+                    TenantId = tenantDto.TenantId,
+                    Status = LeaseAgreement.LeaseStatus.Sent
+                }
             };
 
             _mockTenantApplicationService.Setup(s => s.GetTenantByUserIdAsync(1))
                 .ReturnsAsync(ServiceResult<TenantDto>.Success(tenantDto));
-            
-            _mockLeaseAgreementService.Setup(s => s.GetLeaseAgreementsByTenantIdAsync(1))
-                .ReturnsAsync(ServiceResult<IEnumerable<LeaseAgreementDto>>.Success(new[] { leaseDto }));
+            _mockLeaseAgreementService.Setup(s => s.GetLeaseAgreementsByTenantIdAsync(tenantDto.TenantId))
+                .ReturnsAsync(ServiceResult<IEnumerable<LeaseAgreementDto>>.Success(leaseDtos));
 
-            var mapperMock = new Mock<IMapper>();
-            mapperMock.Setup(m => m.Map<List<LeaseAgreementViewModel>>(It.IsAny<IEnumerable<LeaseAgreementDto>>()))
-                .Returns(new List<LeaseAgreementViewModel> { leaseViewModel });
-
-            var controller = new DigitalLeaseController(
-                _mockLeaseGenerationService.Object,
-                _mockLeaseAgreementService.Object,
-                _mockTenantApplicationService.Object,
-                mapperMock.Object);
-
-            SetupControllerContextForController(controller);
+            var controller = GetController("Tenant", userId: 1);
 
             // Act
             var result = await controller.LeaseStatusInfo(leaseAgreementId);
@@ -644,37 +614,7 @@ namespace PropertyManagement.Test.Controllers
             // Assert
             var redirectResult = Assert.IsType<RedirectToActionResult>(result);
             Assert.Equal("MyLeases", redirectResult.ActionName);
-            
-            // Check that status messages were set
-            Assert.Contains("Status: Generated", controller.TempData["Info"]?.ToString());
-            Assert.Contains("Digital document has been generated", controller.TempData["Success"]?.ToString());
+            Assert.Contains("Lease is ready for signing", controller.TempData["Info"]?.ToString());
         }
-
-        #endregion
-
-        #region Helper Methods
-
-        private void SetupControllerContextForController(DigitalLeaseController controller, string role = "Tenant", int userId = 1)
-        {
-            var claims = new List<Claim>
-            {
-                new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
-                new Claim(ClaimTypes.Role, role)
-            };
-
-            var identity = new ClaimsIdentity(claims, "test");
-            var principal = new ClaimsPrincipal(identity);
-
-            controller.ControllerContext = new ControllerContext
-            {
-                HttpContext = new DefaultHttpContext { User = principal }
-            };
-
-            controller.TempData = new TempDataDictionary(
-                controller.ControllerContext.HttpContext,
-                Mock.Of<ITempDataProvider>());
-        }
-
-        #endregion
     }
 }

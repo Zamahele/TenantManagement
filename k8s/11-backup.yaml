@@ -1,0 +1,89 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: sql-server-backup
+  namespace: property-management
+spec:
+  schedule: "0 2 * * *"  # Daily at 2 AM
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+          - name: backup
+            image: mcr.microsoft.com/mssql-tools:latest
+            command:
+            - /bin/bash
+            - -c
+            - |
+              echo "Starting database backup..."
+              sqlcmd -S sql-server-service,1433 -U sa -P $SA_PASSWORD -Q "
+              BACKUP DATABASE PropertyManagementDb 
+              TO DISK = '/var/opt/mssql/backup/PropertyManagementDb_$(date +%Y%m%d_%H%M%S).bak'
+              WITH FORMAT, INIT, COMPRESSION"
+              echo "Backup completed successfully"
+              
+              # Clean up old backups (keep last 7 days)
+              find /var/opt/mssql/backup -name "*.bak" -mtime +7 -delete
+            env:
+            - name: SA_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sql-server-secret
+                  key: SA_PASSWORD
+            volumeMounts:
+            - name: sql-storage
+              mountPath: /var/opt/mssql
+          volumes:
+          - name: sql-storage
+            persistentVolumeClaim:
+              claimName: sql-server-pvc
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backup-scripts
+  namespace: property-management
+data:
+  restore.sh: |
+    #!/bin/bash
+    # Database restore script
+    # Usage: kubectl exec -it <pod> -n property-management -- /scripts/restore.sh <backup-file>
+    
+    if [ -z "$1" ]; then
+      echo "Usage: $0 <backup-file>"
+      echo "Available backups:"
+      ls -la /var/opt/mssql/backup/*.bak
+      exit 1
+    fi
+    
+    BACKUP_FILE="/var/opt/mssql/backup/$1"
+    
+    if [ ! -f "$BACKUP_FILE" ]; then
+      echo "Backup file not found: $BACKUP_FILE"
+      exit 1
+    fi
+    
+    echo "Restoring database from: $BACKUP_FILE"
+    sqlcmd -S localhost,1433 -U sa -P $SA_PASSWORD -Q "
+    RESTORE DATABASE PropertyManagementDb 
+    FROM DISK = '$BACKUP_FILE'
+    WITH REPLACE"
+    
+    echo "Database restored successfully"
+  
+  backup-manual.sh: |
+    #!/bin/bash
+    # Manual backup script
+    # Usage: kubectl exec -it <sql-pod> -n property-management -- /scripts/backup-manual.sh
+    
+    BACKUP_FILE="/var/opt/mssql/backup/PropertyManagementDb_manual_$(date +%Y%m%d_%H%M%S).bak"
+    
+    echo "Creating manual backup: $BACKUP_FILE"
+    sqlcmd -S localhost,1433 -U sa -P $SA_PASSWORD -Q "
+    BACKUP DATABASE PropertyManagementDb 
+    TO DISK = '$BACKUP_FILE'
+    WITH FORMAT, INIT, COMPRESSION"
+    
+    echo "Manual backup completed: $BACKUP_FILE"

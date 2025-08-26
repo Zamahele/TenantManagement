@@ -3,4 +3,5 @@ kind: Namespace
 metadata:
   name: property-management
   labels:
-    app: property-management    environment: production
+    app: property-management
+    environment: production

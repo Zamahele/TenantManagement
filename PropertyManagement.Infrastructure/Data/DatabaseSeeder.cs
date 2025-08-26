@@ -67,7 +67,9 @@ namespace PropertyManagement.Infrastructure.Data
       context.SaveChanges();
 
       // Seed Tenants (Entities) (insert if does not exist)
-      var userDict = context.Users.Where(u => u.Role == "Tenant").ToDictionary(u => u.Username, u => u.UserId);
+      var userDict = context.Users.Where(u => u.Role == "Tenant")
+                                 .GroupBy(u => u.Username)
+                                 .ToDictionary(g => g.Key, g => g.First().UserId);
       var roomDict = context.Rooms.ToDictionary(r => r.Number, r => r.RoomId);
 
       var tenants = new[]

@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sql-server
+  namespace: property-management
+  labels:
+    app: sql-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sql-server
+  template:
+    metadata:
+      labels:
+        app: sql-server
+    spec:
+      securityContext:
+        runAsUser: 10001
+        fsGroup: 10001
+      containers:
+      - name: sql-server
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        ports:
+        - containerPort: 1433
+          name: sql-port
+        env:
+        - name: ACCEPT_EULA
+          value: "Y"
+        - name: SA_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: sql-server-secret
+              key: SA_PASSWORD
+        - name: MSSQL_PID
+          value: "Express"
+        - name: MSSQL_USER
+          value: "mssql"
+        volumeMounts:
+        - name: sql-storage
+          mountPath: /var/opt/mssql
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "500m"
+          limits:
+            memory: "4Gi"
+            cpu: "1"
+        livenessProbe:
+          tcpSocket:
+            port: 1433
+          initialDelaySeconds: 120
+          periodSeconds: 30
+          timeoutSeconds: 10
+        readinessProbe:
+          tcpSocket:
+            port: 1433
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 5
+      volumes:
+      - name: sql-storage
+        persistentVolumeClaim:
+          claimName: sql-server-pvc

@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Prometheus;
 using PropertyManagement.Domain.Entities;
 using PropertyManagement.Infrastructure.Data;
@@ -261,15 +262,23 @@ builder.Services.AddAutoMapper(cfg =>
   cfg.CreateMap<QuickAddWaitingListViewModel, CreateWaitingListEntryDto>();
 });
 
+// Add health checks
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<ApplicationDbContext>();
+
 builder.WebHost.ConfigureKestrel(options =>
 {
   if (!builder.Environment.IsDevelopment())
   {
     options.ListenAnyIP(80); // HTTP for production
-    options.ListenAnyIP(443, listenOptions =>
+    // Only configure HTTPS if certificate exists
+    if (File.Exists("/https/aspnetapp.pfx"))
     {
-      listenOptions.UseHttps("https/aspnetapp.pfx", "YourPassword123");
-    });
+      options.ListenAnyIP(443, listenOptions =>
+      {
+        listenOptions.UseHttps("/https/aspnetapp.pfx", "YourPassword123");
+      });
+    }
   }
 });
 var app = builder.Build();
@@ -333,13 +342,36 @@ if (!app.Environment.IsDevelopment())
   app.UseHsts();
 }
 
-app.UseHttpsRedirection();
+// Only redirect to HTTPS if HTTPS is configured
+if (!app.Environment.IsDevelopment() && File.Exists("/https/aspnetapp.pfx"))
+{
+  app.UseHttpsRedirection();
+}
+
 app.UseStaticFiles();
 
 app.UseRouting();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Map health check endpoints (before other routes)
+app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+  AllowCachingResponses = false
+}).AllowAnonymous();
+
+app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+  AllowCachingResponses = false,
+  Predicate = _ => true
+}).AllowAnonymous();
+
+app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+  AllowCachingResponses = false,
+  Predicate = _ => false // Only basic liveness, no dependency checks
+}).AllowAnonymous();
 
 app.MapControllerRoute(
     name: "default",

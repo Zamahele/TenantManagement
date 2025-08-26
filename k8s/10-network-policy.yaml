@@ -1,0 +1,76 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: property-management-network-policy
+  namespace: property-management
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Allow ingress traffic to web app from ingress controller
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    to:
+    - podSelector:
+        matchLabels:
+          app: property-management-web
+    ports:
+    - protocol: TCP
+      port: 80
+    - protocol: TCP
+      port: 443
+  # Allow internal communication between web app and SQL Server
+  - from:
+    - podSelector:
+        matchLabels:
+          app: property-management-web
+    to:
+    - podSelector:
+        matchLabels:
+          app: sql-server
+    ports:
+    - protocol: TCP
+      port: 1433
+  # Allow metrics scraping from monitoring namespace
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: monitoring
+    to:
+    - podSelector:
+        matchLabels:
+          app: property-management-web
+    ports:
+    - protocol: TCP
+      port: 80
+  egress:
+  # Allow DNS resolution
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+  # Allow HTTPS outbound (for external APIs, NuGet packages, etc.)
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 443
+    - protocol: TCP
+      port: 80
+  # Allow communication to SQL Server
+  - from:
+    - podSelector:
+        matchLabels:
+          app: property-management-web
+    to:
+    - podSelector:
+        matchLabels:
+          app: sql-server
+    ports:
+    - protocol: TCP
+      port: 1433

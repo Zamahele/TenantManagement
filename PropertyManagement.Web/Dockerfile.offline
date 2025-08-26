@@ -1,0 +1,19 @@
+# Offline Docker Build Strategy
+# This Dockerfile uses pre-built binaries to avoid NuGet issues
+
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
+WORKDIR /app
+EXPOSE 80
+EXPOSE 443
+
+# Copy the published output directly
+COPY ./publish /app
+
+# Create required directories
+RUN mkdir -p /app/logs /https
+
+# Set environment variables
+ENV ASPNETCORE_ENVIRONMENT=Production
+ENV ASPNETCORE_URLS=http://+:80
+
+ENTRYPOINT ["dotnet", "PropertyManagement.Web.dll"]

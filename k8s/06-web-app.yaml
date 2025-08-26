@@ -1,0 +1,111 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: property-management-web
+  namespace: property-management
+  labels:
+    app: property-management-web
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: property-management-web
+  template:
+    metadata:
+      labels:
+        app: property-management-web
+    spec:
+      initContainers:
+      - name: wait-for-db
+        image: busybox:1.35
+        command: 
+        - sh
+        - -c
+        - |
+          echo "Waiting for SQL Server to be ready..."
+          until nc -z sql-server-service 1433; do
+            echo "SQL Server not ready, waiting..."
+            sleep 5
+          done
+          echo "SQL Server is ready!"
+      containers:
+      - name: web-app
+        image: ghcr.io/zamahele/tenantmanagement:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80
+          name: http
+        - containerPort: 443
+          name: https
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: ASPNETCORE_ENVIRONMENT
+        - name: ASPNETCORE_URLS
+          value: "http://+:80;https://+:443"
+        - name: ASPNETCORE_FORWARDEDHEADERS_ENABLED
+          value: "true"
+        - name: ASPNETCORE_HTTPS_PORT
+          value: ""
+        - name: ConnectionStrings__DefaultConnection
+          value: "Server=sql-server-service,1433;Database=PropertyManagementDb;User=sa;Password=Your_password123;MultipleActiveResultSets=true;TrustServerCertificate=True"
+        - name: EnableDatabaseSeeding
+          value: "false"
+        volumeMounts:
+        - name: app-config
+          mountPath: /app/appsettings.Production.json
+          subPath: appsettings.Production.json
+          readOnly: true
+        - name: app-logs
+          mountPath: /app/logs
+        - name: https-cert
+          mountPath: /https
+          readOnly: true
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: 80
+            scheme: HTTP
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: 80
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /health
+            port: 80
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 30
+      imagePullSecrets:
+      - name: ghcr-secret
+      volumes:
+      - name: app-config
+        configMap:
+          name: app-config
+      - name: app-logs
+        persistentVolumeClaim:
+          claimName: app-logs-pvc
+      - name: https-cert
+        secret:
+          secretName: https-cert

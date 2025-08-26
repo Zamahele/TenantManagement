@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: sql-server-service
+  namespace: property-management
+  labels:
+    app: sql-server
+spec:
+  selector:
+    app: sql-server
+  ports:
+  - port: 1433
+    targetPort: 1433
+    protocol: TCP
+    name: sql-port
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: property-management-service
+  namespace: property-management
+  labels:
+    app: property-management-web
+spec:
+  selector:
+    app: property-management-web
+  ports:
+  - port: 80
+    targetPort: 80
+    nodePort: 30080
+    protocol: TCP
+    name: http
+  - port: 443
+    targetPort: 443
+    nodePort: 30443
+    protocol: TCP
+    name: https
+  type: NodePort

@@ -1,0 +1,31 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: property-management-ingress
+  namespace: property-management
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+    # For production with SSL:
+    # nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    # cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  # Uncomment for HTTPS in production:
+  # tls:
+  # - hosts:
+  #   - property-management.yourdomain.com
+  #   secretName: property-management-tls
+  rules:
+  - host: property-management.local  # Change to your domain
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: property-management-service
+            port:
+              number: 80

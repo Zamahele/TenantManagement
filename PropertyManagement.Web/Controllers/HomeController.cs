@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Prometheus;
 using PropertyManagement.Domain.Entities;
 using PropertyManagement.Infrastructure.Repositories;
+using PropertyManagement.Infrastructure.Data;
 using System.Diagnostics;
 
 namespace PropertyManagement.Web.Controllers;
@@ -19,6 +20,7 @@ public class HomeController : Controller
   private readonly IGenericRepository<Payment> _paymentRepository;
   private readonly IGenericRepository<Inspection> _inspectionRepository;
   private readonly IGenericRepository<BookingRequest> _bookingRequestRepository;
+  private readonly ApplicationDbContext _context;
   private readonly ILogger<HomeController> _logger;
   private readonly IMapper _mapper;
 
@@ -30,6 +32,7 @@ public class HomeController : Controller
       IGenericRepository<Payment> paymentRepository,
       IGenericRepository<Inspection> inspectionRepository,
       IGenericRepository<BookingRequest> bookingRequestRepository,
+      ApplicationDbContext context,
       ILogger<HomeController> logger,
       IMapper mapper)
   {
@@ -40,6 +43,7 @@ public class HomeController : Controller
     _paymentRepository = paymentRepository;
     _inspectionRepository = inspectionRepository;
     _bookingRequestRepository = bookingRequestRepository;
+    _context = context;
     _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
   }
@@ -47,6 +51,51 @@ public class HomeController : Controller
   // Add a static counter for home page visits
   private static readonly Counter HomePageVisitCounter =
       Metrics.CreateCounter("home_page_visits_total", "Total number of visits to the home page.");
+
+  // Kubernetes Health Check Endpoints
+  [AllowAnonymous]
+  [HttpGet("/health")]
+  public IActionResult Health()
+  {
+    return Ok(new { status = "healthy", timestamp = DateTime.UtcNow });
+  }
+
+  [AllowAnonymous]
+  [HttpGet("/health/ready")]
+  public async Task<IActionResult> Ready()
+  {
+    try
+    {
+      // Check database connectivity
+      await _context.Database.CanConnectAsync();
+      
+      return Ok(new { 
+        status = "ready", 
+        timestamp = DateTime.UtcNow,
+        database = "connected"
+      });
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Readiness check failed");
+      return StatusCode(503, new { 
+        status = "not ready", 
+        timestamp = DateTime.UtcNow,
+        error = ex.Message 
+      });
+    }
+  }
+
+  [AllowAnonymous]
+  [HttpGet("/health/live")]
+  public IActionResult Live()
+  {
+    return Ok(new { 
+      status = "alive", 
+      timestamp = DateTime.UtcNow,
+      uptime = Environment.TickCount64
+    });
+  }
 
   public async Task<IActionResult> Index()
   {

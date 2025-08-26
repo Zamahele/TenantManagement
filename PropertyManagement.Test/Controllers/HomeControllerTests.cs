@@ -102,6 +102,7 @@ public class HomeControllerTests
             paymentRepo.Object,
             inspectionRepo.Object,
             bookingRequestRepo.Object,
+            context,
             logger,
             mapper
         );
@@ -157,5 +158,41 @@ public class HomeControllerTests
         var viewResult = Assert.IsType<ViewResult>(result);
         var model = Assert.IsType<ErrorViewModel>(viewResult.Model);
         Assert.False(string.IsNullOrEmpty(model.RequestId));
+    }
+
+    [Fact]
+    public async Task Health_ReturnsOkResult()
+    {
+        var context = GetDbContext();
+        var controller = GetController(context);
+
+        var result = controller.Health();
+
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.NotNull(okResult.Value);
+    }
+
+    [Fact]
+    public async Task Ready_WithHealthyDatabase_ReturnsOkResult()
+    {
+        var context = GetDbContext();
+        var controller = GetController(context);
+
+        var result = await controller.Ready();
+
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.NotNull(okResult.Value);
+    }
+
+    [Fact]
+    public void Live_ReturnsOkResult()
+    {
+        var context = GetDbContext();
+        var controller = GetController(context);
+
+        var result = controller.Live();
+
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.NotNull(okResult.Value);
     }
 }

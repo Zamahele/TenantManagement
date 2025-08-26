@@ -17,7 +17,8 @@
       "Bash(dotnet tool list:*)",
       "Bash(dotnet-ef migrations:*)",
       "Bash(dotnet ef database update:*)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(kubectl logs:*)"
     ],
     "deny": []
   }

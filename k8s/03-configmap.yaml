@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: property-management
+data:
+  appsettings.Production.json: |
+    {
+        "Logging": {
+            "LogLevel": {
+                "Default": "Information",
+                "Microsoft.AspNetCore": "Warning"
+            }
+        },
+        "EnableDatabaseSeeding": true,
+        "ConnectionStrings": {
+            "DefaultConnection": "Server=sql-server-service,1433;Database=PropertyManagementDb;User=sa;Password=Your_password123;MultipleActiveResultSets=true;TrustServerCertificate=True"
+        },
+        "AllowedHosts": "*",
+        "UtilityRates": {
+            "WaterPerLiter": 0.02,
+            "ElectricityPerKwh": 1.50
+        },
+        "Serilog": {
+            "MinimumLevel": "Information",
+            "WriteTo": [
+                {
+                    "Name": "File",
+                    "Args": {
+                        "path": "/app/logs/propertymanagement.log",
+                        "rollingInterval": "Day"
+                    }
+                },
+                {
+                    "Name": "Console"
+                }
+            ]
+        }
+    }

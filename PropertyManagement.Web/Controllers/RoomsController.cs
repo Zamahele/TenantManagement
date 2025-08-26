@@ -120,10 +120,24 @@ public class RoomsController : BaseController
         new SelectListItem { Value = "Suite", Text = "Suite" }
     };
     model.StatusOptions = GetStatusOptions();
+    
+    // Check if this is an AJAX request - with null safety for testing
+    bool isAjax = Request?.Headers?.ContainsKey("X-Requested-With") == true && 
+                  Request.Headers["X-Requested-With"] == "XMLHttpRequest";
+    
     if (!ModelState.IsValid)
     {
+      if (isAjax)
+      {
+        var errors = ModelState.Values
+            .SelectMany(v => v.Errors)
+            .Select(e => e.ErrorMessage)
+            .ToList();
+        return Json(new { success = false, message = "Please correct the form errors.", errors = errors });
+      }
       return View("_RoomModal", model);
     }
+    
     try
     {
       if (model.RoomId == 0)
@@ -132,8 +146,18 @@ public class RoomsController : BaseController
         var result = await _roomApplicationService.CreateRoomAsync(createRoomDto);
         if (!result.IsSuccess)
         {
+          if (isAjax)
+          {
+            return Json(new { success = false, message = result.ErrorMessage });
+          }
+          SetErrorMessage(result.ErrorMessage);
           model.StatusOptions = GetStatusOptions();
           return View("_RoomModal", model);
+        }
+        
+        if (isAjax)
+        {
+          return Json(new { success = true, message = "Room created successfully." });
         }
         SetSuccessMessage("Room created successfully.");
       }
@@ -143,19 +167,34 @@ public class RoomsController : BaseController
         var result = await _roomApplicationService.UpdateRoomAsync(model.RoomId, updateRoomDto);
         if (!result.IsSuccess)
         {
+          if (isAjax)
+          {
+            return Json(new { success = false, message = result.ErrorMessage });
+          }
+          SetErrorMessage(result.ErrorMessage);
           model.StatusOptions = GetStatusOptions();
           return View("_RoomModal", model);
+        }
+        
+        if (isAjax)
+        {
+          return Json(new { success = true, message = "Room updated successfully." });
         }
         SetSuccessMessage("Room updated successfully.");
       }
     }
     catch (Exception ex)
     {
-      model.StatusOptions = GetStatusOptions();
+      if (isAjax)
+      {
+        return Json(new { success = false, message = $"An unexpected error occurred: {ex.Message}" });
+      }
       SetErrorMessage($"An unexpected error occurred: {ex.Message}");
+      model.StatusOptions = GetStatusOptions();
       return View("_RoomModal", model);
     }
-    return SafeRedirectToAction(nameof(Index));
+
+    return RedirectToAction(nameof(Index));
   }
 
   private IEnumerable<SelectListItem> GetStatusOptions()
@@ -192,14 +231,39 @@ public class RoomsController : BaseController
   [Authorize(Roles = "Manager")]
   public async Task<IActionResult> Delete(int id)
   {
-    var result = await _roomApplicationService.DeleteRoomAsync(id);
-    if (!result.IsSuccess)
+    // Check if this is an AJAX request - with null safety for testing
+    bool isAjax = Request?.Headers?.ContainsKey("X-Requested-With") == true && 
+                  Request.Headers["X-Requested-With"] == "XMLHttpRequest";
+    
+    try
     {
-      SetErrorMessage(result.ErrorMessage);
-      return SafeRedirectToAction(nameof(Index));
+      var result = await _roomApplicationService.DeleteRoomAsync(id);
+      if (!result.IsSuccess)
+      {
+        if (isAjax)
+        {
+          return Json(new { success = false, message = result.ErrorMessage });
+        }
+        SetErrorMessage(result.ErrorMessage);
+        return RedirectToAction(nameof(Index));
+      }
+      
+      if (isAjax)
+      {
+        return Json(new { success = true, message = "Room deleted successfully." });
+      }
+      SetSuccessMessage("Room deleted successfully.");
     }
-    SetSuccessMessage("Room deleted successfully.");
-    return SafeRedirectToAction(nameof(Index));
+    catch (Exception ex)
+    {
+      if (isAjax)
+      {
+        return Json(new { success = false, message = $"An unexpected error occurred: {ex.Message}" });
+      }
+      SetErrorMessage($"An unexpected error occurred: {ex.Message}");
+    }
+    
+    return RedirectToAction(nameof(Index));
   }
 
   // GET: /Rooms/BookRoom
@@ -233,6 +297,10 @@ public class RoomsController : BaseController
   [Authorize(Roles = "Manager")]
   public async Task<IActionResult> BookRoom(BookingRequestViewModel model, IFormFile? ProofOfPayment)
   {
+    // Check if this is an AJAX request - with null safety for testing
+    bool isAjax = Request?.Headers?.ContainsKey("X-Requested-With") == true && 
+                  Request.Headers["X-Requested-With"] == "XMLHttpRequest";
+    
     if (!ModelState.IsValid)
     {
       var availableRoomsResult = await _roomApplicationService.GetAvailableRoomsAsync();
@@ -242,6 +310,15 @@ public class RoomsController : BaseController
           Value = r.RoomId.ToString(),
           Text = $"Room {r.Number} - {r.Type}"
         }).ToList() : new List<SelectListItem>();
+      
+      if (isAjax)
+      {
+        var errors = ModelState.Values
+            .SelectMany(v => v.Errors)
+            .Select(e => e.ErrorMessage)
+            .ToList();
+        return Json(new { success = false, message = "Please correct the form errors.", errors = errors });
+      }
       
       SetErrorMessage("Please correct the errors in the form.");
       return PartialView("_BookingModal", model);
@@ -256,29 +333,49 @@ public class RoomsController : BaseController
       Note = model.Note
     };
 
-    // Handle file upload
-    if (ProofOfPayment != null && ProofOfPayment.Length > 0)
+    try
     {
-      var uploadsFolder = Path.Combine("wwwroot", "uploads", "proofs");
-      Directory.CreateDirectory(uploadsFolder);
-      
-      var fileName = $"{Guid.NewGuid()}_{ProofOfPayment.FileName}";
-      var filePath = Path.Combine(uploadsFolder, fileName);
-      
-      using var stream = new FileStream(filePath, FileMode.Create);
-      await ProofOfPayment.CopyToAsync(stream);
-      
-      createBookingDto.ProofOfPaymentPath = $"uploads/proofs/{fileName}";
-    }
+      // Handle file upload
+      if (ProofOfPayment != null && ProofOfPayment.Length > 0)
+      {
+        var uploadsFolder = Path.Combine("wwwroot", "uploads", "proofs");
+        Directory.CreateDirectory(uploadsFolder);
+        
+        var fileName = $"{Guid.NewGuid()}_{ProofOfPayment.FileName}";
+        var filePath = Path.Combine(uploadsFolder, fileName);
+        
+        using var stream = new FileStream(filePath, FileMode.Create);
+        await ProofOfPayment.CopyToAsync(stream);
+        
+        createBookingDto.ProofOfPaymentPath = $"uploads/proofs/{fileName}";
+      }
 
-    var result = await _bookingRequestApplicationService.CreateBookingRequestAsync(createBookingDto);
-    if (!result.IsSuccess)
+      var result = await _bookingRequestApplicationService.CreateBookingRequestAsync(createBookingDto);
+      if (!result.IsSuccess)
+      {
+        if (isAjax)
+        {
+          return Json(new { success = false, message = result.ErrorMessage });
+        }
+        SetErrorMessage(result.ErrorMessage);
+        return RedirectToAction(nameof(Index));
+      }
+      
+      if (isAjax)
+      {
+        return Json(new { success = true, message = "Booking request submitted successfully." });
+      }
+      SetSuccessMessage("Booking request submitted successfully.");
+    }
+    catch (Exception ex)
     {
-      SetErrorMessage(result.ErrorMessage);
-      return RedirectToAction(nameof(Index));
+      if (isAjax)
+      {
+        return Json(new { success = false, message = $"An unexpected error occurred: {ex.Message}" });
+      }
+      SetErrorMessage($"An unexpected error occurred: {ex.Message}");
     }
     
-    SetSuccessMessage("Booking request submitted successfully.");
     return RedirectToAction(nameof(Index));
   }
 
@@ -308,6 +405,10 @@ public class RoomsController : BaseController
   [ValidateAntiForgeryToken]
   public async Task<IActionResult> EditBookingRequest(BookingRequestViewModel model, IFormFile? ProofOfPayment)
   {
+    // Check if this is an AJAX request - with null safety for testing
+    bool isAjax = Request?.Headers?.ContainsKey("X-Requested-With") == true && 
+                  Request.Headers["X-Requested-With"] == "XMLHttpRequest";
+    
     if (!ModelState.IsValid)
     {
       var availableRoomsResult = await _roomApplicationService.GetAvailableRoomsAsync();
@@ -317,6 +418,15 @@ public class RoomsController : BaseController
           Value = r.RoomId.ToString(),
           Text = $"Room {r.Number} - {r.Type}"
         }).ToList() : new List<SelectListItem>();
+      
+      if (isAjax)
+      {
+        var errors = ModelState.Values
+            .SelectMany(v => v.Errors)
+            .Select(e => e.ErrorMessage)
+            .ToList();
+        return Json(new { success = false, message = "Please correct the form errors.", errors = errors });
+      }
       
       SetErrorMessage("Please correct the errors in the form.");
       return PartialView("_BookingModal", model);
@@ -331,29 +441,49 @@ public class RoomsController : BaseController
       Note = model.Note
     };
 
-    // Handle file upload
-    if (ProofOfPayment != null && ProofOfPayment.Length > 0)
+    try
     {
-      var uploadsFolder = Path.Combine("wwwroot", "uploads", "proofs");
-      Directory.CreateDirectory(uploadsFolder);
-      
-      var fileName = $"{Guid.NewGuid()}_{ProofOfPayment.FileName}";
-      var filePath = Path.Combine(uploadsFolder, fileName);
-      
-      using var stream = new FileStream(filePath, FileMode.Create);
-      await ProofOfPayment.CopyToAsync(stream);
-      
-      updateBookingDto.ProofOfPaymentPath = $"uploads/proofs/{fileName}";
-    }
+      // Handle file upload
+      if (ProofOfPayment != null && ProofOfPayment.Length > 0)
+      {
+        var uploadsFolder = Path.Combine("wwwroot", "uploads", "proofs");
+        Directory.CreateDirectory(uploadsFolder);
+        
+        var fileName = $"{Guid.NewGuid()}_{ProofOfPayment.FileName}";
+        var filePath = Path.Combine(uploadsFolder, fileName);
+        
+        using var stream = new FileStream(filePath, FileMode.Create);
+        await ProofOfPayment.CopyToAsync(stream);
+        
+        updateBookingDto.ProofOfPaymentPath = $"uploads/proofs/{fileName}";
+      }
 
-    var result = await _bookingRequestApplicationService.UpdateBookingRequestAsync(model.BookingRequestId, updateBookingDto);
-    if (!result.IsSuccess)
+      var result = await _bookingRequestApplicationService.UpdateBookingRequestAsync(model.BookingRequestId, updateBookingDto);
+      if (!result.IsSuccess)
+      {
+        if (isAjax)
+        {
+          return Json(new { success = false, message = result.ErrorMessage });
+        }
+        SetErrorMessage(result.ErrorMessage);
+        return RedirectToAction(nameof(Index));
+      }
+      
+      if (isAjax)
+      {
+        return Json(new { success = true, message = "Booking request updated successfully." });
+      }
+      SetSuccessMessage("Booking request updated successfully.");
+    }
+    catch (Exception ex)
     {
-      SetErrorMessage(result.ErrorMessage);
-      return RedirectToAction(nameof(Index));
+      if (isAjax)
+      {
+        return Json(new { success = false, message = $"An unexpected error occurred: {ex.Message}" });
+      }
+      SetErrorMessage($"An unexpected error occurred: {ex.Message}");
     }
     
-    SetSuccessMessage("Booking request updated successfully.");
     return RedirectToAction(nameof(Index));
   }
 
@@ -362,24 +492,39 @@ public class RoomsController : BaseController
   [ValidateAntiForgeryToken]
   public async Task<IActionResult> DeleteBookingRequest(int bookingRequestId)
   {
-    var result = await _bookingRequestApplicationService.DeleteBookingRequestAsync(bookingRequestId);
-    if (!result.IsSuccess)
+    // Check if this is an AJAX request - with null safety for testing
+    bool isAjax = Request?.Headers?.ContainsKey("X-Requested-With") == true && 
+                  Request.Headers["X-Requested-With"] == "XMLHttpRequest";
+    
+    try
     {
-      SetErrorMessage(result.ErrorMessage);
-      return RedirectToAction(nameof(Index));
+      var result = await _bookingRequestApplicationService.DeleteBookingRequestAsync(bookingRequestId);
+      if (!result.IsSuccess)
+      {
+        if (isAjax)
+        {
+          return Json(new { success = false, message = result.ErrorMessage });
+        }
+        SetErrorMessage(result.ErrorMessage);
+        return RedirectToAction(nameof(Index));
+      }
+      
+      if (isAjax)
+      {
+        return Json(new { success = true, message = "Booking request deleted successfully." });
+      }
+      SetSuccessMessage("Booking request deleted successfully.");
+    }
+    catch (Exception ex)
+    {
+      if (isAjax)
+      {
+        return Json(new { success = false, message = $"An unexpected error occurred: {ex.Message}" });
+      }
+      SetErrorMessage($"An unexpected error occurred: {ex.Message}");
     }
     
-    SetSuccessMessage("Booking request deleted successfully.");
     return RedirectToAction(nameof(Index));
-  }
-
-  private new void SetSuccessMessage(string message)
-  {
-      TempData["Success"] = message;
-  }
-  private new void SetErrorMessage(string message)
-  {
-      TempData["Error"] = message;
   }
 
   private async Task SetSidebarCountsAsync()
@@ -416,13 +561,5 @@ public class RoomsController : BaseController
       ViewBag.RoomCount = 0;
       ViewBag.PendingMaintenanceCount = 0;
     }
-  }
-
-  // Ensure TempData keys are always set before redirect
-  private RedirectToActionResult SafeRedirectToAction(string action, string controller = null, object routeValues = null)
-  {
-      if (!TempData.ContainsKey("Success")) TempData["Success"] = null;
-      if (!TempData.ContainsKey("Error")) TempData["Error"] = null;
-      return controller == null ? base.RedirectToAction(action, routeValues) : base.RedirectToAction(action, controller, routeValues);
   }
 }

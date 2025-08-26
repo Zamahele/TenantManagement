@@ -103,6 +103,9 @@ public class LeaseAgreementsController : BaseController
       LeaseAgreementViewModel agreementVm,
       IFormFile? File)
   {
+    // Check if this is an AJAX request
+    bool isAjax = Request.Headers["X-Requested-With"] == "XMLHttpRequest";
+    
     // Custom validation: EndDate must be after Start Date
     if (agreementVm.EndDate <= agreementVm.StartDate)
     {
@@ -143,58 +146,91 @@ public class LeaseAgreementsController : BaseController
 
     if (!ModelState.IsValid)
     {
+      if (isAjax)
+      {
+        var errors = ModelState.Values
+            .SelectMany(v => v.Errors)
+            .Select(e => e.ErrorMessage)
+            .ToList();
+        return Json(new { success = false, message = "Please correct the form errors.", errors = errors });
+      }
+      
       var tenants = await _tenantRepository.Query().Include(t => t.Room).ToListAsync();
       ViewBag.Tenants = _mapper.Map<List<TenantViewModel>>(tenants);
       ViewBag.IsEdit = agreementVm.LeaseAgreementId != 0;
       return PartialView("_LeaseAgreementModal", agreementVm);
     }
 
-    // Handle file upload if present
-    if (File != null && File.Length > 0)
+    try
     {
-      var uploads = Path.Combine(_env.WebRootPath, "uploads");
-      Directory.CreateDirectory(uploads);
-      var fileName = $"{Guid.NewGuid()}_{Path.GetFileName(File.FileName)}";
-      var filePath = Path.Combine(uploads, fileName);
-      using (var stream = new FileStream(filePath, FileMode.Create))
+      // Handle file upload if present
+      if (File != null && File.Length > 0)
       {
-        await File.CopyToAsync(stream);
-      }
-      agreementVm.FilePath = "/uploads/" + fileName;
-    }
-
-    if (agreementVm.LeaseAgreementId == 0)
-    {
-      var entity = _mapper.Map<LeaseAgreement>(agreementVm);
-      await _leaseAgreementRepository.AddAsync(entity);
-      SetSuccessMessage("Lease agreement created successfully.");
-    }
-    else
-    {
-      var existing = await _leaseAgreementRepository.GetByIdAsync(agreementVm.LeaseAgreementId);
-      if (existing == null)
-      {
-        SetErrorMessage("Lease agreement not found.");
-        return NotFound();
+        var uploads = Path.Combine(_env.WebRootPath, "uploads");
+        Directory.CreateDirectory(uploads);
+        var fileName = $"{Guid.NewGuid()}_{Path.GetFileName(File.FileName)}";
+        var filePath = Path.Combine(uploads, fileName);
+        using (var stream = new FileStream(filePath, FileMode.Create))
+        {
+          await File.CopyToAsync(stream);
+        }
+        agreementVm.FilePath = "/uploads/" + fileName;
       }
 
-      // Update properties manually to avoid navigation property issues
-      existing.TenantId = agreementVm.TenantId;
-      existing.RoomId = agreementVm.RoomId;
-      existing.StartDate = agreementVm.StartDate;
-      existing.EndDate = agreementVm.EndDate;
-      existing.RentAmount = agreementVm.RentAmount;
-      existing.ExpectedRentDay = agreementVm.ExpectedRentDay;
-      if (!string.IsNullOrEmpty(agreementVm.FilePath))
-        existing.FilePath = agreementVm.FilePath;
-      await _leaseAgreementRepository.UpdateAsync(existing);
-      SetSuccessMessage("Lease agreement updated successfully.");
-    }
+      if (agreementVm.LeaseAgreementId == 0)
+      {
+        var entity = _mapper.Map<LeaseAgreement>(agreementVm);
+        await _leaseAgreementRepository.AddAsync(entity);
+        
+        if (isAjax)
+        {
+          return Json(new { success = true, message = "Lease agreement created successfully." });
+        }
+        SetSuccessMessage("Lease agreement created successfully.");
+      }
+      else
+      {
+        var existing = await _leaseAgreementRepository.GetByIdAsync(agreementVm.LeaseAgreementId);
+        if (existing == null)
+        {
+          if (isAjax)
+          {
+            return Json(new { success = false, message = "Lease agreement not found." });
+          }
+          SetErrorMessage("Lease agreement not found.");
+          return NotFound();
+        }
 
-    // Return JSON for AJAX requests
-    if (Request.Headers.ContainsKey("X-Requested-With") && Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+        // Update properties manually to avoid navigation property issues
+        existing.TenantId = agreementVm.TenantId;
+        existing.RoomId = agreementVm.RoomId;
+        existing.StartDate = agreementVm.StartDate;
+        existing.EndDate = agreementVm.EndDate;
+        existing.RentAmount = agreementVm.RentAmount;
+        existing.ExpectedRentDay = agreementVm.ExpectedRentDay;
+        if (!string.IsNullOrEmpty(agreementVm.FilePath))
+          existing.FilePath = agreementVm.FilePath;
+        await _leaseAgreementRepository.UpdateAsync(existing);
+        
+        if (isAjax)
+        {
+          return Json(new { success = true, message = "Lease agreement updated successfully." });
+        }
+        SetSuccessMessage("Lease agreement updated successfully.");
+      }
+    }
+    catch (Exception ex)
     {
-      return Json(new { success = true, message = TempData["SuccessMessage"]?.ToString() ?? "Operation completed successfully." });
+      if (isAjax)
+      {
+        return Json(new { success = false, message = $"An unexpected error occurred: {ex.Message}" });
+      }
+      SetErrorMessage($"An unexpected error occurred: {ex.Message}");
+      
+      var tenants = await _tenantRepository.Query().Include(t => t.Room).ToListAsync();
+      ViewBag.Tenants = _mapper.Map<List<TenantViewModel>>(tenants);
+      ViewBag.IsEdit = agreementVm.LeaseAgreementId != 0;
+      return PartialView("_LeaseAgreementModal", agreementVm);
     }
     
     return RedirectToAction(nameof(Index));
@@ -204,21 +240,27 @@ public class LeaseAgreementsController : BaseController
   [HttpPost]
   public async Task<IActionResult> Delete(int id)
   {
+    // Check if this is an AJAX request
+    bool isAjax = Request.Headers["X-Requested-With"] == "XMLHttpRequest";
+    
     var agreement = await _leaseAgreementRepository.GetByIdAsync(id);
     if (agreement != null)
     {
       await _leaseAgreementRepository.DeleteAsync(agreement);
+      
+      if (isAjax)
+      {
+        return Json(new { success = true, message = "Lease agreement deleted successfully." });
+      }
       SetSuccessMessage("Lease agreement deleted successfully.");
     }
     else
     {
+      if (isAjax)
+      {
+        return Json(new { success = false, message = "Lease agreement not found." });
+      }
       SetErrorMessage("Lease agreement not found.");
-    }
-
-    // Return JSON for AJAX requests
-    if (Request.Headers.ContainsKey("X-Requested-With") && Request.Headers["X-Requested-With"] == "XMLHttpRequest")
-    {
-      return Json(new { success = true, message = TempData["SuccessMessage"]?.ToString() ?? TempData["ErrorMessage"]?.ToString() ?? "Operation completed." });
     }
 
     return RedirectToAction(nameof(Index));

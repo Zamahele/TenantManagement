@@ -120,6 +120,8 @@ public class RoomsControllerTests
         var redirect = Assert.IsType<RedirectToActionResult>(result);
         Assert.Equal("Index", redirect.ActionName);
         Assert.Equal("Room created successfully.", controller.TempData["Success"]);
+        // Note: BaseController sets both Success and Error keys, so we check for the expected value instead of count
+        Assert.Null(controller.TempData["Error"]);
         mockRoomService.Verify(s => s.CreateRoomAsync(It.IsAny<CreateRoomDto>()), Times.Once);
     }
 

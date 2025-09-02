@@ -90,7 +90,9 @@
           <td>@payment.Tenant.Room?.Number</td>
           <td>@payment.Amount.ToString("C")</td>
           <td>@payment.Type</td>
-          <td data-order="@payment.Date.ToString("yyyy-MM-dd")">@payment.Date.ToShortDateString()</td>
+          <td data-order="@(payment.Date != DateTime.MinValue ? payment.Date.ToString("yyyy-MM-dd") : "")">
+            @(payment.Date != DateTime.MinValue ? payment.Date.ToShortDateString() : "No date")
+          </td>
           <td>
             @(payment.PaymentMonth >= 1 && payment.PaymentMonth <= 12
                       ? System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(payment.PaymentMonth)

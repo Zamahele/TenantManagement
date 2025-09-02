@@ -268,7 +268,8 @@
       max-width: 900px;
       max-height: 90vh;
       overflow: hidden;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+      /* Removed box-shadow to eliminate the black shadow */
+      box-shadow: none !important;
       border: 1px solid #dee2e6;
       z-index: 1051;
     }
@@ -371,10 +372,10 @@
       background-color: #d1e7dd;
     }
     
-    /* Toast styling */
+    /* Toast styling - remove shadow from toast as well */
     .toast {
       min-width: 300px;
-      box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+      box-shadow: none !important;
     }
     
     .toast-header.bg-success {

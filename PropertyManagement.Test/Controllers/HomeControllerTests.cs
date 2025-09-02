@@ -91,6 +91,9 @@ public class HomeControllerTests
         var bookingRequestRepo = new Mock<IGenericRepository<BookingRequest>>();
         bookingRequestRepo.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<BookingRequest>());
 
+        var waitingListRepo = new Mock<IGenericRepository<WaitingListEntry>>();
+        waitingListRepo.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<WaitingListEntry>());
+
         var logger = GetLogger();
         var mapper = GetMapper();
 
@@ -102,6 +105,7 @@ public class HomeControllerTests
             paymentRepo.Object,
             inspectionRepo.Object,
             bookingRequestRepo.Object,
+            waitingListRepo.Object,
             context,
             logger,
             mapper

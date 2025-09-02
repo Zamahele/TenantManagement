@@ -3,11 +3,71 @@
 # Property Management System - Kubernetes Deployment Script
 
 param(
-    [switch]$CleanDeploy
+    [switch]$CleanDeploy,
+    [switch]$ViewLogs,
+    [string]$GitHubEmail = $env:GITHUB_EMAIL,
+    [string]$GitHubToken = $env:GITHUB_TOKEN
 )
 
 $ErrorActionPreference = "Stop"
 $Namespace = "property-management"
+
+# Function to view logs
+function Show-Logs {
+    Write-Host "Checking deployment status..." -ForegroundColor Cyan
+    kubectl get pods -n $Namespace
+    
+    Write-Host "`nChecking init container logs..." -ForegroundColor Cyan
+    $pods = kubectl get pods -n $Namespace -o jsonpath='{.items[*].metadata.name}' | Select-String "property-management-web"
+    if ($pods) {
+        $podName = $pods.ToString().Split()[0]
+        Write-Host "Init container logs for pod: $podName" -ForegroundColor Yellow
+        kubectl logs $podName -c wait-for-db -n $Namespace
+        
+        Write-Host "`nMain container logs (if available):" -ForegroundColor Yellow
+        kubectl logs $podName -n $Namespace --container=web-app 2>$null
+    }
+    
+    Write-Host "`nSQL Server logs:" -ForegroundColor Yellow
+    kubectl logs deployment/sql-server -n $Namespace --tail=20
+    
+    Write-Host "`nRecent events:" -ForegroundColor Yellow
+    kubectl get events -n $Namespace --sort-by=.lastTimestamp --field-selector type!=Normal
+}
+
+# Function to create required secrets
+function Create-RequiredSecrets {
+    Write-Host "Creating required secrets..." -ForegroundColor Cyan
+    
+    # Create SSL certificate secret if aspnetapp.pfx exists
+    if (Test-Path "aspnetapp.pfx") {
+        Write-Host "Creating SSL certificate secret..."
+        kubectl create secret generic https-cert --from-file=aspnetapp.pfx=aspnetapp.pfx -n $Namespace --dry-run=client -o yaml | kubectl apply -f -
+    } else {
+        Write-Warning "SSL certificate file 'aspnetapp.pfx' not found in current directory"
+        Write-Host "You can generate one with: dotnet dev-certs https -ep aspnetapp.pfx -p YourPassword"
+    }
+    
+    # Create GHCR secret if credentials are provided
+    if ($GitHubEmail -and $GitHubToken) {
+        Write-Host "Creating GitHub Container Registry secret..."
+        kubectl create secret docker-registry ghcr-secret `
+            --docker-server=ghcr.io `
+            --docker-username=$GitHubEmail `
+            --docker-password=$GitHubToken `
+            --docker-email=$GitHubEmail `
+            -n $Namespace --dry-run=client -o yaml | kubectl apply -f -
+    } else {
+        Write-Warning "GitHub credentials not provided. Set GITHUB_EMAIL and GITHUB_TOKEN environment variables"
+        Write-Host "Or run: `$env:GITHUB_EMAIL='your-email'; `$env:GITHUB_TOKEN='your-token'"
+    }
+}
+
+# If only viewing logs, do that and exit
+if ($ViewLogs) {
+    Show-Logs
+    exit 0
+}
 
 Write-Host "Property Management System - Kubernetes Deployment" -ForegroundColor Green
 Write-Host "=================================================" -ForegroundColor Green
@@ -60,22 +120,44 @@ try {
     kubectl apply -f k8s/03-configmap.yaml
     kubectl apply -f k8s/04-storage.yaml
     
+    # Create required secrets
+    Create-RequiredSecrets
+    
     # Deploy SQL Server
     Write-Host "Deploying SQL Server..."
     kubectl apply -f k8s/05-sql-server.yaml
     
-    # Wait for SQL Server
-    Write-Host "Waiting for SQL Server to be ready..."
-    kubectl wait --for=condition=available --timeout=300s deployment/sql-server -n $Namespace
+    # Wait for SQL Server with better timeout
+    Write-Host "Waiting for SQL Server to be ready (this may take several minutes)..."
+    $sqlReady = kubectl wait --for=condition=available --timeout=300s deployment/sql-server -n $Namespace 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warning "SQL Server deployment timeout or failed. Checking status..."
+        kubectl get pods -n $Namespace
+        kubectl describe deployment/sql-server -n $Namespace
+        Write-Host "SQL Server logs:"
+        kubectl logs deployment/sql-server -n $Namespace --tail=20
+    } else {
+        Write-Host "SQL Server is ready" -ForegroundColor Green
+    }
+    
+    # Verify SQL Server service is accessible
+    Write-Host "Verifying SQL Server service..."
+    Start-Sleep -Seconds 10
     
     # Deploy web application
     Write-Host "Deploying web application..."
     kubectl apply -f k8s/06-web-app.yaml
     kubectl apply -f k8s/07-services.yaml
     
-    # Wait for web application
+    # Wait for web application with better error handling
     Write-Host "Waiting for web application to be ready..."
-    kubectl wait --for=condition=available --timeout=300s deployment/property-management-web -n $Namespace
+    $webReady = kubectl wait --for=condition=available --timeout=300s deployment/property-management-web -n $Namespace 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warning "Web application deployment timeout. Checking status..."
+        Show-Logs
+    } else {
+        Write-Host "Web application is ready" -ForegroundColor Green
+    }
     
     # Deploy ingress if available
     if (Test-Path "k8s/08-ingress.yaml") {
@@ -83,25 +165,35 @@ try {
         kubectl apply -f k8s/08-ingress.yaml
     }
     
-    Write-Host "Deployment completed successfully!" -ForegroundColor Green
+    Write-Host "Deployment process completed!" -ForegroundColor Green
     
     # Show status
     Write-Host "`nDeployment Status:" -ForegroundColor Cyan
     kubectl get pods -n $Namespace
     
-    Write-Host "`nAccess Information:" -ForegroundColor Cyan
-    Write-Host "Port forward: kubectl port-forward svc/property-management-service 8080:80 -n $Namespace"
-    Write-Host "Then access: http://localhost:8080"
-    Write-Host "Login - Username: Admin, Password: 01Pa`$`$w0rd2025#"
+    # Check if pods are ready
+    $notReadyPods = kubectl get pods -n $Namespace --field-selector=status.phase!=Running -o jsonpath='{.items[*].metadata.name}' 2>$null
+    if ($notReadyPods) {
+        Write-Host "`nSome pods are not ready. Use the following command to troubleshoot:" -ForegroundColor Yellow
+        Write-Host ".\deploy-kubernetes-final.ps1 -ViewLogs" -ForegroundColor White
+    } else {
+        Write-Host "`nAccess Information:" -ForegroundColor Cyan
+        Write-Host "HTTPS: https://localhost:30443" -ForegroundColor Green
+        Write-Host "HTTP:  http://localhost:30080" -ForegroundColor Green
+        Write-Host "Login - Username: Admin, Password: 01Pa`$`$w0rd2025#"
+    }
+    
+    Write-Host "`nUseful Commands:" -ForegroundColor Yellow
+    Write-Host "View logs:    .\deploy-kubernetes-final.ps1 -ViewLogs"
+    Write-Host "Check status: kubectl get pods -n $Namespace"
+    Write-Host "Clean deploy: .\deploy-kubernetes-final.ps1 -CleanDeploy"
     
 } catch {
     Write-Host "Deployment failed!" -ForegroundColor Red
     Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
     
-    Write-Host "`nTroubleshooting commands:" -ForegroundColor Yellow
-    Write-Host "kubectl get pods -n $Namespace"
-    Write-Host "kubectl logs -f deployment/property-management-web -n $Namespace"
-    Write-Host "kubectl get events -n $Namespace --sort-by=.lastTimestamp"
+    Write-Host "`nRunning diagnostics..." -ForegroundColor Yellow
+    Show-Logs
     
     exit 1
 }

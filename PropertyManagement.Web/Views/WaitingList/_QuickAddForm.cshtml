@@ -4,12 +4,12 @@
 <div id="quickFormErrors" class="alert alert-danger" style="display: none;"></div>
 <div id="quickFormSuccess" class="alert alert-success" style="display: none;"></div>
 
-<form id="quickAddForm" action="/WaitingList/QuickAdd" method="post" class="needs-validation" novalidate>
+<form id="quickAddForm" action="/WaitingList/QuickAdd" method="post" autocomplete="off" class="needs-validation" novalidate>
     @Html.AntiForgeryToken()
 
     <div class="row">
         <!-- Header -->
-        <div class="col-12">
+        <div class="col-12 mb-3">
             <div class="alert alert-info">
                 <i class="bi bi-info-circle me-2"></i>
                 <strong>Quick Add for Phone Calls</strong><br>
@@ -25,11 +25,15 @@
                     <span class="input-group-text">
                         <i class="bi bi-telephone"></i>
                     </span>
-                    <input asp-for="PhoneNumber" class="form-control" 
+                    <input asp-for="PhoneNumber" 
+                           type="tel"
+                           class="form-control" 
                            placeholder="0821234567" 
                            pattern="^0[6-8][0-9]{8}$"
                            title="South African mobile number (e.g., 0821234567)"
-                           maxlength="10" autofocus required />
+                           maxlength="10" 
+                           autofocus 
+                           required />
                 </div>
                 <div class="invalid-feedback">Please enter a valid SA mobile number.</div>
                 <small class="text-muted">South African mobile format (e.g., 0821234567)</small>
@@ -72,7 +76,11 @@
                         <i class="bi bi-currency-dollar"></i>
                     </span>
                     <span class="input-group-text">R</span>
-                    <input asp-for="MaxBudget" class="form-control" placeholder="0.00" step="0.01" />
+                    <input asp-for="MaxBudget" 
+                           class="form-control" 
+                           type="number"
+                           placeholder="0.00" 
+                           step="0.01" />
                 </div>
                 <small class="text-muted">Maximum they can afford per month</small>
             </div>
@@ -108,33 +116,30 @@
             </div>
         </div>
 
-        <!-- Quick Tips -->
+        <!-- Quick Tips (without card styling) -->
         <div class="col-12">
-            <div class="card bg-light border-0">
-                <div class="card-body p-3">
-                    <h6 class="card-title text-primary">
-                        <i class="bi bi-lightbulb me-1"></i> Phone Call Tips
-                    </h6>
-                    <ul class="mb-0 small">
-                        <li>Let them know they'll be notified immediately when a room becomes available</li>
-                        <li>Ask about their preferred room type and budget range</li>
-                        <li>Confirm their phone number is active for SMS notifications</li>
-                        <li>You can add more details later if needed</li>
-                    </ul>
-                </div>
+            <div class="alert alert-light border-0">
+                <h6 class="text-primary">
+                    <i class="bi bi-lightbulb me-1"></i> Phone Call Tips
+                </h6>
+                <ul class="mb-0 small">
+                    <li>Let them know they'll be notified when a room becomes available</li>
+                    <li>Ask about their preferred room type and budget range</li>
+                    <li>Confirm their phone number for future contact</li>
+                    <li>You can add more details later if needed</li>
+                </ul>
             </div>
         </div>
     </div>
-
 </form>
 
 <div class="row mt-4">
     <div class="col-12">
         <div class="d-flex justify-content-end gap-2">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            <button type="button" class="btn btn-secondary" onclick="closeQuickAddModal()">
                 <i class="bi bi-x-circle"></i> Cancel
             </button>
-            <button type="submit" class="btn btn-primary" form="quickAddForm">
+            <button type="button" class="btn btn-primary" onclick="submitQuickAddForm()">
                 <i class="bi bi-person-plus"></i> 
                 <span class="submit-text">Add to Waiting List</span>
                 <div class="spinner-border spinner-border-sm ms-2" style="display: none;" role="status" aria-hidden="true"></div>
@@ -143,171 +148,18 @@
     </div>
 </div>
 
-<script>
-    $(document).ready(function() {
-        initializeQuickAddForm();
-    });
-
-    function initializeQuickAddForm() {
-        const form = $('#quickAddForm');
-        
-        // Form validation and submission
-        form.on('submit', function(e) {
-            e.preventDefault();
-            submitQuickAddForm();
-        });
-
-        // Phone number formatting
-        $('#PhoneNumber').on('input', function() {
-            let value = $(this).val().replace(/\D/g, ''); // Remove non-digits
-            if (value.length > 10) {
-                value = value.substring(0, 10);
-            }
-            $(this).val(value);
-            
-            // Auto-advance to next field when 10 digits entered
-            if (value.length === 10) {
-                $('#FullName').focus();
-            }
-        });
-
-        // Auto-format budget
-        $('#MaxBudget').on('blur', function() {
-            const value = parseFloat($(this).val());
-            if (!isNaN(value)) {
-                $(this).val(value.toFixed(2));
-            }
-        });
-
-        // Character limit for notes
-        $('#Notes').on('input', function() {
-            const maxLength = 500;
-            const currentLength = $(this).val().length;
-            if (currentLength > maxLength) {
-                $(this).val($(this).val().substring(0, maxLength));
-            }
-        });
-
-        // Focus on phone number when modal opens
-        $('#PhoneNumber').focus();
-    }
-
-    function submitQuickAddForm() {
-        const form = $('#quickAddForm');
-        const submitButton = form.find('button[type="submit"]');
-        const spinner = submitButton.find('.spinner-border');
-        const errorDiv = $('#quickFormErrors');
-        const successDiv = $('#quickFormSuccess');
-        
-        // Show loading state
-        submitButton.prop('disabled', true);
-        spinner.show();
-        errorDiv.hide();
-        successDiv.hide();
-        
-        // Submit form via AJAX
-        $.ajax({
-            url: form.attr('action'),
-            method: 'POST',
-            data: form.serialize(),
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        })
-        .done(function(response) {
-            if (response.success) {
-                successDiv.html(`<i class="bi bi-check-circle"></i> ${response.message}`).show();
-                
-                // Show success state for a moment
-                setTimeout(function() {
-                    $('#quickAddModal').modal('hide');
-                    
-                    // Optional: Show a toast notification
-                    showToast('Success', 'Contact added to waiting list successfully!', 'success');
-                    
-                    // Refresh the page or update the list
-                    if (typeof updateWaitingListTable === 'function') {
-                        updateWaitingListTable();
-                    } else {
-                        window.location.reload();
-                    }
-                }, 1500);
-            } else {
-                if (response.errors && Array.isArray(response.errors)) {
-                    errorDiv.html(`<i class="bi bi-exclamation-triangle"></i> ${response.errors.join('<br>')}`).show();
-                } else {
-                    errorDiv.html(`<i class="bi bi-exclamation-triangle"></i> ${response.message || 'An error occurred'}`).show();
-                }
-            }
-        })
-        .fail(function(xhr) {
-            let errorMessage = 'An error occurred while adding to waiting list. Please try again.';
-            if (xhr.responseJSON && xhr.responseJSON.message) {
-                errorMessage = xhr.responseJSON.message;
-            }
-            errorDiv.html(`<i class="bi bi-exclamation-triangle"></i> ${errorMessage}`).show();
-        })
-        .always(function() {
-            submitButton.prop('disabled', false);
-            spinner.hide();
-        });
-    }
-
-    // Simple toast notification function
-    function showToast(title, message, type) {
-        // Create toast element if it doesn't exist
-        let toastContainer = $('#toast-container');
-        if (toastContainer.length === 0) {
-            $('body').append('<div id="toast-container" class="position-fixed top-0 end-0 p-3" style="z-index: 9999;"></div>');
-            toastContainer = $('#toast-container');
+<script type="text/javascript">
+    // Form initialization will be handled by parent page JavaScript
+    document.addEventListener('DOMContentLoaded', function() {
+        if (document.getElementById('quickAddForm') && typeof initializeQuickAddForm === 'function') {
+            initializeQuickAddForm();
         }
-
-        const toastId = 'toast-' + Date.now();
-        const toastHtml = `
-            <div id="${toastId}" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
-                <div class="toast-header bg-${type} text-white">
-                    <strong class="me-auto">${title}</strong>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
-                </div>
-                <div class="toast-body">
-                    ${message}
-                </div>
-            </div>
-        `;
-        
-        toastContainer.append(toastHtml);
-        
-        const toast = new bootstrap.Toast(document.getElementById(toastId));
-        toast.show();
-        
-        // Remove toast element after it's hidden
-        document.getElementById(toastId).addEventListener('hidden.bs.toast', function() {
-            this.remove();
-        });
-    }
+    });
+    
+    // Initialize immediately for dynamic content
+    setTimeout(function() {
+        if (document.getElementById('quickAddForm') && typeof initializeQuickAddForm === 'function') {
+            initializeQuickAddForm();
+        }
+    }, 100);
 </script>
-
-<style>
-    /* Phone number input styling */
-    #PhoneNumber {
-        font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-        letter-spacing: 1px;
-    }
-
-    /* Toast styling */
-    .toast {
-        min-width: 300px;
-    }
-
-    .toast-header.bg-success {
-        background-color: #198754 !important;
-    }
-
-    .toast-header.bg-danger {
-        background-color: #dc3545 !important;
-    }
-
-    .toast-header.bg-info {
-        background-color: #0dcaf0 !important;
-    }
-</style>

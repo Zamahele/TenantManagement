@@ -17,12 +17,13 @@ spec:
     spec:
       initContainers:
       - name: wait-for-db
-        image: busybox:1.35
+        image: alpine:3.18
         command: 
         - sh
         - -c
         - |
           echo "Waiting for SQL Server to be ready..."
+          apk add --no-cache netcat-openbsd
           until nc -z sql-server-service 1433; do
             echo "SQL Server not ready, waiting..."
             sleep 5
@@ -31,7 +32,7 @@ spec:
       containers:
       - name: web-app
         image: ghcr.io/zamahele/tenantmanagement:latest
-        imagePullPolicy: Always
+        imagePullPolicy: IfNotPresent  # Changed from Always to IfNotPresent
         ports:
         - containerPort: 80
           name: http

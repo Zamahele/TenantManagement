@@ -1,4 +1,4 @@
-@model PropertyManagement.Web.ViewModels.WaitingListManagementViewModel
+﻿@model PropertyManagement.Web.ViewModels.WaitingListManagementViewModel
 @{
     ViewData["Title"] = "Waiting List";
 }
@@ -308,49 +308,93 @@
     </div>
 }
 
-<!-- Modals Container -->
-<div id="waitingListModal" class="modal fade" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <!-- Content will be loaded via AJAX -->
+<!-- Custom Waiting List Modal -->
+<div id="waitingListModal" class="custom-modal" style="display: none;">
+    <div class="custom-modal-backdrop" onclick="closeWaitingListModal()"></div>
+    <div class="custom-modal-content">
+        <div class="custom-modal-header">
+            <h4 class="custom-modal-title">
+                <i class="bi bi-hourglass-split me-2"></i>
+                <span id="waitingListModalTitle">Add Waiting List Entry</span>
+            </h4>
+            <button type="button" class="custom-modal-close" onclick="closeWaitingListModal()">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+        <div class="custom-modal-body" id="waitingListModalBody">
+            <div class="loading-state">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2 text-muted">Loading form...</p>
+            </div>
         </div>
     </div>
 </div>
 
-<div id="quickAddModal" class="modal fade" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <!-- Content will be loaded via AJAX -->
+<!-- Custom Quick Add Modal -->
+<div id="quickAddModal" class="custom-modal" style="display: none;">
+    <div class="custom-modal-backdrop" onclick="closeQuickAddModal()"></div>
+    <div class="custom-modal-content">
+        <div class="custom-modal-header">
+            <h4 class="custom-modal-title">
+                <i class="bi bi-telephone me-2"></i>
+                <span id="quickAddModalTitle">Quick Add to Waiting List</span>
+            </h4>
+            <button type="button" class="custom-modal-close" onclick="closeQuickAddModal()">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+        <div class="custom-modal-body" id="quickAddModalBody">
+            <div class="loading-state">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2 text-muted">Loading form...</p>
+            </div>
         </div>
     </div>
 </div>
 
-<div id="notificationModal" class="modal fade" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <!-- Content will be loaded via AJAX -->
+<!-- Custom Notification Modal -->
+<div id="notificationModal" class="custom-modal" style="display: none;">
+    <div class="custom-modal-backdrop" onclick="closeNotificationModal()"></div>
+    <div class="custom-modal-content">
+        <div class="custom-modal-header">
+            <h4 class="custom-modal-title">
+                <i class="bi bi-bell me-2"></i>
+                <span id="notificationModalTitle">Send Notification</span>
+            </h4>
+            <button type="button" class="custom-modal-close" onclick="closeNotificationModal()">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+        <div class="custom-modal-body" id="notificationModalBody">
+            <div class="loading-state">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2 text-muted">Loading form...</p>
+            </div>
         </div>
     </div>
 </div>
 
-<!-- Delete Modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalTitle" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="deleteModalTitle">Delete Waiting List Entry</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p id="deleteModalBody">Are you sure you want to delete this waiting list entry?</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <form id="deleteForm" method="post" style="display: inline;">
-                    @Html.AntiForgeryToken()
-                    <button type="submit" class="btn btn-danger">Delete</button>
-                </form>
-            </div>
+<!-- Custom Delete Modal -->
+<div id="deleteModal" class="custom-modal" style="display: none;">
+    <div class="custom-modal-backdrop" onclick="closeDeleteModal()"></div>
+    <div class="custom-modal-content">
+        <div class="custom-modal-header">
+            <h4 class="custom-modal-title">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                <span id="deleteModalTitle">Confirm Delete</span>
+            </h4>
+            <button type="button" class="custom-modal-close" onclick="closeDeleteModal()">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+        <div class="custom-modal-body" id="deleteModalBody">
+            <!-- Delete form content will be loaded here -->
         </div>
     </div>
 </div>
@@ -398,75 +442,347 @@
         });
     }
 
-    // Modal functions
+    function getAntiForgeryToken() {
+        return $('input[name="__RequestVerificationToken"]').val();
+    }
+
+    // Modal functions - Following Tenants pattern
     function openAddWaitingListModal() {
         loadWaitingListForm('Add Waiting List Entry', '/WaitingList/WaitingListForm');
     }
 
     function openEditWaitingListModal(id) {
-        loadWaitingListForm('Edit Waiting List Entry', `/WaitingList/WaitingListForm/${id}`);
+        loadWaitingListForm('Edit Waiting List Entry', `/WaitingList/WaitingListForm?id=${id}`);
+    }
+
+    function loadWaitingListForm(title, url) {
+        // Show loading state
+        document.getElementById('waitingListModalTitle').innerText = title;
+        document.getElementById('waitingListModalBody').innerHTML = `
+            <div class="text-center py-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <div class="mt-2">Loading form...</div>
+            </div>`;
+        
+        // Show modal
+        document.getElementById('waitingListModal').style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        
+        // Load form content
+        fetch(url, {
+            method: 'GET',
+            headers: {
+                'RequestVerificationToken': getAntiForgeryToken(),
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.text();
+        })
+        .then(html => {
+            document.getElementById('waitingListModalBody').innerHTML = html;
+            initializeWaitingListForm();
+        })
+        .catch(error => {
+            console.error('Error loading form:', error);
+            document.getElementById('waitingListModalBody').innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle"></i> 
+                    Error loading form. Please try again.
+                </div>`;
+        });
+    }
+
+    function initializeWaitingListForm() {
+        // Initialize form after it's loaded into modal
+        var form = document.getElementById('waitingListForm');
+        var phoneInput = document.getElementById('PhoneNumber');
+        
+        // Phone number formatting
+        if (phoneInput) {
+            phoneInput.addEventListener('input', function() {
+                let value = this.value.replace(/\D/g, ''); // Remove non-digits
+                if (value.length > 10) {
+                    value = value.substring(0, 10);
+                }
+                this.value = value;
+                
+                // Auto-advance to next field when 10 digits entered
+                if (value.length === 10) {
+                    const fullNameInput = document.getElementById('FullName');
+                    if (fullNameInput) fullNameInput.focus();
+                }
+            });
+        }
+        
+        // Handle form submission via AJAX
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                submitWaitingListForm(form);
+            });
+        }
+        
+        // Auto-format budget
+        const budgetInput = document.getElementById('MaxBudget');
+        if (budgetInput) {
+            budgetInput.addEventListener('blur', function() {
+                const value = parseFloat(this.value);
+                if (!isNaN(value)) {
+                    this.value = value.toFixed(2);
+                }
+            });
+        }
+
+        // Character limit for notes
+        const notesInput = document.getElementById('Notes');
+        if (notesInput) {
+            notesInput.addEventListener('input', function() {
+                const maxLength = 500;
+                const currentLength = this.value.length;
+                if (currentLength > maxLength) {
+                    this.value = this.value.substring(0, maxLength);
+                }
+            });
+        }
+        
+        // Enable Bootstrap validation
+        form.classList.add('needs-validation');
+    }
+
+    function submitWaitingListForm(form) {
+        var submitButton = document.querySelector('button[form="waitingListForm"]') || (form ? form.querySelector('button[type="submit"]') : null);
+        var spinner = submitButton ? submitButton.querySelector('.spinner-border') : null;
+        var submitText = submitButton ? submitButton.querySelector('.submit-text') : null;
+        var errorDiv = document.getElementById('formErrors');
+        var successDiv = document.getElementById('formSuccess');
+        
+        if (!form) {
+            console.error('❌ Form not found!');
+            return;
+        }
+        
+        if (!submitButton) {
+            console.error('❌ Submit button not found!');
+            return;
+        }
+        
+        // Show loading state
+        submitButton.disabled = true;
+        if (spinner) {
+            spinner.style.display = 'inline-block';
+        }
+        if (errorDiv) errorDiv.style.display = 'none';
+        if (successDiv) successDiv.style.display = 'none';
+        
+        // Validate form
+        if (!form.checkValidity()) {
+            form.classList.add('was-validated');
+            submitButton.disabled = false;
+            if (spinner) {
+                spinner.style.display = 'none';
+            }
+            return;
+        }
+        
+        // Submit form
+        var formData = new FormData(form);
+        
+        fetch('/WaitingList/CreateOrEdit', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.text().then(text => {
+                    throw new Error(text || 'Server error');
+                });
+            }
+            return response.json();
+        })
+        .then(result => {
+            if (result.success) {
+                // Show prominent success message
+                successDiv.innerHTML = `
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-check-circle-fill text-success fs-4 me-2"></i>
+                        <div>
+                            <strong>Success!</strong><br>
+                            <span>${result.message}</span>
+                        </div>
+                    </div>
+                `;
+                successDiv.style.display = 'block';
+                
+                // Disable form to prevent double submission
+                form.style.pointerEvents = 'none';
+                form.style.opacity = '0.7';
+                
+                // Close modal and reload after longer delay to show success
+                setTimeout(() => {
+                    closeWaitingListModal();
+                    
+                    // Show a toast notification before reload
+                    showSuccessToast(result.message);
+                    
+                    // Delay reload to show toast
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                }, 3000); // Increased to 3 seconds
+            } else {
+                // Show error messages
+                var errors = Array.isArray(result.errors) ? result.errors : [result.message || 'An error occurred'];
+                errorDiv.innerHTML = '<i class="bi bi-exclamation-triangle"></i> ' + errors.join('<br>');
+                errorDiv.style.display = 'block';
+            }
+        })
+        .catch(error => {
+            console.error('Form submission error:', error);
+            errorDiv.innerHTML = '<i class="bi bi-exclamation-triangle"></i> An error occurred while saving. Please try again.';
+            errorDiv.style.display = 'block';
+        })
+        .finally(() => {
+            submitButton.disabled = false;
+            if (spinner) {
+                spinner.style.display = 'none';
+            }
+        });
     }
 
     function openQuickAddModal() {
         loadQuickAddForm('Quick Add to Waiting List', '/WaitingList/QuickAdd');
     }
 
-    function loadWaitingListForm(title, url) {
-        $('#waitingListModal .modal-content').html('<div class="modal-body text-center"><div class="spinner-border" role="status"></div></div>');
-        $('#waitingListModal').modal('show');
-
-        $.get(url)
-            .done(function(data) {
-                $('#waitingListModal .modal-content').html(`
-                    <div class="modal-header">
-                        <h5 class="modal-title">${title}</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        ${data}
-                    </div>
-                `);
-            })
-            .fail(function() {
-                $('#waitingListModal .modal-content').html(`
-                    <div class="modal-header">
-                        <h5 class="modal-title">Error</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="alert alert-danger">Failed to load form. Please try again.</div>
-                    </div>
-                `);
-            });
+    function loadQuickAddForm(title, url) {
+        console.log('🚀 loadQuickAddForm called with:', { title, url });
+        
+        // Show loading state
+        document.getElementById('quickAddModalTitle').innerText = title;
+        document.getElementById('quickAddModalBody').innerHTML = `
+            <div class="text-center py-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <div class="mt-2">Loading form...</div>
+            </div>`;
+        
+        // Show modal
+        document.getElementById('quickAddModal').style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        
+        // Load form content
+        fetch(url, {
+            method: 'GET',
+            headers: {
+                'RequestVerificationToken': getAntiForgeryToken(),
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.text();
+        })
+        .then(html => {
+            console.log('📄 Form HTML loaded:', html.substring(0, 200) + '...');
+            document.getElementById('quickAddModalBody').innerHTML = html;
+            
+            // Wait a moment for DOM to update, then initialize
+            setTimeout(() => {
+                console.log('⏰ Initializing form after DOM update');
+                initializeQuickAddForm();
+                
+                // Double-check that our form is properly set up
+                const form = document.getElementById('quickAddForm');
+                if (form) {
+                    console.log('✅ Form found after initialization');
+                    console.log('📋 Form elements check:', {
+                        errorDiv: !!document.getElementById('quickFormErrors'),
+                        successDiv: !!document.getElementById('quickFormSuccess'),
+                        submitButton: !!form.querySelector('button[type="submit"]'),
+                        phoneInput: !!document.getElementById('PhoneNumber')
+                    });
+                } else {
+                    console.error('❌ Form not found after initialization');
+                }
+            }, 100);
+        })
+        .catch(error => {
+            console.error('Error loading form:', error);
+            document.getElementById('quickAddModalBody').innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle"></i> 
+                    Error loading form. Please try again.
+                </div>`;
+        });
     }
 
-    function loadQuickAddForm(title, url) {
-        $('#quickAddModal .modal-content').html('<div class="modal-body text-center"><div class="spinner-border" role="status"></div></div>');
-        $('#quickAddModal').modal('show');
+    // Add toast notification function
+    function showSuccessToast(message) {
+        // Create toast container if it doesn't exist
+        let toastContainer = document.getElementById('toast-container');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.id = 'toast-container';
+            toastContainer.className = 'position-fixed top-0 end-0 p-3';
+            toastContainer.style.zIndex = '9999';
+            document.body.appendChild(toastContainer);
+        }
 
-        $.get(url)
-            .done(function(data) {
-                $('#quickAddModal .modal-content').html(`
-                    <div class="modal-header">
-                        <h5 class="modal-title">${title}</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        ${data}
-                    </div>
-                `);
-            })
-            .fail(function() {
-                $('#quickAddModal .modal-content').html(`
-                    <div class="modal-header">
-                        <h5 class="modal-title">Error</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="alert alert-danger">Failed to load form. Please try again.</div>
-                    </div>
-                `);
-            });
+        const toastId = 'toast-' + Date.now();
+        const toastHtml = `
+            <div id="${toastId}" class="toast show" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="toast-header bg-success text-white">
+                    <i class="bi bi-check-circle-fill me-2"></i>
+                    <strong class="me-auto">Waiting List Entry Added Successfully</strong>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+                <div class="toast-body">
+                    ${message}
+                </div>
+            </div>
+        `;
+        
+        toastContainer.innerHTML = toastHtml;
+        
+        // Auto-remove after 4 seconds
+        setTimeout(() => {
+            const toast = document.getElementById(toastId);
+            if (toast) {
+                toast.remove();
+            }
+        }, 4000);
+    }
+
+    // Close modal functions
+    function closeWaitingListModal() {
+        document.getElementById('waitingListModal').style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }
+
+    function closeQuickAddModal() {
+        document.getElementById('quickAddModal').style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }
+
+    function closeNotificationModal() {
+        document.getElementById('notificationModal').style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }
+
+    function closeDeleteModal() {
+        document.getElementById('deleteModal').style.display = 'none';
+        document.body.style.overflow = 'auto';
     }
 
     // View details
@@ -483,7 +799,6 @@
         var modal = document.getElementById('deleteModal');
         var modalTitle = document.getElementById('deleteModalTitle');
         var modalBody = document.getElementById('deleteModalBody');
-        var deleteForm = document.getElementById('deleteForm');
         
         modalTitle.textContent = `Delete ${title}`;
         modalBody.innerHTML = `
@@ -496,16 +811,9 @@
             <p>Are you sure you want to delete this waiting list entry?</p>
         `;
         
-        deleteForm.action = actionUrl;
-        deleteForm.innerHTML = `
-            <input name="__RequestVerificationToken" type="hidden" value="${document.querySelector('input[name="__RequestVerificationToken"]').value}" />
-            <input type="hidden" name="id" value="${entityId}" />
-            <button type="submit" class="btn btn-danger">Delete</button>
-        `;
-        
         // Show the modal
-        var bsModal = new bootstrap.Modal(modal);
-        bsModal.show();
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
     }
 
     // Filtering and search
@@ -634,6 +942,304 @@
     function openNotificationModal(waitingListId) {
         // TODO: Implement notification modal
         alert('Notification modal will be implemented in Phase 2');
+    }
+
+    // Close modals when clicking outside or pressing Escape
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeWaitingListModal();
+            closeQuickAddModal();
+            closeNotificationModal();
+            closeDeleteModal();
+        }
+    });
+
+    function initializeQuickAddForm() {
+        console.log('🔧 initializeQuickAddForm called');
+        
+        const form = document.getElementById('quickAddForm');
+        if (!form) {
+            console.error('❌ Form not found in initializeQuickAddForm');
+            return;
+        }
+        
+        console.log('📝 Form found:', form);
+        console.log('📝 Form action:', form.action);
+        console.log('📝 Form method:', form.method);
+        
+        // Remove any existing event listeners to prevent duplicates
+        const newForm = form.cloneNode(true);
+        form.parentNode.replaceChild(newForm, form);
+        const cleanForm = document.getElementById('quickAddForm');
+        
+        console.log('🧹 Cleaned form and added fresh event listener');
+        
+        // Form validation and submission
+        cleanForm.addEventListener('submit', function(e) {
+            console.log('📨 Form submit event triggered');
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('🛑 Default form submission prevented');
+            submitQuickAddForm();
+        });
+
+        // Phone number formatting
+        const phoneInput = document.getElementById('PhoneNumber');
+        if (phoneInput) {
+            phoneInput.addEventListener('input', function() {
+                let value = this.value.replace(/\D/g, ''); // Remove non-digits
+                if (value.length > 10) {
+                    value = value.substring(0, 10);
+                }
+                this.value = value;
+                
+                // Auto-advance to next field when 10 digits entered
+                if (value.length === 10) {
+                    const fullNameInput = document.getElementById('FullName');
+                    if (fullNameInput) fullNameInput.focus();
+                }
+            });
+        }
+
+        // Auto-format budget
+        const budgetInput = document.getElementById('MaxBudget');
+        if (budgetInput) {
+            budgetInput.addEventListener('blur', function() {
+                const value = parseFloat(this.value);
+                if (!isNaN(value)) {
+                    this.value = value.toFixed(2);
+                }
+            });
+        }
+
+        // Character limit for notes
+        const notesInput = document.getElementById('Notes');
+        if (notesInput) {
+            notesInput.addEventListener('input', function() {
+                const maxLength = 500;
+                const currentLength = this.value.length;
+                if (currentLength > maxLength) {
+                    this.value = this.value.substring(0, maxLength);
+                }
+            });
+        }
+
+        // Focus on phone number when modal opens
+        if (phoneInput) {
+            phoneInput.focus();
+        }
+        
+        console.log('✅ Form initialization complete');
+    }
+
+    function submitQuickAddForm() {
+        console.log('🚀 submitQuickAddForm called');
+        
+        const form = document.getElementById('quickAddForm');
+        const submitButton = form.querySelector('button[type="submit"]');
+        const spinner = submitButton.querySelector('.spinner-border');
+        const errorDiv = document.getElementById('quickFormErrors');
+        const successDiv = document.getElementById('quickFormSuccess');
+        
+        console.log('Form elements found:', {
+            form: !!form,
+            submitButton: !!submitButton,
+            spinner: !!spinner,
+            errorDiv: !!errorDiv,
+            successDiv: !!successDiv
+        });
+        
+        if (!form || !submitButton || !errorDiv || !successDiv) {
+            console.error('❌ Required form elements not found');
+            return;
+        }
+        
+        // Show loading state
+        submitButton.disabled = true;
+        if (spinner) spinner.style.display = 'inline-block';
+        errorDiv.style.display = 'none';
+        successDiv.style.display = 'none';
+        
+        console.log('📤 Preparing form data');
+        
+        // Prepare form data
+        const formData = new FormData(form);
+        
+        // Log form data for debugging
+        console.log('📋 Form data being sent:');
+        for (let [key, value] of formData.entries()) {
+            console.log(`  ${key}: ${value}`);
+        }
+        
+        console.log('🌐 Making fetch request to:', form.action);
+        
+        // Submit form via fetch
+        fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(async response => {
+            console.log('📥 Response received:', {
+                status: response.status,
+                statusText: response.statusText,
+                ok: response.ok,
+                headers: Object.fromEntries([...response.headers.entries()])
+            });
+            
+            // Get the response text first
+            const responseText = await response.text();
+            console.log('📄 Raw response text:', responseText);
+            
+            // Try to parse as JSON
+            let result;
+            try {
+                result = JSON.parse(responseText);
+                console.log('✅ Parsed JSON successfully:', result);
+            } catch (e) {
+                console.error('❌ Failed to parse JSON response:', e);
+                console.error('Raw response that failed to parse:', responseText);
+                throw new Error('Server returned invalid response format');
+            }
+            
+            if (result.success) {
+                console.log('🎉 Success response - showing success message');
+                
+                // Show success message properly
+                successDiv.innerHTML = `
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-check-circle-fill text-success fs-4 me-2"></i>
+                        <div>
+                            <strong>Success!</strong><br>
+                            <span>${result.message}</span>
+                        </div>
+                    </div>
+                `;
+                successDiv.style.display = 'block';
+                
+                // Disable form to prevent double submission
+                form.style.pointerEvents = 'none';
+                form.style.opacity = '0.7';
+                
+                // Show success state for a moment then close and reload
+                setTimeout(function() {
+                    closeQuickAddModal();
+                    
+                    // Show a toast notification
+                    showToast('Success', result.message, 'success');
+                    
+                    // Reload to show updated data
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                }, 2000);
+            } else {
+                console.log('❌ Error response - showing error message');
+                console.log('Error data:', {
+                    message: result.message,
+                    errors: result.errors,
+                    hasErrors: !!(result.errors && Array.isArray(result.errors)),
+                    hasMessage: !!result.message
+                });
+                
+                // Handle error response
+                let errorMessage = '';
+                if (result.errors && Array.isArray(result.errors)) {
+                    errorMessage = result.errors.join('<br>');
+                    console.log('📝 Using errors array:', result.errors);
+                } else if (result.message) {
+                    errorMessage = result.message;
+                    console.log('📝 Using message:', result.message);
+                } else {
+                    errorMessage = 'An error occurred while processing your request';
+                    console.log('📝 Using fallback error message');
+                }
+                
+                console.log('🎨 Setting error HTML:', errorMessage);
+                
+                // Make sure the error is displayed properly
+                const errorHtml = `
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-exclamation-triangle-fill text-danger fs-5 me-2"></i>
+                        <div>
+                            <strong>Error!</strong><br>
+                            <span>${errorMessage}</span>
+                        </div>
+                    </div>
+                `;
+                
+                console.log('🎨 Full error HTML:', errorHtml);
+                
+                errorDiv.innerHTML = errorHtml;
+                errorDiv.style.display = 'block';
+                
+                console.log('👀 Error div display style after setting:', errorDiv.style.display);
+                console.log('👀 Error div innerHTML after setting:', errorDiv.innerHTML);
+                
+                // Scroll to the error message
+                errorDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        })
+        .catch(error => {
+            console.error('💥 Form submission error:', error);
+            
+            const errorHtml = `
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-exclamation-triangle-fill text-danger fs-5 me-2"></i>
+                    <div>
+                        <strong>Error!</strong><br>
+                        <span>An error occurred while adding to waiting list. Please try again.</span>
+                    </div>
+                </div>
+            `;
+            
+            errorDiv.innerHTML = errorHtml;
+            errorDiv.style.display = 'block';
+        })
+        .finally(() => {
+            console.log('🔄 Finally block - resetting button state');
+            submitButton.disabled = false;
+            if (spinner) spinner.style.display = 'none';
+        });
+    }
+
+    // Simple toast notification function
+    function showToast(title, message, type) {
+        // Create toast container if it doesn't exist
+        let toastContainer = document.getElementById('toast-container');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.id = 'toast-container';
+            toastContainer.className = 'position-fixed top-0 end-0 p-3';
+            toastContainer.style.zIndex = '9999';
+            document.body.appendChild(toastContainer);
+        }
+
+        const toastId = 'toast-' + Date.now();
+        const toastHtml = `
+            <div id="${toastId}" class="toast show" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="toast-header bg-${type} text-white">
+                    <i class="bi bi-check-circle-fill me-2"></i>
+                    <strong class="me-auto">${title}</strong>
+                    <button type="button" class="btn-close btn-close-white" onclick="this.parentElement.parentElement.remove()"></button>
+                </div>
+                <div class="toast-body">
+                    ${message}
+                </div>
+            </div>
+        `;
+        
+        toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+        
+        // Auto-remove after 4 seconds
+        setTimeout(() => {
+            const toast = document.getElementById(toastId);
+            if (toast) {
+                toast.remove();
+            }
+        }, 4000);
     }
 </script>
 }
@@ -771,5 +1377,133 @@
         border: 2px solid #007bff;
         border-radius: 12px;
         background: #fff;
+    }
+
+    /* Custom Modal Styles */
+    .custom-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1050;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .custom-modal-backdrop {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.4);
+    }
+    
+    .custom-modal-content {
+        position: relative;
+        background: white;
+        border-radius: 8px;
+        width: 90%;
+        max-width: 900px;
+        max-height: 90vh;
+        overflow: hidden;
+        /* Remove shadow to eliminate the black shadow */
+        box-shadow: none !important;
+        border: 1px solid #dee2e6;
+        z-index: 1051;
+    }
+    
+    .custom-modal-header {
+        background: #f8f9fa;
+        color: #495057;
+        padding: 1.25rem 1.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .custom-modal-title {
+        margin: 0;
+        font-size: 1.125rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        color: #212529;
+    }
+    
+    .custom-modal-close {
+        background: none;
+        border: none;
+        color: #6c757d;
+        font-size: 1.25rem;
+        cursor: pointer;
+        padding: 0.25rem;
+        border-radius: 4px;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.15s ease;
+    }
+    
+    .custom-modal-close:hover {
+        background-color: #e9ecef;
+        color: #495057;
+    }
+    
+    .custom-modal-body {
+        padding: 1.5rem;
+        max-height: calc(90vh - 100px);
+        overflow-y: auto;
+    }
+    
+    .loading-state {
+        text-align: center;
+        padding: 3rem 0;
+    }
+    
+    /* Responsive Design */
+    @@media (max-width: 768px) {
+        .custom-modal-content {
+            width: 95%;
+            max-height: 95vh;
+            margin: 1rem;
+        }
+        
+        .custom-modal-header {
+            padding: 1rem 1.5rem;
+        }
+        
+        .custom-modal-body {
+            padding: 1.5rem;
+            max-height: calc(95vh - 100px);
+        }
+        
+        .custom-modal-title {
+            font-size: 1.1rem;
+        }
+    }
+    
+    /* Smooth scrollbar for modal body */
+    .custom-modal-body::-webkit-scrollbar {
+        width: 6px;
+    }
+    
+    .custom-modal-body::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 3px;
+    }
+    
+    .custom-modal-body::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 3px;
+    }
+    
+    .custom-modal-body::-webkit-scrollbar-thumb:hover {
+        background: #a1a1a1;
     }
 </style>

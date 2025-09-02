@@ -275,6 +275,17 @@
                         <span class="nav-badge" title="Tenant Count: @(ViewBag.TenantCount ?? 0)">@(ViewBag.TenantCount ?? 0)</span>
                       </a>
                     </li>
+                    <li class="nav-item">
+                      <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "WaitingList" ? "active" : "")" 
+                         asp-controller="WaitingList" asp-action="Index">
+                        <i class="bi bi-hourglass-split"></i>
+                        <span class="nav-text">Waiting List</span>
+                        @if ((ViewBag.WaitingListCount ?? 0) > 0)
+                        {
+                          <span class="nav-badge" title="Active Waiting List Entries: @ViewBag.WaitingListCount">@ViewBag.WaitingListCount</span>
+                        }
+                      </a>
+                    </li>
                   </ul>
                 </div>
               }

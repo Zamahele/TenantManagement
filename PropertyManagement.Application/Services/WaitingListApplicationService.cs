@@ -261,8 +261,8 @@ public class WaitingListApplicationService : IWaitingListApplicationService
             entry.LastNotified = DateTime.UtcNow;
             await _waitingListRepository.UpdateAsync(entry);
 
-            // TODO: Integrate with SMS service to actually send the message
-            // await _smsService.SendSmsAsync(entry.PhoneNumber, message);
+            // Note: SMS functionality has been removed. Notifications are logged in the database only.
+            // Implement your preferred notification method here (email, push notifications, etc.)
 
             return ServiceResult<bool>.Success(true);
         }
@@ -311,8 +311,8 @@ public class WaitingListApplicationService : IWaitingListApplicationService
                 await _waitingListRepository.UpdateAsync(entry);
             }
 
-            // TODO: Integrate with SMS service for bulk sending
-            // await _smsService.SendBulkSmsAsync(phoneNumbers, message);
+            // Note: SMS functionality has been removed. Notifications are logged in the database only.
+            // Implement your preferred notification method here (email, push notifications, etc.)
 
             return ServiceResult<bool>.Success(true);
         }

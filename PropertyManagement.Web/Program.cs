@@ -62,8 +62,6 @@ builder.Services.AddFluentValidationAutoValidation(options =>
 }).AddFluentValidationClientsideAdapters();
 
 builder.Services.AddHttpClient();
-builder.Services.AddScoped<ISmsService, BulkSmsService>();
-builder.Services.AddHostedService<RentReminderService>();
 builder.Services.AddScoped<IEmailService, SmtpEmailService>();
 // Register all validators for DI (required for validators with constructor injection)
 builder.Services.AddScoped<IValidator<Payment>, PaymentValidator>();

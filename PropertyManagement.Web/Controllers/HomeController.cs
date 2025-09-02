@@ -11,7 +11,7 @@ using System.Diagnostics;
 namespace PropertyManagement.Web.Controllers;
 
 [Authorize(Roles = "Manager")]
-public class HomeController : Controller
+public class HomeController : BaseController
 {
   private readonly IGenericRepository<Room> _roomRepository;
   private readonly IGenericRepository<Tenant> _tenantRepository;
@@ -20,6 +20,7 @@ public class HomeController : Controller
   private readonly IGenericRepository<Payment> _paymentRepository;
   private readonly IGenericRepository<Inspection> _inspectionRepository;
   private readonly IGenericRepository<BookingRequest> _bookingRequestRepository;
+  private readonly IGenericRepository<WaitingListEntry> _waitingListRepository;
   private readonly ApplicationDbContext _context;
   private readonly ILogger<HomeController> _logger;
   private readonly IMapper _mapper;
@@ -32,6 +33,7 @@ public class HomeController : Controller
       IGenericRepository<Payment> paymentRepository,
       IGenericRepository<Inspection> inspectionRepository,
       IGenericRepository<BookingRequest> bookingRequestRepository,
+      IGenericRepository<WaitingListEntry> waitingListRepository,
       ApplicationDbContext context,
       ILogger<HomeController> logger,
       IMapper mapper)
@@ -43,6 +45,7 @@ public class HomeController : Controller
     _paymentRepository = paymentRepository;
     _inspectionRepository = inspectionRepository;
     _bookingRequestRepository = bookingRequestRepository;
+    _waitingListRepository = waitingListRepository;
     _context = context;
     _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
@@ -116,6 +119,7 @@ public class HomeController : Controller
     var payments = await _paymentRepository.GetAllAsync();
     var inspections = await _inspectionRepository.GetAllAsync();
     var bookingRequests = await _bookingRequestRepository.GetAllAsync();
+    var waitingListEntries = await _waitingListRepository.GetAllAsync();
 
     // Calculate basic property metrics
     var totalRooms = rooms.Count();
@@ -123,11 +127,16 @@ public class HomeController : Controller
     var occupiedRooms = rooms.Count(r => r.Status == "Occupied");
     var underMaintenanceRooms = rooms.Count(r => r.Status == "Under Maintenance");
     
-    // Set sidebar counts
-    ViewBag.TenantCount = tenants.Count();
-    ViewBag.RoomCount = totalRooms;
-    ViewBag.PendingMaintenanceCount = maintenanceRequests.Count(m => 
-      m.Status == "Pending" || m.Status == "In Progress");
+    // Calculate waiting list metrics
+    var activeWaitingListCount = waitingListEntries.Count(w => w.IsActive && w.Status == "Active");
+    
+    // Set sidebar counts using BaseController method
+    SetSidebarCounts(
+      tenantCount: tenants.Count(),
+      roomCount: totalRooms,
+      pendingMaintenanceCount: maintenanceRequests.Count(m => m.Status == "Pending" || m.Status == "In Progress"),
+      waitingListCount: activeWaitingListCount
+    );
     
     // Calculate financial metrics
     var activeLeases = leases.Where(l => l.StartDate <= now && l.EndDate >= now).ToList();

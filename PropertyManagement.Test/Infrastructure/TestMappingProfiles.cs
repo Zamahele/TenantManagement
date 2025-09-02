@@ -32,6 +32,11 @@ namespace PropertyManagement.Test.Infrastructure
             expr.CreateMap<DigitalSignature, DigitalSignatureDto>().ReverseMap();
             expr.CreateMap<LeaseTemplate, LeaseTemplateDto>().ReverseMap();
 
+            // Waiting List mappings
+            expr.CreateMap<WaitingListEntry, WaitingListEntryDto>().ReverseMap();
+            expr.CreateMap<WaitingListNotification, WaitingListNotificationDto>().ReverseMap();
+            expr.CreateMap<WaitingListSummaryDto, WaitingListSummaryViewModel>().ReverseMap();
+
             // DTO to ViewModel mappings
             expr.CreateMap<TenantDto, TenantViewModel>().ReverseMap();
             expr.CreateMap<RoomDto, RoomViewModel>().ReverseMap();
@@ -53,6 +58,10 @@ namespace PropertyManagement.Test.Infrastructure
             expr.CreateMap<InspectionDto, InspectionViewModel>().ReverseMap();
             expr.CreateMap<DigitalSignatureDto, DigitalSignatureViewModel>().ReverseMap();
             expr.CreateMap<LeaseTemplateDto, LeaseTemplateViewModel>().ReverseMap();
+
+            // Waiting List DTO to ViewModel mappings
+            expr.CreateMap<WaitingListEntryDto, WaitingListEntryViewModel>().ReverseMap();
+            expr.CreateMap<WaitingListNotificationDto, WaitingListNotificationViewModel>().ReverseMap();
 
             // ViewModel to Create/Update DTO mappings
             expr.CreateMap<TenantViewModel, CreateTenantDto>();
@@ -77,6 +86,12 @@ namespace PropertyManagement.Test.Infrastructure
             expr.CreateMap<InspectionViewModel, UpdateInspectionDto>();
             expr.CreateMap<LeaseTemplateViewModel, CreateLeaseTemplateDto>();
             expr.CreateMap<LeaseTemplateViewModel, UpdateLeaseTemplateDto>();
+
+            // Waiting List ViewModel to Create/Update DTO mappings
+            expr.CreateMap<WaitingListEntryViewModel, CreateWaitingListEntryDto>();
+            expr.CreateMap<WaitingListEntryViewModel, UpdateWaitingListEntryDto>();
+            expr.CreateMap<QuickAddWaitingListViewModel, CreateWaitingListEntryDto>();
+            expr.CreateMap<WaitingListEntryDto, UpdateWaitingListEntryDto>();
 
             // Special mappings for complex scenarios
             expr.CreateMap<RegisterTenantDto, TenantDto>();

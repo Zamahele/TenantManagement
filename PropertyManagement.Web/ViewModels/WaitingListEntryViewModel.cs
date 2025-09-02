@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using System.Globalization;
 
 namespace PropertyManagement.Web.ViewModels;
 
@@ -66,7 +67,7 @@ public class WaitingListEntryViewModel
     public string LastNotifiedFormatted => LastNotified?.ToString("dd/MM/yyyy HH:mm") ?? "Never";
 
     [DisplayName("Budget")]
-    public string BudgetFormatted => MaxBudget?.ToString("C") ?? "Any";
+    public string BudgetFormatted => MaxBudget?.ToString("C", new CultureInfo("en-ZA")) ?? "Any Budget";
 
     [DisplayName("Room Type")]
     public string RoomTypeDisplay => PreferredRoomType ?? "Any";

@@ -33,16 +33,45 @@ public class WaitingListController : BaseController
   }
 
   // GET: /WaitingList
-  public async Task<IActionResult> Index()
+  public async Task<IActionResult> Index(string statusFilter = "All", string roomTypeFilter = "All", string searchTerm = "")
   {
     // Set sidebar counts
     await SetSidebarCountsAsync();
 
-    var result = await _waitingListApplicationService.GetAllWaitingListEntriesAsync();
+    // Get filtered results based on parameters
+    ServiceResult<IEnumerable<WaitingListEntryDto>> result;
+    
+    if (!string.IsNullOrEmpty(statusFilter) && statusFilter != "All")
+    {
+      result = await _waitingListApplicationService.GetWaitingListEntriesByStatusAsync(statusFilter);
+    }
+    else if (!string.IsNullOrEmpty(roomTypeFilter) && roomTypeFilter != "All")
+    {
+      result = await _waitingListApplicationService.GetWaitingListEntriesByRoomTypeAsync(roomTypeFilter);
+    }
+    else
+    {
+      result = await _waitingListApplicationService.GetAllWaitingListEntriesAsync();
+    }
+    
     if (!result.IsSuccess)
     {
       SetErrorMessage(result.ErrorMessage);
       return View(new WaitingListManagementViewModel());
+    }
+
+    var entries = _mapper.Map<List<WaitingListEntryViewModel>>(result.Data);
+    
+    // Apply search filter if provided
+    if (!string.IsNullOrEmpty(searchTerm))
+    {
+      var searchLower = searchTerm.ToLower();
+      entries = entries.Where(e => 
+        (!string.IsNullOrEmpty(e.FullName) && e.FullName.ToLower().Contains(searchLower)) ||
+        (!string.IsNullOrEmpty(e.PhoneNumber) && e.PhoneNumber.ToLower().Contains(searchLower)) ||
+        (!string.IsNullOrEmpty(e.Email) && e.Email.ToLower().Contains(searchLower)) ||
+        (!string.IsNullOrEmpty(e.Notes) && e.Notes.ToLower().Contains(searchLower))
+      ).ToList();
     }
 
     var summaryResult = await _waitingListApplicationService.GetWaitingListSummaryAsync();
@@ -50,9 +79,14 @@ public class WaitingListController : BaseController
 
     var viewModel = new WaitingListManagementViewModel
     {
-      Entries = _mapper.Map<List<WaitingListEntryViewModel>>(result.Data),
+      Entries = entries,
       Summary = summary,
-      TotalCount = result.Data.Count()
+      TotalCount = entries.Count,
+      StatusFilter = statusFilter,
+      RoomTypeFilter = roomTypeFilter,
+      SearchTerm = searchTerm,
+      StatusOptions = new List<string> { "All", "Active", "Contacted", "Converted", "Not Interested", "Inactive" },
+      RoomTypeOptions = new List<string> { "All", "Any", "Single", "Double", "Family", "Studio" }
     };
 
     return View(viewModel);

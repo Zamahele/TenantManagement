@@ -35,9 +35,6 @@ public class WaitingListController : BaseController
   // GET: /WaitingList
   public async Task<IActionResult> Index(string statusFilter = "All", string roomTypeFilter = "All", string searchTerm = "")
   {
-    // Set sidebar counts
-    await SetSidebarCountsAsync();
-
     // Get filtered results based on parameters
     ServiceResult<IEnumerable<WaitingListEntryDto>> result;
     
@@ -73,6 +70,9 @@ public class WaitingListController : BaseController
         (!string.IsNullOrEmpty(e.Notes) && e.Notes.ToLower().Contains(searchLower))
       ).ToList();
     }
+
+    // Set sidebar counts using the data we already have
+    await SetSidebarCountsAsync(result.Data);
 
     var summaryResult = await _waitingListApplicationService.GetWaitingListSummaryAsync();
     var summary = summaryResult.IsSuccess ? _mapper.Map<WaitingListSummaryViewModel>(summaryResult.Data) : new WaitingListSummaryViewModel();
@@ -641,21 +641,30 @@ public class WaitingListController : BaseController
   }
 
   // Helper method to set sidebar counts
-  private async Task SetSidebarCountsAsync()
+  private async Task SetSidebarCountsAsync(IEnumerable<WaitingListEntryDto>? waitingListData = null)
   {
     try
     {
       // Get counts for sidebar badges
       var tenantsResult = await _tenantApplicationService.GetAllTenantsAsync();
       var roomsResult = await _roomApplicationService.GetAllRoomsAsync();
-      var waitingListResult = await _waitingListApplicationService.GetAllWaitingListEntriesAsync();
       var maintenanceResult = await _maintenanceApplicationService.GetAllMaintenanceRequestsAsync();
+
+      // Use provided waiting list data if available, otherwise fetch it
+      IEnumerable<WaitingListEntryDto> waitingListEntries;
+      if (waitingListData != null)
+      {
+        waitingListEntries = waitingListData;
+      }
+      else
+      {
+        var waitingListResult = await _waitingListApplicationService.GetAllWaitingListEntriesAsync();
+        waitingListEntries = waitingListResult.IsSuccess ? waitingListResult.Data : new List<WaitingListEntryDto>();
+      }
 
       var tenantCount = tenantsResult.IsSuccess ? tenantsResult.Data.Count() : 0;
       var roomCount = roomsResult.IsSuccess ? roomsResult.Data.Count() : 0;
-      var activeWaitingListCount = waitingListResult.IsSuccess
-          ? waitingListResult.Data.Count(w => w.IsActive && w.Status == "Active")
-          : 0;
+      var activeWaitingListCount = waitingListEntries.Count(w => w.IsActive && w.Status == "Active");
       var pendingMaintenanceCount = maintenanceResult.IsSuccess
           ? maintenanceResult.Data.Count(m => m.Status == "Pending" || m.Status == "In Progress")
           : 0;

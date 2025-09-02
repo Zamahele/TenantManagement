@@ -95,6 +95,49 @@ if ($CleanDeploy) {
     Write-Host "Cleaning existing deployment..." -ForegroundColor Yellow
     kubectl delete namespace $Namespace --ignore-not-found=true
     
+    # Clean up Docker images containing "tenantmanagement"
+    Write-Host "Cleaning up Docker images containing 'tenantmanagement'..." -ForegroundColor Yellow
+    try {
+        # Check if Docker is available
+        docker version | Out-Null
+        
+        # Get images containing "tenantmanagement"
+        $tenantImages = docker images --format "table {{.Repository}}:{{.Tag}}" | Select-String -Pattern "tenantmanagement" -AllMatches
+        
+        if ($tenantImages) {
+            Write-Host "Found Docker images containing 'tenantmanagement':" -ForegroundColor Cyan
+            $tenantImages | ForEach-Object {
+                $imageName = $_.ToString().Trim()
+                Write-Host "  - $imageName" -ForegroundColor Gray
+            }
+            
+            # Remove the images
+            $tenantImages | ForEach-Object {
+                $imageName = $_.ToString().Trim()
+                try {
+                    Write-Host "Removing image: $imageName" -ForegroundColor Yellow
+                    docker rmi $imageName --force 2>$null
+                    if ($LASTEXITCODE -eq 0) {
+                        Write-Host "Successfully removed: $imageName" -ForegroundColor Green
+                    }
+                } catch {
+                    Write-Warning "Failed to remove image: $imageName - $($_.Exception.Message)"
+                }
+            }
+            
+            # Clean up dangling images
+            Write-Host "Cleaning up dangling images..." -ForegroundColor Yellow
+            docker image prune -f | Out-Null
+            
+        } else {
+            Write-Host "No Docker images containing 'tenantmanagement' found" -ForegroundColor Gray
+        }
+        
+    } catch {
+        Write-Warning "Docker not available or failed to clean images: $($_.Exception.Message)"
+        Write-Host "Continuing with Kubernetes cleanup..." -ForegroundColor Gray
+    }
+    
     # Wait for cleanup
     $timeout = 60
     $elapsed = 0

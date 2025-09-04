@@ -1,0 +1,625 @@
+@model PropertyManagement.Web.ViewModels.LeaseAgreementViewModel
+@{
+  ViewData["Title"] = "Create Lease Agreement";
+  var tenants = ViewBag.Tenants as List<PropertyManagement.Web.ViewModels.TenantViewModel>;
+  var isEdit = ViewBag.IsEdit as bool? ?? (Model.LeaseAgreementId != 0);
+  var currentYear = DateTime.Today.Year;
+  var defaultStart = new DateTime(currentYear, 1, 1);
+  var defaultEnd = new DateTime(currentYear, 12, 31);
+  string startDateValue = Model.StartDate != default ? Model.StartDate.ToString("yyyy-MM-dd") : defaultStart.ToString("yyyy-MM-dd");
+  string endDateValue = Model.EndDate != default ? Model.EndDate.ToString("yyyy-MM-dd") : defaultEnd.ToString("yyyy-MM-dd");
+  var rentAmountValue = Model.RentAmount != 0 ? Model.RentAmount.ToString("0.##") : "";
+  var expectedRentDayValue = Model.ExpectedRentDay != 0 ? Model.ExpectedRentDay : 1;
+  var selectedTenant = tenants?.FirstOrDefault(t => t.TenantId == Model.TenantId);
+  var selectedRoomId = isEdit ? Model.RoomId : selectedTenant?.RoomId;
+  var selectedRoomNumber = isEdit ? Model.Room?.Number : selectedTenant?.Room?.Number;
+}
+
+<!-- Page Header -->
+<div class="page-header mb-4">
+  <div class="d-flex justify-content-between align-items-center">
+    <div class="page-title">
+      <h1 class="page-title-main">
+        <div class="page-icon">
+          <i class="bi bi-file-earmark-text"></i>
+        </div>
+        @(isEdit ? "Edit Lease Agreement" : "Create Lease Agreement")
+      </h1>
+      <p class="page-title-sub text-secondary mb-0">@(isEdit ? "Update lease agreement details and terms" : "Create a new lease agreement with tenant and property details")</p>
+    </div>
+    <div class="page-actions">
+      <a asp-action="Index" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i>
+        Back to Lease Agreements
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- Lease Agreement Form Container -->
+<div class="content-section">
+  <div class="card-elevated">
+    <div class="card-header">
+      <h5 class="card-title mb-0">
+        <i class="bi bi-file-earmark-text me-2"></i>
+        Lease Agreement Details
+      </h5>
+      <p class="card-description">@(isEdit ? "Update the lease agreement information below" : "Fill in the lease agreement information below")</p>
+    </div>
+    <div class="card-body">
+      
+      <!-- Form Error Display -->
+      <div id="formErrors" class="alert alert-danger" style="display: none;"></div>
+      <div id="formSuccess" class="alert alert-success" style="display: none;"></div>
+
+      <form id="agreementForm" asp-action="CreateOrEdit" method="post" enctype="multipart/form-data" autocomplete="off" class="needs-validation" novalidate>
+        @Html.AntiForgeryToken()
+        @Html.HiddenFor(m => m.LeaseAgreementId)
+        
+        <div class="row g-4">
+          <!-- Left Column -->
+          <div class="col-lg-6">
+            
+            <!-- Tenant Selection -->
+            <div class="form-group-container">
+              <label asp-for="TenantId" class="form-label-primary">
+                <i class="bi bi-person me-2"></i>
+                Tenant
+                <span class="text-danger">*</span>
+              </label>
+              @if (isEdit)
+              {
+                @Html.HiddenFor(m => m.TenantId)
+                <div class="form-control-readonly">
+                  <div class="readonly-value">
+                    <i class="bi bi-person-circle text-primary me-2"></i>
+                    @selectedTenant?.FullName
+                  </div>
+                  <small class="text-muted">Tenant cannot be changed after lease creation</small>
+                </div>
+              }
+              else
+              {
+                <select asp-for="TenantId" class="form-select form-control-enhanced" id="TenantId" required onchange="updateRoomFields()">
+                  <option value="">-- Select Tenant --</option>
+                  @if (tenants != null)
+                  {
+                    foreach (var tenant in tenants)
+                    {
+                      <option value="@tenant.TenantId"
+                              data-room-id="@tenant.RoomId"
+                              data-room-number="@tenant.Room?.Number">
+                        @tenant.FullName (Room @tenant.Room?.Number)
+                      </option>
+                    }
+                  }
+                </select>
+                <div class="invalid-feedback">Please select a tenant.</div>
+              }
+            </div>
+
+            <!-- Room Assignment -->
+            <input type="hidden" asp-for="RoomId" id="RoomId" value="@selectedRoomId" />
+            <div class="form-group-container">
+              <label class="form-label-primary">
+                <i class="bi bi-door-closed me-2"></i>
+                Room Assignment
+              </label>
+              <div class="input-group">
+                <span class="input-group-text">
+                  <i class="bi bi-door-closed"></i>
+                </span>
+                <input type="text" class="form-control form-control-enhanced" id="RoomDisplay" value="Room @selectedRoomNumber" readonly />
+              </div>
+              <small class="text-muted">Auto-populated based on tenant selection</small>
+            </div>
+
+            <!-- Monthly Rent -->
+            <div class="form-group-container">
+              <label asp-for="RentAmount" class="form-label-primary">
+                <i class="bi bi-currency-dollar me-2"></i>
+                Monthly Rent (R)
+                <span class="text-danger">*</span>
+              </label>
+              <div class="input-group">
+                <span class="input-group-text">R</span>
+                <input asp-for="RentAmount" 
+                       type="number" 
+                       class="form-control form-control-enhanced" 
+                       id="RentAmount" 
+                       required 
+                       min="0" 
+                       step="0.01" 
+                       value="@rentAmountValue"
+                       placeholder="0.00" />
+              </div>
+              <div class="invalid-feedback">Please enter a valid rent amount.</div>
+            </div>
+
+            <!-- Rent Due Day -->
+            <div class="form-group-container">
+              <label asp-for="ExpectedRentDay" class="form-label-primary">
+                <i class="bi bi-calendar-day me-2"></i>
+                Monthly Rent Due Day
+                <span class="text-danger">*</span>
+              </label>
+              <div class="d-flex align-items-center gap-3">
+                <input asp-for="ExpectedRentDay"
+                       type="range"
+                       class="form-range flex-grow-1"
+                       min="1"
+                       max="31"
+                       id="ExpectedRentDay"
+                       required
+                       value="@expectedRentDayValue"
+                       oninput="updateRentDayDisplay(this.value)" />
+                <span class="badge bg-primary fs-6 px-3 py-2" id="expectedRentDayValue">@expectedRentDayValue</span>
+              </div>
+              <small class="text-muted">Day of the month when rent is due</small>
+            </div>
+            
+          </div>
+
+          <!-- Right Column -->
+          <div class="col-lg-6">
+            
+            <!-- Lease Start Date -->
+            <div class="form-group-container">
+              <label asp-for="StartDate" class="form-label-primary">
+                <i class="bi bi-calendar-event me-2"></i>
+                Lease Start Date
+                <span class="text-danger">*</span>
+              </label>
+              <input asp-for="StartDate" 
+                     type="date" 
+                     class="form-control form-control-enhanced" 
+                     id="StartDate" 
+                     required 
+                     value="@startDateValue" />
+              <div class="invalid-feedback">Please select a start date.</div>
+            </div>
+
+            <!-- Lease End Date -->
+            <div class="form-group-container">
+              <label asp-for="EndDate" class="form-label-primary">
+                <i class="bi bi-calendar-x me-2"></i>
+                Lease End Date
+                <span class="text-danger">*</span>
+              </label>
+              <input asp-for="EndDate" 
+                     type="date" 
+                     class="form-control form-control-enhanced" 
+                     id="EndDate" 
+                     required 
+                     value="@endDateValue" />
+              <div class="invalid-feedback">Please select an end date.</div>
+            </div>
+
+            <!-- Lease Document Upload -->
+            <div class="form-group-container">
+              <label for="File" class="form-label-primary">
+                <i class="bi bi-file-earmark-pdf me-2"></i>
+                Lease Document (PDF)
+              </label>
+              <input asp-for="File" 
+                     type="file" 
+                     class="form-control form-control-enhanced" 
+                     accept=".pdf"
+                     id="fileInput" />
+              <div class="form-text">Upload a PDF document (optional)</div>
+              
+              @if (isEdit && !string.IsNullOrEmpty(Model.FilePath))
+              {
+                <div class="mt-2">
+                  <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-file-earmark-pdf text-danger"></i>
+                    <a href="@Model.FilePath" target="_blank" class="text-decoration-none">
+                      Current Document
+                    </a>
+                  </div>
+                </div>
+              }
+            </div>
+
+            <!-- Lease Summary Card -->
+            <div class="form-group-container">
+              <div class="summary-card">
+                <div class="summary-card-header">
+                  <h6 class="summary-card-title">
+                    <i class="bi bi-info-circle"></i>
+                    Lease Summary
+                  </h6>
+                </div>
+                <div class="summary-card-body">
+                  <div id="leaseSummary">
+                    <div class="summary-item">
+                      <span class="summary-label">Duration:</span>
+                      <span class="summary-value" id="leaseDuration">--</span>
+                    </div>
+                    <div class="summary-item">
+                      <span class="summary-label">Total Value:</span>
+                      <span class="summary-value" id="leaseValue">--</span>
+                    </div>
+                    <div class="summary-item">
+                      <span class="summary-label">Next Payment:</span>
+                      <span class="summary-value" id="nextPayment">--</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+          </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="form-actions">
+          <div class="d-flex justify-content-end gap-3">
+            <a asp-action="Index" class="btn btn-outline-secondary btn-action">
+              <i class="bi bi-x-circle"></i>
+              Cancel
+            </a>
+            <button type="submit" class="btn btn-primary btn-action" id="saveAgreementBtn">
+              <i class="bi bi-save"></i>
+              <span class="submit-text">@(isEdit ? "Update Agreement" : "Save Agreement")</span>
+              <div class="spinner-border spinner-border-sm ms-2" style="display: none;" role="status" aria-hidden="true"></div>
+            </button>
+          </div>
+        </div>
+        
+      </form>
+    </div>
+  </div>
+</div>
+
+@section Styles {
+  <style>
+    /* Enhanced Form Styling */
+    .form-group-container {
+      margin-bottom: 2rem;
+    }
+    
+    .form-label-primary {
+      font-weight: 600;
+      color: #495057;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+    }
+    
+    .form-control-enhanced {
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      font-size: 1rem;
+      transition: all 0.15s ease-in-out;
+    }
+    
+    .form-control-enhanced:focus {
+      border-color: #0d6efd;
+      box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.1);
+    }
+    
+    .form-control-readonly {
+      background-color: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+    }
+    
+    .readonly-value {
+      font-weight: 500;
+      color: #495057;
+      margin-bottom: 0.25rem;
+    }
+    
+    /* Summary Card Styling */
+    .summary-card {
+      background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+      border: 1px solid #bbdefb;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    
+    .summary-card-header {
+      background: linear-gradient(135deg, #2196f3 0%, #9c27b0 100%);
+      color: white;
+      padding: 1rem 1.25rem;
+    }
+    
+    .summary-card-title {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .summary-card-body {
+      padding: 1.25rem;
+    }
+    
+    .summary-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+    }
+    
+    .summary-item:last-child {
+      margin-bottom: 0;
+    }
+    
+    .summary-label {
+      font-weight: 600;
+      color: #495057;
+    }
+    
+    .summary-value {
+      font-weight: 500;
+      color: #2196f3;
+    }
+    
+    /* Form Actions */
+    .form-actions {
+      margin-top: 3rem;
+      padding-top: 2rem;
+      border-top: 1px solid #dee2e6;
+    }
+    
+    .btn-action {
+      padding: 0.75rem 2rem;
+      font-weight: 600;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    /* Range Input Styling */
+    .form-range {
+      height: 8px;
+    }
+    
+    .form-range::-webkit-slider-thumb {
+      width: 20px;
+      height: 20px;
+      background: #0d6efd;
+      border-radius: 50%;
+    }
+    
+    .form-range::-moz-range-thumb {
+      width: 20px;
+      height: 20px;
+      background: #0d6efd;
+      border-radius: 50%;
+      border: none;
+    }
+    
+    /* Input Group Enhancements */
+    .input-group-text {
+      background-color: #f8f9fa;
+      border-color: #dee2e6;
+      font-weight: 600;
+    }
+    
+    /* Validation Styling */
+    .was-validated .form-control:invalid,
+    .form-control.is-invalid {
+      border-color: #dc3545;
+      box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.1);
+    }
+    
+    .was-validated .form-control:valid,
+    .form-control.is-valid {
+      border-color: #198754;
+      box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.1);
+    }
+  </style>
+}
+
+@section Scripts {
+  <script>
+    function updateRentDayDisplay(value) {
+      document.getElementById('expectedRentDayValue').textContent = value;
+      updateLeaseSummary();
+    }
+    
+    function updateRoomFields() {
+      var tenantSelect = document.getElementById('TenantId');
+      var selectedOption = tenantSelect.options[tenantSelect.selectedIndex];
+      
+      if (selectedOption && selectedOption.value) {
+        var roomId = selectedOption.getAttribute('data-room-id');
+        var roomNumber = selectedOption.getAttribute('data-room-number');
+        
+        document.getElementById('RoomId').value = roomId || '';
+        document.getElementById('RoomDisplay').value = roomNumber ? 'Room ' + roomNumber : '';
+      } else {
+        document.getElementById('RoomId').value = '';
+        document.getElementById('RoomDisplay').value = '';
+      }
+      
+      updateLeaseSummary();
+    }
+    
+    function updateLeaseSummary() {
+      var startDate = document.getElementById('StartDate')?.value;
+      var endDate = document.getElementById('EndDate')?.value;
+      var rentAmount = parseFloat(document.getElementById('RentAmount')?.value) || 0;
+      var rentDay = parseInt(document.getElementById('ExpectedRentDay')?.value) || 1;
+      
+      var durationSpan = document.getElementById('leaseDuration');
+      var valueSpan = document.getElementById('leaseValue');
+      var nextPaymentSpan = document.getElementById('nextPayment');
+      
+      if (!durationSpan || !valueSpan || !nextPaymentSpan) return;
+      
+      if (startDate && endDate) {
+        var start = new Date(startDate);
+        var end = new Date(endDate);
+        var timeDiff = end.getTime() - start.getTime();
+        var daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
+        var monthsDiff = Math.ceil(daysDiff / 30);
+        
+        durationSpan.textContent = monthsDiff > 0 ? monthsDiff + ' months (' + daysDiff + ' days)' : daysDiff + ' days';
+        
+        var totalValue = rentAmount * monthsDiff;
+        valueSpan.textContent = 'R ' + totalValue.toLocaleString('en-ZA', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        
+        // Calculate next payment date
+        var today = new Date();
+        var nextPayment = new Date(today.getFullYear(), today.getMonth(), rentDay);
+        if (nextPayment <= today) {
+          nextPayment.setMonth(nextPayment.getMonth() + 1);
+        }
+        nextPaymentSpan.textContent = nextPayment.toLocaleDateString('en-ZA');
+      } else {
+        durationSpan.textContent = '--';
+        valueSpan.textContent = '--';
+        nextPaymentSpan.textContent = '--';
+      }
+    }
+    
+    function submitLeaseForm(event) {
+      console.log('?? submitLeaseForm called!', event);
+      event.preventDefault();
+      
+      var form = document.getElementById('agreementForm');
+      var submitBtn = document.getElementById('saveAgreementBtn');
+      var spinner = submitBtn ? submitBtn.querySelector('.spinner-border') : null;
+      var formErrors = document.getElementById('formErrors');
+      var formSuccess = document.getElementById('formSuccess');
+      
+      console.log('?? Form elements found:', {
+        form: !!form,
+        submitBtn: !!submitBtn,
+        spinner: !!spinner,
+        formErrors: !!formErrors,
+        formSuccess: !!formSuccess
+      });
+      
+      if (!form) {
+        console.error('? Form not found!');
+        return false;
+      }
+      
+      if (!submitBtn) {
+        console.error('? Submit button not found!');
+        return false;
+      }
+      
+      // Validate form
+      console.log('?? Checking form validity...');
+      if (!form.checkValidity()) {
+        console.log('?? Form is invalid, showing validation errors');
+        form.classList.add('was-validated');
+        return false;
+      }
+      
+      console.log('? Form is valid, proceeding with submission');
+      
+      // Show loading state
+      console.log('? Showing loading state');
+      submitBtn.disabled = true;
+      if (spinner) {
+        spinner.style.display = 'inline-block';
+      }
+      
+      // Hide previous messages
+      if (formErrors) formErrors.style.display = 'none';
+      if (formSuccess) formSuccess.style.display = 'none';
+      
+      // Submit form normally (not AJAX for full page)
+      form.submit();
+      
+      return false;
+    }
+    
+    function initializeLeaseForm() {
+      console.log('?? initializeLeaseForm called!');
+      
+      // Initialize form field event listeners
+      ['StartDate', 'EndDate', 'RentAmount'].forEach(function(fieldId) {
+        var field = document.getElementById(fieldId);
+        if (field) {
+          console.log(`? Found field: ${fieldId}`);
+          field.addEventListener('change', updateLeaseSummary);
+          field.addEventListener('input', updateLeaseSummary);
+        } else {
+          console.log(`? Field not found: ${fieldId}`);
+        }
+      });
+      
+      // Initialize rent day slider
+      var rentDayField = document.getElementById('ExpectedRentDay');
+      if (rentDayField) {
+        rentDayField.addEventListener('input', function() {
+          updateRentDayDisplay(this.value);
+        });
+      }
+      
+      // Add form submit event listener
+      var form = document.getElementById('agreementForm');
+      if (form) {
+        console.log('?? Binding submit event to form');
+        form.addEventListener('submit', function(event) {
+          console.log('?? Form submit event triggered');
+          event.preventDefault();
+          submitLeaseForm(event);
+        });
+      } else {
+        console.error('? Could not find form to bind submit event');
+      }
+      
+      // Also add click event directly to submit button as backup
+      var submitBtn = document.getElementById('saveAgreementBtn');
+      if (submitBtn) {
+        console.log('?? Binding click event to submit button as backup');
+        submitBtn.addEventListener('click', function(event) {
+          console.log('??? Submit button clicked directly');
+          event.preventDefault();
+          submitLeaseForm(event);
+        });
+      } else {
+        console.error('? Could not find submit button to bind click event');
+      }
+      
+      // Add real-time validation
+      const inputs = document.querySelectorAll('#agreementForm input, #agreementForm select');
+      inputs.forEach(input => {
+        input.addEventListener('blur', function() {
+          if (this.checkValidity()) {
+            this.classList.remove('is-invalid');
+            this.classList.add('is-valid');
+          } else {
+            this.classList.remove('is-valid');
+            this.classList.add('is-invalid');
+          }
+        });
+      });
+      
+      // Initial calculation
+      setTimeout(updateLeaseSummary, 100);
+    }
+    
+    // Initialize when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+      initializeLeaseForm();
+      
+      // Set initial tenant selection if editing
+      @if (isEdit && Model.TenantId != 0)
+      {
+        <text>
+        var tenantSelect = document.getElementById('TenantId');
+        if (tenantSelect) {
+          tenantSelect.value = '@Model.TenantId';
+          updateRoomFields();
+        }
+        </text>
+      }
+    });
+  </script>
+  <partial name="_ValidationScriptsPartial" />
+}

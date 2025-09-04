@@ -1,10 +1,12 @@
 #!/usr/bin/env pwsh
 
 # Property Management System - Kubernetes Deployment Script
+# Modified for production-friendly deployment (preserves database by default)
 
 param(
-    [switch]$CleanDeploy,
+    [switch]$CleanDeploy,      # DESTRUCTIVE: Full clean deploy (destroys everything including database)
     [switch]$ViewLogs,
+    [switch]$SkipMigrations,   # Skip database migrations
     [string]$GitHubEmail = $env:GITHUB_EMAIL,
     [string]$GitHubToken = $env:GITHUB_TOKEN
 )
@@ -17,12 +19,21 @@ function Show-Logs {
     Write-Host "Checking deployment status..." -ForegroundColor Cyan
     kubectl get pods -n $Namespace
     
+    Write-Host "`nChecking migration job logs..." -ForegroundColor Cyan
+    $migrationPods = kubectl get pods -n $Namespace -l job-name=migration-job -o jsonpath='{.items[*].metadata.name}' 2>$null
+    if ($migrationPods) {
+        $migrationPods.Split() | ForEach-Object {
+            Write-Host "Migration job logs for pod: $_" -ForegroundColor Yellow
+            kubectl logs $_ -n $Namespace
+        }
+    }
+    
     Write-Host "`nChecking init container logs..." -ForegroundColor Cyan
     $pods = kubectl get pods -n $Namespace -o jsonpath='{.items[*].metadata.name}' | Select-String "property-management-web"
     if ($pods) {
         $podName = $pods.ToString().Split()[0]
         Write-Host "Init container logs for pod: $podName" -ForegroundColor Yellow
-        kubectl logs $podName -c wait-for-db -n $Namespace
+        kubectl logs $podName -c wait-for-db -n $Namespace 2>$null
         
         Write-Host "`nMain container logs (if available):" -ForegroundColor Yellow
         kubectl logs $podName -n $Namespace --container=web-app 2>$null
@@ -63,6 +74,63 @@ function Create-RequiredSecrets {
     }
 }
 
+# Function to run database migrations
+function Run-DatabaseMigrations {
+    Write-Host "Running database migrations..." -ForegroundColor Cyan
+    
+    # Delete any existing migration job
+    kubectl delete job migration-job -n $Namespace --ignore-not-found=true
+    Start-Sleep -Seconds 5
+    
+    # Create migration job YAML
+    $migrationJobYaml = @"
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: migration-job
+  namespace: $Namespace
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: migration
+        image: ghcr.io/zamahele/tenantmanagement:latest
+        command: ["dotnet", "ef", "database", "update", "--project", "/app/PropertyManagement.Infrastructure", "--startup-project", "/app/PropertyManagement.Web"]
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Production"
+        - name: ConnectionStrings__DefaultConnection
+          value: "Server=sql-server.property-management.svc.cluster.local,1433;Database=PropertyManagement;User Id=sa;Password=01Pa`$`$w0rd2025#;TrustServerCertificate=true;"
+        - name: DOTNET_ENVIRONMENT
+          value: "Production"
+      imagePullSecrets:
+      - name: ghcr-secret
+  backoffLimit: 3
+"@
+    
+    # Apply migration job
+    $migrationJobYaml | kubectl apply -f -
+    
+    # Wait for migration job to complete
+    Write-Host "Waiting for database migrations to complete..."
+    $jobCompleted = kubectl wait --for=condition=complete --timeout=300s job/migration-job -n $Namespace 2>&1
+    
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warning "Migration job timeout or failed. Checking logs..."
+        $migrationPods = kubectl get pods -n $Namespace -l job-name=migration-job -o jsonpath='{.items[*].metadata.name}' 2>$null
+        if ($migrationPods) {
+            $migrationPods.Split() | ForEach-Object {
+                kubectl logs $_ -n $Namespace
+            }
+        }
+        return $false
+    } else {
+        Write-Host "Database migrations completed successfully!" -ForegroundColor Green
+        return $true
+    }
+}
+
 # If only viewing logs, do that and exit
 if ($ViewLogs) {
     Show-Logs
@@ -90,73 +158,82 @@ try {
     exit 1
 }
 
-# Clean deployment if requested
+# Clean deployment if requested (DESTRUCTIVE)
 if ($CleanDeploy) {
-    Write-Host "Cleaning existing deployment..." -ForegroundColor Yellow
-    kubectl delete namespace $Namespace --ignore-not-found=true
+    Write-Host "WARNING: DESTRUCTIVE CLEAN DEPLOYMENT!" -ForegroundColor Red
+    Write-Host "This will destroy EVERYTHING including your database and all data!" -ForegroundColor Red
+    $confirmation = Read-Host "Are you absolutely sure? Type 'DELETE-EVERYTHING' to confirm"
     
-    # Clean up Docker images containing "tenantmanagement"
-    Write-Host "Cleaning up Docker images containing 'tenantmanagement'..." -ForegroundColor Yellow
-    try {
-        # Check if Docker is available
-        docker version | Out-Null
+    if ($confirmation -eq "DELETE-EVERYTHING") {
+        Write-Host "Cleaning existing deployment..." -ForegroundColor Yellow
+        kubectl delete namespace $Namespace --ignore-not-found=true
         
-        # Get images containing "tenantmanagement"
-        $tenantImages = docker images --format "table {{.Repository}}:{{.Tag}}" | Select-String -Pattern "tenantmanagement" -AllMatches
-        
-        if ($tenantImages) {
-            Write-Host "Found Docker images containing 'tenantmanagement':" -ForegroundColor Cyan
-            $tenantImages | ForEach-Object {
-                $imageName = $_.ToString().Trim()
-                Write-Host "  - $imageName" -ForegroundColor Gray
-            }
+        # Clean up Docker images containing "tenantmanagement"
+        Write-Host "Cleaning up Docker images containing 'tenantmanagement'..." -ForegroundColor Yellow
+        try {
+            # Check if Docker is available
+            docker version | Out-Null
             
-            # Remove the images
-            $tenantImages | ForEach-Object {
-                $imageName = $_.ToString().Trim()
-                try {
-                    Write-Host "Removing image: $imageName" -ForegroundColor Yellow
-                    docker rmi $imageName --force 2>$null
-                    if ($LASTEXITCODE -eq 0) {
-                        Write-Host "Successfully removed: $imageName" -ForegroundColor Green
-                    }
-                } catch {
-                    Write-Warning "Failed to remove image: $imageName - $($_.Exception.Message)"
+            # Get images containing "tenantmanagement"
+            $tenantImages = docker images --format "table {{.Repository}}:{{.Tag}}" | Select-String -Pattern "tenantmanagement" -AllMatches
+            
+            if ($tenantImages) {
+                Write-Host "Found Docker images containing 'tenantmanagement':" -ForegroundColor Cyan
+                $tenantImages | ForEach-Object {
+                    $imageName = $_.ToString().Trim()
+                    Write-Host "  - $imageName" -ForegroundColor Gray
                 }
+                
+                # Remove the images
+                $tenantImages | ForEach-Object {
+                    $imageName = $_.ToString().Trim()
+                    try {
+                        Write-Host "Removing image: $imageName" -ForegroundColor Yellow
+                        docker rmi $imageName --force 2>$null
+                        if ($LASTEXITCODE -eq 0) {
+                            Write-Host "Successfully removed: $imageName" -ForegroundColor Green
+                        }
+                    } catch {
+                        Write-Warning "Failed to remove image: $imageName - $($_.Exception.Message)"
+                    }
+                }
+                
+                # Clean up dangling images
+                Write-Host "Cleaning up dangling images..." -ForegroundColor Yellow
+                docker image prune -f | Out-Null
+                
+            } else {
+                Write-Host "No Docker images containing 'tenantmanagement' found" -ForegroundColor Gray
             }
             
-            # Clean up dangling images
-            Write-Host "Cleaning up dangling images..." -ForegroundColor Yellow
-            docker image prune -f | Out-Null
-            
-        } else {
-            Write-Host "No Docker images containing 'tenantmanagement' found" -ForegroundColor Gray
+        } catch {
+            Write-Warning "Docker not available or failed to clean images: $($_.Exception.Message)"
+            Write-Host "Continuing with Kubernetes cleanup..." -ForegroundColor Gray
         }
         
-    } catch {
-        Write-Warning "Docker not available or failed to clean images: $($_.Exception.Message)"
-        Write-Host "Continuing with Kubernetes cleanup..." -ForegroundColor Gray
+        # Wait for cleanup
+        $timeout = 60
+        $elapsed = 0
+        do {
+            Start-Sleep -Seconds 2
+            $elapsed += 2
+            $namespaceExists = kubectl get namespace $Namespace --ignore-not-found=true 2>$null
+            if ($elapsed -gt $timeout) {
+                Write-Warning "Cleanup timeout - proceeding"
+                break
+            }
+        } while ($namespaceExists)
+        Write-Host "Cleanup completed" -ForegroundColor Green
+    } else {
+        Write-Host "Clean deployment cancelled - proceeding with normal deployment" -ForegroundColor Yellow
+        $CleanDeploy = $false
     }
-    
-    # Wait for cleanup
-    $timeout = 60
-    $elapsed = 0
-    do {
-        Start-Sleep -Seconds 2
-        $elapsed += 2
-        $namespaceExists = kubectl get namespace $Namespace --ignore-not-found=true 2>$null
-        if ($elapsed -gt $timeout) {
-            Write-Warning "Cleanup timeout - proceeding"
-            break
-        }
-    } while ($namespaceExists)
-    Write-Host "Cleanup completed" -ForegroundColor Green
 }
 
 try {
     Write-Host "Starting deployment..." -ForegroundColor Cyan
     
-    # Deploy base resources
+    # Deploy base resources (safe to reapply)
     Write-Host "Creating namespace and base resources..."
     kubectl apply -f k8s/01-namespace.yaml
     kubectl apply -f k8s/02-secrets.yaml
@@ -166,35 +243,59 @@ try {
     # Create required secrets
     Create-RequiredSecrets
     
-    # Deploy SQL Server
-    Write-Host "Deploying SQL Server..."
-    kubectl apply -f k8s/05-sql-server.yaml
+    # Check if SQL Server already exists (unless clean deploy)
+    $sqlServerExists = $false
+    if (-not $CleanDeploy) {
+        $sqlServerExists = kubectl get deployment sql-server -n $Namespace 2>$null
+    }
     
-    # Wait for SQL Server with better timeout
-    Write-Host "Waiting for SQL Server to be ready (this may take several minutes)..."
-    $sqlReady = kubectl wait --for=condition=available --timeout=300s deployment/sql-server -n $Namespace 2>&1
-    if ($LASTEXITCODE -ne 0) {
-        Write-Warning "SQL Server deployment timeout or failed. Checking status..."
-        kubectl get pods -n $Namespace
-        kubectl describe deployment/sql-server -n $Namespace
-        Write-Host "SQL Server logs:"
-        kubectl logs deployment/sql-server -n $Namespace --tail=20
+    if (-not $sqlServerExists) {
+        # Deploy SQL Server
+        Write-Host "Deploying SQL Server..."
+        kubectl apply -f k8s/05-sql-server.yaml
+        
+        # Wait for SQL Server with better timeout
+        Write-Host "Waiting for SQL Server to be ready (this may take several minutes)..."
+        $sqlReady = kubectl wait --for=condition=available --timeout=300s deployment/sql-server -n $Namespace 2>&1
+        if ($LASTEXITCODE -ne 0) {
+            Write-Warning "SQL Server deployment timeout or failed. Checking status..."
+            kubectl get pods -n $Namespace
+            kubectl describe deployment/sql-server -n $Namespace
+            Write-Host "SQL Server logs:"
+            kubectl logs deployment/sql-server -n $Namespace --tail=20
+        } else {
+            Write-Host "SQL Server is ready" -ForegroundColor Green
+        }
     } else {
-        Write-Host "SQL Server is ready" -ForegroundColor Green
+        Write-Host "SQL Server already exists - preserving database" -ForegroundColor Green
+    }
+    
+    # Run database migrations (unless skipped)
+    if (-not $SkipMigrations) {
+        $migrationSuccess = Run-DatabaseMigrations
+        if (-not $migrationSuccess) {
+            Write-Warning "Database migration failed, but continuing with web deployment..."
+        }
+    } else {
+        Write-Host "Skipping database migrations as requested" -ForegroundColor Yellow
     }
     
     # Verify SQL Server service is accessible
     Write-Host "Verifying SQL Server service..."
-    Start-Sleep -Seconds 10
+    Start-Sleep -Seconds 5
     
     # Deploy web application
     Write-Host "Deploying web application..."
     kubectl apply -f k8s/06-web-app.yaml
     kubectl apply -f k8s/07-services.yaml
     
+    # Force rolling update of web app to ensure latest version
+    $timestamp = Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ"
+    kubectl patch deployment property-management-web -n $Namespace -p "{`"spec`":{`"template`":{`"metadata`":{`"annotations`":{`"deployment.kubernetes.io/restart`":`"$timestamp`"}}}}}"
+    
     # Wait for web application with better error handling
     Write-Host "Waiting for web application to be ready..."
-    $webReady = kubectl wait --for=condition=available --timeout=300s deployment/property-management-web -n $Namespace 2>&1
+    $webReady = kubectl rollout status deployment/property-management-web -n $Namespace --timeout=300s 2>&1
     if ($LASTEXITCODE -ne 0) {
         Write-Warning "Web application deployment timeout. Checking status..."
         Show-Logs
@@ -213,6 +314,7 @@ try {
     # Show status
     Write-Host "`nDeployment Status:" -ForegroundColor Cyan
     kubectl get pods -n $Namespace
+    kubectl get services -n $Namespace
     
     # Check if pods are ready
     $notReadyPods = kubectl get pods -n $Namespace --field-selector=status.phase!=Running -o jsonpath='{.items[*].metadata.name}' 2>$null
@@ -227,9 +329,10 @@ try {
     }
     
     Write-Host "`nUseful Commands:" -ForegroundColor Yellow
-    Write-Host "View logs:    .\deploy-kubernetes-final.ps1 -ViewLogs"
-    Write-Host "Check status: kubectl get pods -n $Namespace"
-    Write-Host "Clean deploy: .\deploy-kubernetes-final.ps1 -CleanDeploy"
+    Write-Host "View logs:         .\deploy-kubernetes-final.ps1 -ViewLogs"
+    Write-Host "Skip migrations:   .\deploy-kubernetes-final.ps1 -SkipMigrations"
+    Write-Host "Check status:      kubectl get pods -n $Namespace"
+    Write-Host "DESTRUCTIVE clean: .\deploy-kubernetes-final.ps1 -CleanDeploy"
     
 } catch {
     Write-Host "Deployment failed!" -ForegroundColor Red

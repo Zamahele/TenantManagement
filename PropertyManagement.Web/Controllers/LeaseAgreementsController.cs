@@ -61,6 +61,17 @@ public class LeaseAgreementsController : BaseController
     return View(agreementVms);
   }
 
+  // GET: /LeaseAgreements/Create
+  public async Task<IActionResult> Create()
+  {
+    var tenants = await _tenantRepository.Query().Include(t => t.Room).ToListAsync();
+    ViewBag.Tenants = _mapper.Map<List<TenantViewModel>>(tenants);
+    ViewBag.IsEdit = false;
+    
+    var model = new LeaseAgreementViewModel();
+    return View(model);
+  }
+
   // GET: /LeaseAgreements/GetAgreement/5
   public async Task<IActionResult> GetAgreement(int id)
   {
@@ -85,16 +96,24 @@ public class LeaseAgreementsController : BaseController
   // GET: /LeaseAgreements/Edit/5
   public async Task<IActionResult> Edit(int id)
   {
-    var agreement = await _leaseAgreementRepository.GetByIdAsync(id);
+    var agreement = await _leaseAgreementRepository.Query()
+        .Include(l => l.Tenant)
+            .ThenInclude(t => t.Room)
+        .Include(l => l.Room)
+        .FirstOrDefaultAsync(l => l.LeaseAgreementId == id);
+        
     if (agreement == null)
     {
       SetErrorMessage("Lease agreement not found.");
       return NotFound();
     }
+    
     var tenants = await _tenantRepository.Query().Include(t => t.Room).ToListAsync();
     ViewBag.Tenants = _mapper.Map<List<TenantViewModel>>(tenants);
+    ViewBag.IsEdit = true;
+    
     var agreementVm = _mapper.Map<LeaseAgreementViewModel>(agreement);
-    return View("CreateOrEdit", agreementVm);
+    return View("Create", agreementVm);
   }
 
   // POST: /LeaseAgreements/CreateOrEdit
@@ -105,6 +124,7 @@ public class LeaseAgreementsController : BaseController
   {
     // Check if this is an AJAX request
     bool isAjax = Request.Headers["X-Requested-With"] == "XMLHttpRequest";
+    bool isEdit = agreementVm.LeaseAgreementId != 0;
     
     // Custom validation: EndDate must be after Start Date
     if (agreementVm.EndDate <= agreementVm.StartDate)
@@ -130,7 +150,7 @@ public class LeaseAgreementsController : BaseController
     }
 
     // If editing and no new file uploaded, preserve existing FilePath
-    if (agreementVm.LeaseAgreementId != 0 && (File == null || File.Length == 0))
+    if (isEdit && (File == null || File.Length == 0))
     {
       var existingAgreement = await _leaseAgreementRepository.Query()
           .AsNoTracking()
@@ -157,8 +177,10 @@ public class LeaseAgreementsController : BaseController
       
       var tenants = await _tenantRepository.Query().Include(t => t.Room).ToListAsync();
       ViewBag.Tenants = _mapper.Map<List<TenantViewModel>>(tenants);
-      ViewBag.IsEdit = agreementVm.LeaseAgreementId != 0;
-      return PartialView("_LeaseAgreementModal", agreementVm);
+      ViewBag.IsEdit = isEdit;
+      
+      // Return full page view instead of partial
+      return View("Create", agreementVm);
     }
 
     try
@@ -177,7 +199,7 @@ public class LeaseAgreementsController : BaseController
         agreementVm.FilePath = "/uploads/" + fileName;
       }
 
-      if (agreementVm.LeaseAgreementId == 0)
+      if (!isEdit)
       {
         var entity = _mapper.Map<LeaseAgreement>(agreementVm);
         await _leaseAgreementRepository.AddAsync(entity);
@@ -229,8 +251,8 @@ public class LeaseAgreementsController : BaseController
       
       var tenants = await _tenantRepository.Query().Include(t => t.Room).ToListAsync();
       ViewBag.Tenants = _mapper.Map<List<TenantViewModel>>(tenants);
-      ViewBag.IsEdit = agreementVm.LeaseAgreementId != 0;
-      return PartialView("_LeaseAgreementModal", agreementVm);
+      ViewBag.IsEdit = isEdit;
+      return View("Create", agreementVm);
     }
     
     return RedirectToAction(nameof(Index));

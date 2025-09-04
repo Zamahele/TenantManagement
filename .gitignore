@@ -363,3 +363,4 @@ MigrationBackup/
 FodyWeavers.xsd
 /PropertyManagement.Web/wwwroot/uploads/leases
 /.claude/settings.local.json
+/PropertyManagement.Web/wwwroot/uploads/signatures

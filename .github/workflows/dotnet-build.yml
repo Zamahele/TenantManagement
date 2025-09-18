@@ -109,7 +109,7 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./publish/
-          server-dir: /
+          server-dir: /gcweproperty.co.za/wwwroot/
           dangerous-clean-slate: false
           exclude: |
             **/.git*

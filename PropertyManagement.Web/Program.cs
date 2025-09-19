@@ -285,7 +285,7 @@ var app = builder.Build();
 app.UseMetricServer(); // Exposes /metrics
 app.UseHttpMetrics();  // Collects default HTTP metrics
 
-// Seed initial data and apply migrations
+// Seed initial data
 using (var scope = app.Services.CreateScope())
 {
   var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -294,46 +294,17 @@ using (var scope = app.Services.CreateScope())
   
   try
   {
-    logger.LogInformation("Initializing database...");
+    logger.LogInformation("Initializing application data...");
     
-    // Check if auto-migration is enabled
-    var enableAutoMigration = config.GetValue<bool>("EnableAutoMigration", true);
-    
-    if (enableAutoMigration)
+    // Verify database connection (but don't apply migrations)
+    if (context.Database.CanConnect())
     {
-      logger.LogInformation("Auto-migration is enabled - checking for pending migrations...");
-      
-      // Apply any pending migrations
-      var pendingMigrations = context.Database.GetPendingMigrations();
-      if (pendingMigrations.Any())
-      {
-        logger.LogInformation("Found {Count} pending migrations: {Migrations}", 
-          pendingMigrations.Count(), 
-          string.Join(", ", pendingMigrations));
-        
-        logger.LogInformation("Applying database migrations...");
-        context.Database.Migrate();
-        logger.LogInformation("? Database migrations applied successfully!");
-      }
-      else
-      {
-        logger.LogInformation("? Database is up to date - no pending migrations");
-      }
+      logger.LogInformation("? Database connection verified");
     }
     else
     {
-      logger.LogInformation("Auto-migration is disabled - skipping migration check");
-      
-      // Still verify database exists and can be connected to
-      if (context.Database.CanConnect())
-      {
-        logger.LogInformation("? Database connection verified");
-      }
-      else
-      {
-        logger.LogError("? Cannot connect to database");
-        throw new InvalidOperationException("Database connection failed");
-      }
+      logger.LogError("? Cannot connect to database");
+      throw new InvalidOperationException("Database connection failed");
     }
 
     // Read the seeding setting from configuration
@@ -370,29 +341,20 @@ using (var scope = app.Services.CreateScope())
       logger.LogInformation("Admin user already exists - skipping creation");
     }
     
-    logger.LogInformation("?? Database initialization completed successfully");
+    logger.LogInformation("?? Application initialization completed successfully");
   }
   catch (Exception ex)
   {
-    logger.LogError(ex, "? Failed to initialize database");
+    logger.LogError(ex, "? Failed to initialize application");
     
-    // In production, you might want to decide whether to continue or stop the application
     if (app.Environment.IsProduction())
     {
-      logger.LogCritical("Application startup failed due to database initialization error in production environment");
-      
-      // Check if this is a migration-specific error and auto-migration is enabled
-      var enableAutoMigration = config.GetValue<bool>("EnableAutoMigration", true);
-      if (enableAutoMigration)
-      {
-        logger.LogError("Consider setting 'EnableAutoMigration' to false and applying migrations manually");
-      }
-      
+      logger.LogCritical("Application startup failed in production environment");
       throw; // This will stop the application startup
     }
     else
     {
-      logger.LogWarning("Continuing application startup despite database initialization failure in non-production environment");
+      logger.LogWarning("Continuing application startup despite initialization failure in non-production environment");
     }
   }
 }

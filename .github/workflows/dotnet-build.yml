@@ -96,6 +96,12 @@ jobs:
     needs: publish
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
     steps:
+      - name: Download build artifact (for migrations)
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+          path: ./source
+
       - name: Download published artifact
         uses: actions/download-artifact@v4
         with:
@@ -113,6 +119,48 @@ jobs:
           sed -i 's/#{DB_SERVER}#/${{ secrets.DB_SERVER }}/g' ./publish/appsettings.Production.json
           sed -i 's/#{DB_USERNAME}#/${{ secrets.DB_USERNAME }}/g' ./publish/appsettings.Production.json
           sed -i 's/#{DB_PASSWORD}#/${{ secrets.DB_PASSWORD }}/g' ./publish/appsettings.Production.json
+          
+          # Also update source appsettings for migrations
+          sed -i 's/#{DB_SERVER}#/${{ secrets.DB_SERVER }}/g' ./source/PropertyManagement.Web/appsettings.Production.json
+          sed -i 's/#{DB_USERNAME}#/${{ secrets.DB_USERNAME }}/g' ./source/PropertyManagement.Web/appsettings.Production.json
+          sed -i 's/#{DB_PASSWORD}#/${{ secrets.DB_PASSWORD }}/g' ./source/PropertyManagement.Web/appsettings.Production.json
+
+      - name: Apply Entity Framework Migrations (Required)
+        run: |
+          echo "Installing Entity Framework CLI tools..."
+          dotnet tool install --global dotnet-ef --version 8.0.0 || true
+          
+          echo "Setting environment for Production..."
+          export ASPNETCORE_ENVIRONMENT=Production
+          
+          echo "Building projects for migrations..."
+          cd ./source
+          dotnet restore
+          dotnet build --configuration Release
+          
+          echo "Applying database migrations (REQUIRED FOR DEPLOYMENT)..."
+          CONNECTION_STRING="Server=${{ secrets.DB_SERVER }};Database=cottagedb;User Id=${{ secrets.DB_USERNAME }};Password=${{ secrets.DB_PASSWORD }};MultipleActiveResultSets=true;TrustServerCertificate=True;Encrypt=True"
+          
+          echo "Testing database connection..."
+          if ! dotnet ef database update --project PropertyManagement.Infrastructure --startup-project PropertyManagement.Web --connection "$CONNECTION_STRING" --verbose; then
+            echo "? Database migration failed!"
+            echo "?? Deployment will be cancelled to prevent deploying incompatible application."
+            echo ""
+            echo "Possible solutions:"
+            echo "1. Check database server connectivity and firewall settings"
+            echo "2. Verify database credentials in GitHub secrets"
+            echo "3. Ensure database user has sufficient permissions"
+            echo "4. Check if database server allows remote connections"
+            echo ""
+            echo "Database connection details:"
+            echo "Server: ${{ secrets.DB_SERVER }}"
+            echo "Database: cottagedb"
+            echo "Username: ${{ secrets.DB_USERNAME }}"
+            exit 1
+          fi
+          
+          echo "? Database migrations applied successfully!"
+          echo "? Deployment can proceed safely."
 
       - name: Deploy to FTP server
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5

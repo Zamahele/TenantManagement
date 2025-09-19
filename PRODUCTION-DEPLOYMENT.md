@@ -101,61 +101,39 @@ The deployment happens automatically when you push to `main` or `master` branch:
 1. **Build** - Compiles the .NET application
 2. **Test** - Runs unit tests with coverage
 3. **Publish** - Creates deployment artifacts
-4. **FTP Deploy** - Replaces database credentials and uploads to FTP server
-5. **Docker Build** - Creates and pushes Docker images
+4. **?? Database Migration** - **REQUIRED** - Applies Entity Framework migrations to production database
+5. **FTP Deploy** - Replaces database credentials and uploads to FTP server (only if migrations succeed)
+6. **Docker Build** - Creates and pushes Docker images
 
-### ?? Automatic Database Migration
+### ?? **Migration-Gated Deployment**
 
-**Your application now automatically applies migrations on startup!** ?
+**Important:** Your deployment now uses a **migration-gated approach**:
 
-When your application starts, it will:
-- ? **Check for pending migrations** and apply them automatically
-- ? **Create the admin user** if it doesn't exist
-- ? **Apply seed data** if enabled in configuration
-- ? **Log all database operations** for monitoring
+- ? **Migrations MUST succeed** before application deployment
+- ?? **If migrations fail**, FTP deployment is cancelled
+- ??? **Prevents deploying incompatible code** to production
+- ?? **Comprehensive error reporting** for troubleshooting
 
-### Migration Configuration
+### Database Configuration
 
-You can control migration behavior in `appsettings.json`:
+**Production Database:**
+- **Server**: `mart.zadns.co.za`
+- **Database**: `cottagedb`
+- **Connection**: Secure with TLS encryption
 
-```json
-{
-  "EnableAutoMigration": true,      // Auto-apply migrations on startup
-  "EnableDatabaseSeeding": true     // Apply seed data
-}
-```
+### Required GitHub Secrets
 
-#### **Production Settings (Current):**
-- `EnableAutoMigration`: `true` - ? Migrations apply automatically
-- `EnableDatabaseSeeding`: `true` - ? Seed data is applied
+You need to configure these secrets in your GitHub repository:
 
-#### **To Disable Auto-Migration:**
-If you prefer manual control, set in your production config:
-```json
-{
-  "EnableAutoMigration": false
-}
-```
+#### **Database Secrets:**
+- `DB_SERVER` = `mart.zadns.co.za`
+- `DB_USERNAME` = `[your database username]`
+- `DB_PASSWORD` = `[your database password]`
 
-### Database Migration Process
-
-#### **Automatic (Recommended - Current Setup):**
-? **No manual intervention required!**
-- Deploy your application via GitHub Actions
-- Application automatically applies any new migrations on startup
-- Check application logs to verify migration status
-
-#### **Manual (If auto-migration is disabled):**
-
-**For New Database Setup:**
-```powershell
-.\database-scripts\deploy-database.ps1 -ServerName "AH-EPYC-3-SQL2019.zadns.co.za" -DatabaseName "propertydb" -Username "propertyadmin" -Password "YourPassword"
-```
-
-**For Schema Updates:**
-```powershell
-.\database-scripts\apply-migrations.ps1 -Password "YourPassword"
-```
+#### **FTP Deployment Secrets:**
+- `FTP_SERVER` = `[your FTP server]`
+- `FTP_USERNAME` = `[your FTP username]`
+- `FTP_PASSWORD` = `[your FTP password]`
 
 ### Development Workflow
 
@@ -165,193 +143,75 @@ When you add new features that require database changes:
    ```bash
    dotnet ef migrations add YourMigrationName --project PropertyManagement.Infrastructure --startup-project PropertyManagement.Web
    ```
-2. **Test locally** - migrations apply automatically when you run the app
-3. **Push to GitHub** - triggers automatic deployment
-4. **Migrations apply automatically** when the production app starts
-5. **Monitor logs** to verify successful migration
+2. **Test locally** with your development database
+3. **Push to GitHub** - triggers automatic deployment pipeline
+4. **Pipeline applies migrations** to production database automatically
+5. **If migrations succeed** ? Application deploys to FTP server
+6. **If migrations fail** ? Deployment stops with detailed error information
 
-### Migration Monitoring
+### Migration Pipeline Benefits
 
-Check application logs for migration status:
+- ?? **Zero-downtime updates** - Database changes applied before app deployment
+- ??? **Deployment safety** - Incompatible code cannot be deployed
+- ?? **Full visibility** - Detailed logs of all migration activities
+- ?? **Automatic rollback** - Failed deployments don't affect production
 
-```bash
-# Application will log:
+### Expected Pipeline Flow
+
+```
+? Build & Test Successful
+? Publish Artifacts Created
+?? Connecting to database: mart.zadns.co.za
+? Database connection verified
+?? Checking for pending migrations...
 ? Found 2 pending migrations: AddNewFeature, UpdateUserTable
-? Applying database migrations...
+?? Applying database migrations...
 ? Database migrations applied successfully!
-? Database initialization completed successfully
-?? Application startup completed
+? Deployment can proceed safely
+?? FTP deployment started...
+? Application deployed successfully!
+```
 
-# Or if no migrations needed:
-? Database is up to date - no pending migrations
+### Troubleshooting Migration Failures
+
+If migrations fail in the pipeline, check:
+
+1. **Database Connectivity:**
+   - Verify `mart.zadns.co.za` is accessible from GitHub Actions
+   - Check firewall settings allow GitHub's IP ranges
+   - Ensure database server accepts remote connections
+
+2. **Credentials:**
+   - Verify `DB_SERVER`, `DB_USERNAME`, `DB_PASSWORD` secrets are correct
+   - Ensure database user has sufficient permissions (recommend `db_owner` role)
+
+3. **Migration Issues:**
+   - Review the detailed error logs in GitHub Actions
+   - Test migrations locally first
+   - Check for conflicting schema changes
+
+### Manual Migration (If Pipeline Fails)
+
+If you need to apply migrations manually:
+
+```powershell
+# Use the manual migration script
+.\database-scripts\apply-migrations.ps1 -ServerName "mart.zadns.co.za" -DatabaseName "cottagedb" -Username "your_username" -Password "your_password"
 ```
 
 ### Rollback Strategy
 
 If you need to rollback a migration:
 
-1. **Disable auto-migration** temporarily:
-   ```json
-   { "EnableAutoMigration": false }
-   ```
-2. **Apply rollback manually**:
+1. **Create a rollback migration:**
    ```bash
    dotnet ef database update [PreviousMigrationName] --project PropertyManagement.Infrastructure --startup-project PropertyManagement.Web
    ```
-3. **Re-enable auto-migration** after resolving issues
+2. **Push the rollback** - pipeline will apply it automatically
 
-### Manual Migration Commands
+### Production Safety Features
 
-```bash
-# Check migration status
-dotnet ef migrations list --project PropertyManagement.Infrastructure --startup-project PropertyManagement.Web
-
-# Apply specific migration
-dotnet ef database update [MigrationName] --project PropertyManagement.Infrastructure --startup-project PropertyManagement.Web
-
-# Generate SQL script for review
-dotnet ef migrations script --project PropertyManagement.Infrastructure --startup-project PropertyManagement.Web --output migration.sql
-
-# Rollback to specific migration  
-dotnet ef database update [PreviousMigrationName] --project PropertyManagement.Infrastructure --startup-project PropertyManagement.Web
-```
-
-## ?? Configuration Details
-
-### Production Connection String
-```json
-{
-  "ConnectionStrings": {
-    "DefaultConnection": "Server=your-server.com;Database=propertydb;User Id=propertymanagement_user;Password=YourSecurePassword123!;MultipleActiveResultSets=true;TrustServerCertificate=True;Encrypt=True"
-  }
-}
-```
-
-### Application Settings
-- **Database**: `propertydb`
-- **Seeding**: Enabled in production (creates default admin user)
-- **Logging**: File-based logging to `/app/logs/`
-- **Utilities**: Water (R0.02/L), Electricity (R1.50/kWh)
-
-## ?? Default Admin Account
-
-After deployment, use these credentials for initial login:
-- **Username**: `Admin`
-- **Password**: `01Pa$$w0rd2025#`
-
-?? **Important**: Change the default admin password immediately after first login!
-
-## ?? Verification
-
-### Test Database Connection
-```sql
--- Connect to your database and run:
-SELECT COUNT(*) as TableCount 
-FROM INFORMATION_SCHEMA.TABLES 
-WHERE TABLE_TYPE = 'BASE TABLE';
-
--- Should return 12 tables
-```
-
-### Test Application
-1. Access your deployed application URL
-2. Login with admin credentials
-3. Navigate through the dashboard
-4. Create a test tenant/room to verify functionality
-
-## ?? Troubleshooting
-
-### Common Issues
-
-**Database Connection Errors:**
-- Verify server name, database name, username, and password
-- Check firewall settings allow connections
-- Ensure SQL Server is configured for SQL authentication
-
-**Migration Failures:**
-- Check if database user has sufficient permissions (db_owner role recommended)
-- Verify connection string format and credentials
-- Review GitHub Actions logs for specific migration errors
-- Ensure database server allows remote connections
-
-**FTP Deployment Issues:**
-- Verify FTP credentials in GitHub secrets
-- Check FTP server permissions for upload directory
-- Ensure passive mode is supported
-
-**Application Startup Errors:**
-- Check application logs in `/app/logs/`
-- Verify appsettings.Production.json has correct values
-- Ensure all NuGet packages are properly deployed
-
-### Support Commands
-
-**Check deployment logs:**
-```bash
-# GitHub Actions logs
-# Go to Actions tab in your repository
-
-# Application logs (on server)
-tail -f /app/logs/propertymanagement.log
-```
-
-**Database diagnostics:**
-```sql
--- Check if migrations were applied
-SELECT * FROM __EFMigrationsHistory ORDER BY MigrationId;
-
--- Verify admin user exists
-SELECT Username, Role FROM Users WHERE Role = 'Manager';
-
--- Check latest migration
-SELECT TOP 1 MigrationId, ProductVersion 
-FROM __EFMigrationsHistory 
-ORDER BY MigrationId DESC;
-```
-
-**Migration troubleshooting:**
-```bash
-# Check EF tools version
-dotnet ef --version
-
-# Validate migration files
-dotnet ef migrations list --project PropertyManagement.Infrastructure --startup-project PropertyManagement.Web
-
-# Test connection string
-dotnet ef database update --dry-run --project PropertyManagement.Infrastructure --startup-project PropertyManagement.Web
-```
-
-## ?? Monitoring
-
-The application includes:
-- **Prometheus metrics** at `/metrics` endpoint
-- **Structured logging** to files and console
-- **Health checks** for database connectivity
-
-## ?? Updates and Maintenance
-
-### Updating the Application
-1. Push changes to `main`/`master` branch
-2. GitHub Actions automatically deploys
-3. Database migrations run automatically if needed
-
-### Database Backups
-Set up regular backups of your `propertydb` database:
-```sql
--- Example backup command (run on server)
-BACKUP DATABASE [propertydb] 
-TO DISK = 'C:\Backups\propertydb_backup.bak'
-WITH FORMAT, COMPRESSION;
-```
-
----
-
-## ?? Support
-
-For issues or questions:
-1. Check the troubleshooting section above
-2. Review GitHub Actions logs for deployment issues
-3. Check application logs for runtime issues
-4. Verify all secrets are correctly configured
-
-Remember to keep your credentials secure and never commit them to source control!
+- **Connection Testing** - Verifies database connectivity before applying migrations
+- **Detailed Logging** - Full migration output for debugging
+- **Fail-Fast Deployment** - Stops deployment immediately on migration failure
+- **Error Context** - Provides troubleshooting guidance when failures occur

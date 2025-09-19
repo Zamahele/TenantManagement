@@ -21,18 +21,20 @@ using PropertyManagement.Application.Services;
 using PropertyManagement.Application.DTOs;
 
 // Ensure log directory exists before Serilog is configured
-var logDirectory = "/gcweproperty.co.za/logs";
+var logDirectory = Path.Combine(Directory.GetCurrentDirectory(), "logs");
 if (!Directory.Exists(logDirectory))
 {
     try
     {
         Directory.CreateDirectory(logDirectory);
     }
-    catch
+    catch (Exception ex)
     {
-        // Fallback to a writable directory if the preferred one fails
-        logDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "PropertyManagement", "logs");
+        // Fallback to temp directory if we can't create in app directory
+        logDirectory = Path.Combine(Path.GetTempPath(), "PropertyManagement", "logs");
         Directory.CreateDirectory(logDirectory);
+        Console.WriteLine($"Log directory created at fallback location: {logDirectory}");
+        Console.WriteLine($"Original error: {ex.Message}");
     }
 }
 

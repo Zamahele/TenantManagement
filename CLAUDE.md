@@ -107,7 +107,7 @@ The application has extensive AutoMapper mappings that are essential for proper 
 Payment Entity ↔ PaymentDto ↔ PaymentViewModel
     ↓ requires
 LeaseAgreementDto ↔ LeaseAgreementViewModel
-    ↓ requires  
+    ↓ requires
 TenantDto ↔ TenantViewModel
     ↓ requires
 UserDto ↔ UserViewModel
@@ -136,7 +136,7 @@ public async Task<ServiceResult<TenantDto>> GetTenantByIdAsync(int id)
     var tenant = await _repository.GetByIdAsync(id);
     if (tenant == null)
         return ServiceResult<TenantDto>.Failure("Tenant not found");
-    
+
     var dto = _mapper.Map<TenantDto>(tenant);
     return ServiceResult<TenantDto>.Success(dto);
 }
@@ -216,8 +216,8 @@ The application features a comprehensive client-side pagination system:
 }
 @await Html.PartialAsync("_TableSearch")
 
-<table id="paymentsTable" 
-       data-pagination 
+<table id="paymentsTable"
+       data-pagination
        data-search-input="#search-input"
        data-items-per-page="15">
     <!-- table content -->
@@ -235,7 +235,7 @@ The application features a comprehensive client-side pagination system:
 ### Validation Architecture
 Each entity has corresponding validator classes with comprehensive rules:
 - **Client-side**: jQuery validation for immediate feedback
-- **Server-side**: FluentValidation in controller actions  
+- **Server-side**: FluentValidation in controller actions
 - **Database**: Entity constraints and referential integrity
 
 ### Key Validation Rules
@@ -305,7 +305,7 @@ var signatureResult = await _leaseGenerationService.ProcessDigitalSignatureAsync
 
 ### Logging Strategy
 - **Serilog** with structured logging
-- File logging to `/app/logs/` (production) 
+- File logging to `/app/logs/` (production)
 - Console logging for development
 - Elasticsearch integration for log aggregation
 
@@ -318,7 +318,7 @@ docker-compose up -d
 
 # Access services:
 # App: http://localhost:8080
-# Prometheus: http://localhost:9090  
+# Prometheus: http://localhost:9090
 # Grafana: http://localhost:3000
 # Kibana: http://localhost:5601
 ```
@@ -456,7 +456,7 @@ Search for these patterns when troubleshooting:
 
 ### AutoMapper Resolution (December 2024)
 - ✅ Fixed `UserDto → UserViewModel` mapping exception
-- ✅ Fixed `LeaseAgreementDto → LeaseAgreementViewModel` mapping exception  
+- ✅ Fixed `LeaseAgreementDto → LeaseAgreementViewModel` mapping exception
 - ✅ Fixed `PaymentDto → PaymentViewModel` mapping with nested objects
 - ✅ Added comprehensive nested object mapping support
 - ✅ Updated test configurations to match main application mappings

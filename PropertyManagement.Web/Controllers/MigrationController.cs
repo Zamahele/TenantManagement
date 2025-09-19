@@ -27,22 +27,39 @@ namespace PropertyManagement.Web.Controllers
         {
             try
             {
-                // Simple security check using FTP password as auth token
-                var expectedToken = _configuration["FTP_PASSWORD"] ?? _configuration["MigrationAuthToken"];
-                if (string.IsNullOrEmpty(authToken) || authToken != expectedToken)
+                // Multiple auth token sources for flexibility
+                var expectedTokens = new[]
                 {
-                    _logger.LogWarning("Unauthorized migration attempt from {IP}", HttpContext.Connection.RemoteIpAddress);
-                    return Unauthorized("Invalid authorization token");
+                    _configuration["FTP_PASSWORD"],
+                    _configuration["MigrationAuthToken"],
+                    Environment.GetEnvironmentVariable("FTP_PASSWORD"),
+                    Environment.GetEnvironmentVariable("MIGRATION_AUTH_TOKEN")
+                }.Where(t => !string.IsNullOrEmpty(t)).ToArray();
+
+                if (string.IsNullOrEmpty(authToken) || !expectedTokens.Any(token => authToken == token))
+                {
+                    _logger.LogWarning("Unauthorized migration attempt from {IP} with token {Token}", 
+                        HttpContext.Connection.RemoteIpAddress, 
+                        string.IsNullOrEmpty(authToken) ? "null" : "***");
+                    return Unauthorized(new { 
+                        success = false,
+                        message = "Invalid or missing authorization token",
+                        hint = "Provide authToken header with valid credentials"
+                    });
                 }
 
-                _logger.LogInformation("Starting automated migration process...");
+                _logger.LogInformation("Starting automated migration process from {IP}...", HttpContext.Connection.RemoteIpAddress);
 
                 // Check if database can be reached
                 var canConnect = await _context.Database.CanConnectAsync();
                 if (!canConnect)
                 {
-                    _logger.LogError("Cannot connect to database");
-                    return StatusCode(500, "Database connection failed");
+                    _logger.LogError("Cannot connect to database during migration attempt");
+                    return StatusCode(500, new { 
+                        success = false,
+                        message = "Database connection failed",
+                        details = "Unable to establish connection to the database"
+                    });
                 }
 
                 // Get pending migrations
@@ -50,11 +67,12 @@ namespace PropertyManagement.Web.Controllers
                 
                 if (!pendingMigrations.Any())
                 {
-                    _logger.LogInformation("No pending migrations found");
+                    _logger.LogInformation("No pending migrations found - database is up to date");
                     return Ok(new { 
                         success = true, 
                         message = "Database is up to date - no pending migrations",
-                        pendingMigrations = 0
+                        pendingMigrations = 0,
+                        appliedMigrations = (await _context.Database.GetAppliedMigrationsAsync()).Count()
                     });
                 }
 
@@ -67,11 +85,17 @@ namespace PropertyManagement.Web.Controllers
 
                 _logger.LogInformation("? Database migrations applied successfully!");
 
+                // Verify migrations were applied
+                var remainingPending = await _context.Database.GetPendingMigrationsAsync();
+                var totalApplied = (await _context.Database.GetAppliedMigrationsAsync()).Count();
+
                 return Ok(new { 
                     success = true, 
                     message = "Database migrations applied successfully",
                     appliedMigrations = pendingMigrations.Count(),
-                    migrations = pendingMigrations.ToList()
+                    totalMigrations = totalApplied,
+                    remainingPending = remainingPending.Count(),
+                    migrationsApplied = pendingMigrations.ToList()
                 });
 
             }
@@ -81,7 +105,8 @@ namespace PropertyManagement.Web.Controllers
                 return StatusCode(500, new { 
                     success = false, 
                     message = "Migration failed",
-                    error = ex.Message 
+                    error = ex.Message,
+                    type = ex.GetType().Name
                 });
             }
         }
@@ -96,7 +121,8 @@ namespace PropertyManagement.Web.Controllers
                 {
                     return Ok(new { 
                         connected = false, 
-                        message = "Cannot connect to database" 
+                        message = "Cannot connect to database",
+                        timestamp = DateTime.UtcNow
                     });
                 }
 
@@ -109,7 +135,9 @@ namespace PropertyManagement.Web.Controllers
                     pendingMigrations = pendingMigrations.Count(),
                     lastAppliedMigration = appliedMigrations.LastOrDefault(),
                     nextPendingMigration = pendingMigrations.FirstOrDefault(),
-                    isUpToDate = !pendingMigrations.Any()
+                    isUpToDate = !pendingMigrations.Any(),
+                    timestamp = DateTime.UtcNow,
+                    databaseProvider = _context.Database.ProviderName
                 });
             }
             catch (Exception ex)
@@ -117,7 +145,30 @@ namespace PropertyManagement.Web.Controllers
                 _logger.LogError(ex, "Failed to get migration status");
                 return StatusCode(500, new { 
                     connected = false, 
-                    error = ex.Message 
+                    error = ex.Message,
+                    timestamp = DateTime.UtcNow
+                });
+            }
+        }
+
+        [HttpGet("health")]
+        public async Task<IActionResult> GetHealth()
+        {
+            try
+            {
+                var canConnect = await _context.Database.CanConnectAsync();
+                return Ok(new {
+                    status = canConnect ? "healthy" : "unhealthy",
+                    database = canConnect ? "connected" : "disconnected",
+                    timestamp = DateTime.UtcNow
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new {
+                    status = "unhealthy",
+                    error = ex.Message,
+                    timestamp = DateTime.UtcNow
                 });
             }
         }

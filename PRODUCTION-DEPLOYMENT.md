@@ -101,51 +101,109 @@ The deployment happens automatically when you push to `main` or `master` branch:
 1. **Build** - Compiles the .NET application
 2. **Test** - Runs unit tests with coverage
 3. **Publish** - Creates deployment artifacts
-4. **Database Migration** - Automatically applies Entity Framework migrations to production database
-5. **FTP Deploy** - Replaces database credentials and uploads to FTP server
-6. **Docker Build** - Creates and pushes Docker images
+4. **FTP Deploy** - Replaces database credentials and uploads to FTP server
+5. **Docker Build** - Creates and pushes Docker images
 
-### Database Migration Benefits
+### ?? Automatic Database Migration
 
-The pipeline now includes automatic database migrations, which means:
+**Your application now automatically applies migrations on startup!** ?
 
-- ? **Automatic Schema Updates**: New tables, columns, and indexes are automatically created
-- ? **Zero-Downtime Deployments**: Database changes are applied before application deployment
-- ? **Rollback Safety**: Migration history is maintained for potential rollbacks
-- ? **Production Consistency**: Same migration process used in development and production
+When your application starts, it will:
+- ? **Check for pending migrations** and apply them automatically
+- ? **Create the admin user** if it doesn't exist
+- ? **Apply seed data** if enabled in configuration
+- ? **Log all database operations** for monitoring
 
-### Migration Safety Features
+### Migration Configuration
 
-- **Connection Validation**: Tests database connectivity before applying migrations
-- **Verbose Logging**: Detailed output for troubleshooting migration issues
-- **Environment Isolation**: Uses Production configuration and credentials
-- **Failure Handling**: Deployment stops if migrations fail
+You can control migration behavior in `appsettings.json`:
 
-### Manual Deployment
+```json
+{
+  "EnableAutoMigration": true,      // Auto-apply migrations on startup
+  "EnableDatabaseSeeding": true     // Apply seed data
+}
+```
 
-If needed, you can deploy manually:
+#### **Production Settings (Current):**
+- `EnableAutoMigration`: `true` - ? Migrations apply automatically
+- `EnableDatabaseSeeding`: `true` - ? Seed data is applied
+
+#### **To Disable Auto-Migration:**
+If you prefer manual control, set in your production config:
+```json
+{
+  "EnableAutoMigration": false
+}
+```
+
+### Database Migration Process
+
+#### **Automatic (Recommended - Current Setup):**
+? **No manual intervention required!**
+- Deploy your application via GitHub Actions
+- Application automatically applies any new migrations on startup
+- Check application logs to verify migration status
+
+#### **Manual (If auto-migration is disabled):**
+
+**For New Database Setup:**
+```powershell
+.\database-scripts\deploy-database.ps1 -ServerName "AH-EPYC-3-SQL2019.zadns.co.za" -DatabaseName "propertydb" -Username "propertyadmin" -Password "YourPassword"
+```
+
+**For Schema Updates:**
+```powershell
+.\database-scripts\apply-migrations.ps1 -Password "YourPassword"
+```
+
+### Development Workflow
+
+When you add new features that require database changes:
+
+1. **Create migrations** in development:
+   ```bash
+   dotnet ef migrations add YourMigrationName --project PropertyManagement.Infrastructure --startup-project PropertyManagement.Web
+   ```
+2. **Test locally** - migrations apply automatically when you run the app
+3. **Push to GitHub** - triggers automatic deployment
+4. **Migrations apply automatically** when the production app starts
+5. **Monitor logs** to verify successful migration
+
+### Migration Monitoring
+
+Check application logs for migration status:
 
 ```bash
-# 1. Publish the application
-dotnet publish --configuration Release --output ./publish
+# Application will log:
+? Found 2 pending migrations: AddNewFeature, UpdateUserTable
+? Applying database migrations...
+? Database migrations applied successfully!
+? Database initialization completed successfully
+?? Application startup completed
 
-# 2. Apply migrations manually
-export ASPNETCORE_ENVIRONMENT=Production
-dotnet ef database update --project PropertyManagement.Infrastructure --startup-project PropertyManagement.Web
-
-# 3. Replace database connection placeholders
-# Edit ./publish/appsettings.Production.json and replace:
-# #{DB_SERVER}# with your actual server
-# #{DB_USERNAME}# with your actual username  
-# #{DB_PASSWORD}# with your actual password
-
-# 4. Upload to your web server via FTP or file copy
+# Or if no migrations needed:
+? Database is up to date - no pending migrations
 ```
+
+### Rollback Strategy
+
+If you need to rollback a migration:
+
+1. **Disable auto-migration** temporarily:
+   ```json
+   { "EnableAutoMigration": false }
+   ```
+2. **Apply rollback manually**:
+   ```bash
+   dotnet ef database update [PreviousMigrationName] --project PropertyManagement.Infrastructure --startup-project PropertyManagement.Web
+   ```
+3. **Re-enable auto-migration** after resolving issues
 
 ### Manual Migration Commands
 
 ```bash
-# Check current migration status
+# Check migration status
 dotnet ef migrations list --project PropertyManagement.Infrastructure --startup-project PropertyManagement.Web
 
 # Apply specific migration
@@ -153,6 +211,9 @@ dotnet ef database update [MigrationName] --project PropertyManagement.Infrastru
 
 # Generate SQL script for review
 dotnet ef migrations script --project PropertyManagement.Infrastructure --startup-project PropertyManagement.Web --output migration.sql
+
+# Rollback to specific migration  
+dotnet ef database update [PreviousMigrationName] --project PropertyManagement.Infrastructure --startup-project PropertyManagement.Web
 ```
 
 ## ?? Configuration Details

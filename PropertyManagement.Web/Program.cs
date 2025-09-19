@@ -285,33 +285,116 @@ var app = builder.Build();
 app.UseMetricServer(); // Exposes /metrics
 app.UseHttpMetrics();  // Collects default HTTP metrics
 
-// Seed initial data
+// Seed initial data and apply migrations
 using (var scope = app.Services.CreateScope())
 {
   var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-  context.Database.Migrate();
-
-  // Read the setting from configuration
+  var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
   var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
-  var enableSeeding = config.GetValue<bool>("EnableDatabaseSeeding");
-
-  if (enableSeeding)
+  
+  try
   {
-    DatabaseSeeder.Seed(context);
-  }
-  // Check if a manager already exists
-  if (!context.Users.Any(u => u.Role == "Manager"))
-  {
-    var manager = new User
+    logger.LogInformation("Initializing database...");
+    
+    // Check if auto-migration is enabled
+    var enableAutoMigration = config.GetValue<bool>("EnableAutoMigration", true);
+    
+    if (enableAutoMigration)
     {
-      Username = "Admin",
-      PasswordHash = BCrypt.Net.BCrypt.HashPassword("01Pa$$w0rd2025#"),
-      Role = "Manager"
-    };
-    context.Users.Add(manager);
-    context.SaveChanges();
-  }
+      logger.LogInformation("Auto-migration is enabled - checking for pending migrations...");
+      
+      // Apply any pending migrations
+      var pendingMigrations = context.Database.GetPendingMigrations();
+      if (pendingMigrations.Any())
+      {
+        logger.LogInformation("Found {Count} pending migrations: {Migrations}", 
+          pendingMigrations.Count(), 
+          string.Join(", ", pendingMigrations));
+        
+        logger.LogInformation("Applying database migrations...");
+        context.Database.Migrate();
+        logger.LogInformation("? Database migrations applied successfully!");
+      }
+      else
+      {
+        logger.LogInformation("? Database is up to date - no pending migrations");
+      }
+    }
+    else
+    {
+      logger.LogInformation("Auto-migration is disabled - skipping migration check");
+      
+      // Still verify database exists and can be connected to
+      if (context.Database.CanConnect())
+      {
+        logger.LogInformation("? Database connection verified");
+      }
+      else
+      {
+        logger.LogError("? Cannot connect to database");
+        throw new InvalidOperationException("Database connection failed");
+      }
+    }
 
+    // Read the seeding setting from configuration
+    var enableSeeding = config.GetValue<bool>("EnableDatabaseSeeding", false);
+
+    if (enableSeeding)
+    {
+      logger.LogInformation("Database seeding is enabled - applying seed data...");
+      DatabaseSeeder.Seed(context);
+      logger.LogInformation("? Database seeding completed");
+    }
+    else
+    {
+      logger.LogInformation("Database seeding is disabled");
+    }
+
+    // Check if a manager already exists (always run this)
+    if (!context.Users.Any(u => u.Role == "Manager"))
+    {
+      logger.LogInformation("Creating default admin user...");
+      var manager = new User
+      {
+        Username = "Admin",
+        PasswordHash = BCrypt.Net.BCrypt.HashPassword("01Pa$$w0rd2025#"),
+        Role = "Manager"
+      };
+      context.Users.Add(manager);
+      context.SaveChanges();
+      logger.LogInformation("? Default admin user created successfully");
+      logger.LogInformation("Default admin credentials: Username='Admin', Password='01Pa$$w0rd2025#'");
+    }
+    else
+    {
+      logger.LogInformation("Admin user already exists - skipping creation");
+    }
+    
+    logger.LogInformation("?? Database initialization completed successfully");
+  }
+  catch (Exception ex)
+  {
+    logger.LogError(ex, "? Failed to initialize database");
+    
+    // In production, you might want to decide whether to continue or stop the application
+    if (app.Environment.IsProduction())
+    {
+      logger.LogCritical("Application startup failed due to database initialization error in production environment");
+      
+      // Check if this is a migration-specific error and auto-migration is enabled
+      var enableAutoMigration = config.GetValue<bool>("EnableAutoMigration", true);
+      if (enableAutoMigration)
+      {
+        logger.LogError("Consider setting 'EnableAutoMigration' to false and applying migrations manually");
+      }
+      
+      throw; // This will stop the application startup
+    }
+    else
+    {
+      logger.LogWarning("Continuing application startup despite database initialization failure in non-production environment");
+    }
+  }
 }
 
 // Set default culture to South Africa

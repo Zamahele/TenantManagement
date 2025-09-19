@@ -111,7 +111,7 @@ jobs:
           
           echo "Creating web.config for Windows SSD hosting..."
           cat > ./publish/web.config << 'EOF'
-          <?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <configuration>
   <location path="." inheritInChildApplications="false">
     <system.webServer>

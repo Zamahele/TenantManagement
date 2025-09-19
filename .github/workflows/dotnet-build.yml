@@ -109,7 +109,27 @@ jobs:
           sed -i 's/#{DB_USERNAME}#/${{ secrets.DB_USERNAME }}/g' ./publish/appsettings.Production.json
           sed -i 's/#{DB_PASSWORD}#/${{ secrets.DB_PASSWORD }}/g' ./publish/appsettings.Production.json
           
+          # Create logs directory structure
+          mkdir -p ./publish/../logs
+          
+          # Create a simple log directory setup script
+          cat > ./publish/setup-logs.ps1 << 'EOF'
+          # Create logs directory if it doesn't exist
+          $logDir = "/gcweproperty.co.za/logs"
+          if (-not (Test-Path $logDir)) {
+              try {
+                  New-Item -ItemType Directory -Path $logDir -Force
+                  Write-Host "? Created logs directory: $logDir"
+              } catch {
+                  Write-Host "?? Could not create preferred log directory, using fallback"
+              }
+          } else {
+              Write-Host "? Logs directory already exists: $logDir"
+          }
+          EOF
+          
           echo "? Database credentials configured in appsettings.Production.json"
+          echo "? Log directory setup script created"
 
       - name: Deploy to FTP server
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
@@ -227,6 +247,7 @@ jobs:
           echo "? What was accomplished:"
           echo "   ?? Application built and tested"
           echo "   ?? Database credentials configured securely"
+          echo "   ?? Log directory structure prepared"
           echo "   ?? Files uploaded to FTP server"
           echo "   ?? Automatic migration attempted via HTTP endpoint"
           echo "   ?? Migration status verified"
@@ -235,10 +256,19 @@ jobs:
           echo "   • http://${{ secrets.FTP_SERVER }}/gcweproperty.co.za/"
           echo "   • https://${{ secrets.FTP_SERVER }}/gcweproperty.co.za/ (if HTTPS configured)"
           echo ""
+          echo "?? Application structure on server:"
+          echo "   • Application: /gcweproperty.co.za/wwwroot/"
+          echo "   • Logs: /gcweproperty.co.za/logs/"
+          echo "   • Setup script: /gcweproperty.co.za/wwwroot/setup-logs.ps1"
+          echo ""
           echo "?? Monitoring endpoints:"
           echo "   • Health: /health"
           echo "   • Migration Status: /api/migration/status"
           echo "   • Metrics: /metrics"
+          echo ""
+          echo "?? Log files:"
+          echo "   • Application: /gcweproperty.co.za/logs/propertymanagement.log"
+          echo "   • Daily rotation: propertymanagement-YYYY-MM-DD.log"
           echo ""
           echo "??? Manual migration (if needed):"
           echo "   POST /api/migration/apply"

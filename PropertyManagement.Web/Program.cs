@@ -21,7 +21,20 @@ using PropertyManagement.Application.Services;
 using PropertyManagement.Application.DTOs;
 
 // Ensure log directory exists before Serilog is configured
-Directory.CreateDirectory("/app/logs");
+var logDirectory = "/gcweproperty.co.za/logs";
+if (!Directory.Exists(logDirectory))
+{
+    try
+    {
+        Directory.CreateDirectory(logDirectory);
+    }
+    catch
+    {
+        // Fallback to a writable directory if the preferred one fails
+        logDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "PropertyManagement", "logs");
+        Directory.CreateDirectory(logDirectory);
+    }
+}
 
 // Build configuration first
 var builder = WebApplication.CreateBuilder(args);

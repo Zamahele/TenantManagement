@@ -104,32 +104,28 @@ jobs:
 
       - name: Prepare deployment files
         run: |
-          # Replace placeholders in appsettings.Production.json with actual secret values
           sed -i 's/#{DB_SERVER}#/${{ secrets.DB_SERVER }}/g' ./publish/appsettings.Production.json
           sed -i 's/#{DB_USERNAME}#/${{ secrets.DB_USERNAME }}/g' ./publish/appsettings.Production.json
           sed -i 's/#{DB_PASSWORD}#/${{ secrets.DB_PASSWORD }}/g' ./publish/appsettings.Production.json
           
-          # Create logs directory structure
           mkdir -p ./publish/../logs
           
-          # Create a simple log directory setup script
           cat > ./publish/setup-logs.ps1 << 'EOF'
-          # Create logs directory if it doesn't exist
           $logDir = "/gcweproperty.co.za/logs"
           if (-not (Test-Path $logDir)) {
               try {
                   New-Item -ItemType Directory -Path $logDir -Force
-                  Write-Host "? Created logs directory: $logDir"
+                  Write-Host "Created logs directory: $logDir"
               } catch {
-                  Write-Host "?? Could not create preferred log directory, using fallback"
+                  Write-Host "Could not create preferred log directory, using fallback"
               }
           } else {
-              Write-Host "? Logs directory already exists: $logDir"
+              Write-Host "Logs directory already exists: $logDir"
           }
           EOF
           
-          echo "? Database credentials configured in appsettings.Production.json"
-          echo "? Log directory setup script created"
+          echo "Database credentials configured in appsettings.Production.json"
+          echo "Log directory setup script created"
 
       - name: Deploy to FTP server
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
@@ -148,35 +144,31 @@ jobs:
 
       - name: Wait for application to start
         run: |
-          echo "? Waiting for application to start up..."
+          echo "Waiting for application to start up..."
           sleep 30
           
-          # Try to ping the application health endpoint
           for i in {1..10}; do
             if curl -f -s "http://${{ secrets.FTP_SERVER }}/gcweproperty.co.za/health" > /dev/null 2>&1; then
-              echo "? Application is responding"
+              echo "Application is responding"
               break
             elif curl -f -s "https://${{ secrets.FTP_SERVER }}/gcweproperty.co.za/health" > /dev/null 2>&1; then
-              echo "? Application is responding (HTTPS)"
+              echo "Application is responding (HTTPS)"
               break
             else
-              echo "? Waiting for application... (attempt $i/10)"
+              echo "Waiting for application... (attempt $i/10)"
               sleep 10
             fi
           done
 
       - name: Apply migrations automatically via HTTP
         run: |
-          echo "?? Triggering automatic database migration..."
+          echo "Triggering automatic database migration..."
           
-          # Try HTTP first
           HTTP_URL="http://${{ secrets.FTP_SERVER }}/gcweproperty.co.za/api/migration/apply"
           HTTPS_URL="https://${{ secrets.FTP_SERVER }}/gcweproperty.co.za/api/migration/apply"
           
-          # Use FTP password as auth token for migration endpoint
           AUTH_TOKEN="${{ secrets.FTP_PASSWORD }}"
           
-          # Try HTTPS first, then HTTP
           for URL in "$HTTPS_URL" "$HTTP_URL"; do
             echo "Trying migration endpoint: $URL"
             
@@ -190,48 +182,46 @@ jobs:
             BODY=$(echo "$RESPONSE" | sed '$d')
             
             if [ "$HTTP_CODE" = "200" ]; then
-              echo "? Migration completed successfully!"
+              echo "Migration completed successfully!"
               echo "Response: $BODY"
               
-              # Check if migrations were actually applied
               if echo "$BODY" | grep -q '"success":true'; then
-                echo "?? Database migrations applied successfully via HTTP endpoint!"
+                echo "Database migrations applied successfully via HTTP endpoint!"
                 exit 0
               fi
               break
             elif [ "$HTTP_CODE" = "401" ]; then
-              echo "? Unauthorized - check auth token configuration"
+              echo "Unauthorized - check auth token configuration"
               break
             elif [ "$HTTP_CODE" = "500" ]; then
-              echo "?? Server error during migration:"
+              echo "Server error during migration:"
               echo "$BODY"
               break
             else
-              echo "? Endpoint not ready (HTTP $HTTP_CODE), trying next URL..."
+              echo "Endpoint not ready (HTTP $HTTP_CODE), trying next URL..."
             fi
           done
           
-          echo "?? Automatic migration via HTTP failed or not available"
-          echo "?? Migration may need to be triggered manually or application may not be fully started yet"
+          echo "Automatic migration via HTTP failed or not available"
+          echo "Migration may need to be triggered manually or application may not be fully started yet"
 
       - name: Check migration status
         run: |
-          echo "?? Checking final migration status..."
+          echo "Checking final migration status..."
           
-          # Check migration status endpoint
           for URL in "https://${{ secrets.FTP_SERVER }}/gcweproperty.co.za/api/migration/status" "http://${{ secrets.FTP_SERVER }}/gcweproperty.co.za/api/migration/status"; do
             RESPONSE=$(curl -s -w "\n%{http_code}" "$URL" 2>/dev/null)
             HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
             BODY=$(echo "$RESPONSE" | sed '$d')
             
             if [ "$HTTP_CODE" = "200" ]; then
-              echo "? Migration status retrieved:"
+              echo "Migration status retrieved:"
               echo "$BODY"
               
               if echo "$BODY" | grep -q '"isUpToDate":true'; then
-                echo "?? Database is up to date!"
+                echo "Database is up to date!"
               elif echo "$BODY" | grep -q '"pendingMigrations":[^0]'; then
-                echo "?? There are still pending migrations that may need manual attention"
+                echo "There are still pending migrations that may need manual attention"
               fi
               break
             fi
@@ -240,41 +230,39 @@ jobs:
       - name: Deployment Summary
         run: |
           echo ""
-          echo "?? ======================================="
-          echo "?? FULLY AUTOMATED DEPLOYMENT COMPLETED!"
-          echo "?? ======================================="
+          echo "FULLY AUTOMATED DEPLOYMENT COMPLETED!"
           echo ""
-          echo "? What was accomplished:"
-          echo "   ?? Application built and tested"
-          echo "   ?? Database credentials configured securely"
-          echo "   ?? Log directory structure prepared"
-          echo "   ?? Files uploaded to FTP server"
-          echo "   ?? Automatic migration attempted via HTTP endpoint"
-          echo "   ?? Migration status verified"
+          echo "What was accomplished:"
+          echo "- Application built and tested"
+          echo "- Database credentials configured securely"
+          echo "- Log directory structure prepared"
+          echo "- Files uploaded to FTP server"
+          echo "- Automatic migration attempted via HTTP endpoint"
+          echo "- Migration status verified"
           echo ""
-          echo "?? Your application is available at:"
-          echo "   • http://${{ secrets.FTP_SERVER }}/gcweproperty.co.za/"
-          echo "   • https://${{ secrets.FTP_SERVER }}/gcweproperty.co.za/ (if HTTPS configured)"
+          echo "Your application is available at:"
+          echo "- http://${{ secrets.FTP_SERVER }}/gcweproperty.co.za/"
+          echo "- https://${{ secrets.FTP_SERVER }}/gcweproperty.co.za/ (if HTTPS configured)"
           echo ""
-          echo "?? Application structure on server:"
-          echo "   • Application: /gcweproperty.co.za/wwwroot/"
-          echo "   • Logs: /gcweproperty.co.za/logs/"
-          echo "   • Setup script: /gcweproperty.co.za/wwwroot/setup-logs.ps1"
+          echo "Application structure on server:"
+          echo "- Application: /gcweproperty.co.za/wwwroot/"
+          echo "- Logs: /gcweproperty.co.za/logs/"
+          echo "- Setup script: /gcweproperty.co.za/wwwroot/setup-logs.ps1"
           echo ""
-          echo "?? Monitoring endpoints:"
-          echo "   • Health: /health"
-          echo "   • Migration Status: /api/migration/status"
-          echo "   • Metrics: /metrics"
+          echo "Monitoring endpoints:"
+          echo "- Health: /health"
+          echo "- Migration Status: /api/migration/status"
+          echo "- Metrics: /metrics"
           echo ""
-          echo "?? Log files:"
-          echo "   • Application: /gcweproperty.co.za/logs/propertymanagement.log"
-          echo "   • Daily rotation: propertymanagement-YYYY-MM-DD.log"
+          echo "Log files:"
+          echo "- Application: /gcweproperty.co.za/logs/propertymanagement.log"
+          echo "- Daily rotation: propertymanagement-YYYY-MM-DD.log"
           echo ""
-          echo "??? Manual migration (if needed):"
-          echo "   POST /api/migration/apply"
-          echo "   Header: authToken: [your-ftp-password]"
+          echo "Manual migration (if needed):"
+          echo "POST /api/migration/apply"
+          echo "Header: authToken: [your-ftp-password]"
           echo ""
-          echo "?? Zero-touch deployment complete!"
+          echo "Zero-touch deployment complete!"
 
   docker-build-and-push:
     runs-on: ubuntu-latest

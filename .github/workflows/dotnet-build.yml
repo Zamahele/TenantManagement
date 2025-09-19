@@ -96,11 +96,48 @@ jobs:
     needs: publish
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
     steps:
+      - name: Download build artifact (for migrations)
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+          path: ./source
+
       - name: Download published artifact
         uses: actions/download-artifact@v4
         with:
           name: published-app
           path: ./publish
+
+      - name: Setup .NET 8 for migrations
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Replace database connection placeholders
+        run: |
+          # Replace placeholders in appsettings.Production.json with actual secret values
+          sed -i 's/#{DB_SERVER}#/${{ secrets.DB_SERVER }}/g' ./publish/appsettings.Production.json
+          sed -i 's/#{DB_USERNAME}#/${{ secrets.DB_USERNAME }}/g' ./publish/appsettings.Production.json
+          sed -i 's/#{DB_PASSWORD}#/${{ secrets.DB_PASSWORD }}/g' ./publish/appsettings.Production.json
+          
+          # Also update source appsettings for migrations
+          sed -i 's/#{DB_SERVER}#/${{ secrets.DB_SERVER }}/g' ./source/PropertyManagement.Web/appsettings.Production.json
+          sed -i 's/#{DB_USERNAME}#/${{ secrets.DB_USERNAME }}/g' ./source/PropertyManagement.Web/appsettings.Production.json
+          sed -i 's/#{DB_PASSWORD}#/${{ secrets.DB_PASSWORD }}/g' ./source/PropertyManagement.Web/appsettings.Production.json
+
+      - name: Apply Entity Framework Migrations
+        run: |
+          echo "Installing Entity Framework CLI tools..."
+          dotnet tool install --global dotnet-ef --version 8.0.0 || true
+          
+          echo "Setting environment for Production..."
+          export ASPNETCORE_ENVIRONMENT=Production
+          
+          echo "Applying database migrations..."
+          cd ./source
+          dotnet ef database update --project PropertyManagement.Infrastructure --startup-project PropertyManagement.Web --verbose
+          
+          echo "? Database migrations applied successfully!"
 
       - name: Deploy to FTP server
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5

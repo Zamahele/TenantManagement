@@ -133,9 +133,14 @@ jobs:
           echo "Setting environment for Production..."
           export ASPNETCORE_ENVIRONMENT=Production
           
-          echo "Applying database migrations..."
+          echo "Building projects for migrations..."
           cd ./source
-          dotnet ef database update --project PropertyManagement.Infrastructure --startup-project PropertyManagement.Web --verbose
+          dotnet restore
+          dotnet build --configuration Release
+          
+          echo "Applying database migrations with connection string override..."
+          CONNECTION_STRING="Server=${{ secrets.DB_SERVER }};Database=propertydb;User Id=${{ secrets.DB_USERNAME }};Password=${{ secrets.DB_PASSWORD }};MultipleActiveResultSets=true;TrustServerCertificate=True;Encrypt=True"
+          dotnet ef database update --project PropertyManagement.Infrastructure --startup-project PropertyManagement.Web --connection "$CONNECTION_STRING" --verbose
           
           echo "? Database migrations applied successfully!"
 

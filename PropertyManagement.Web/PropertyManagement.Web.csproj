@@ -40,6 +40,10 @@
     <Content Update="appsettings.Production.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Content Include="../web.config">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <Link>web.config</Link>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>
